@@ -152,7 +152,7 @@ namespace GU_Exchange
         /// <summary>
         /// Updates the card list in this inventory to contain all the most current cards available in Gods Unchained.
         /// </summary>
-        private static async void updateCardList()
+        private static async Task updateCardList()
         {
             using (HttpClient client = new HttpClient())
             {
@@ -216,6 +216,7 @@ namespace GU_Exchange
                     }
                 }
                 CardList = updatedList;
+                Console.WriteLine("2");
             }
         }
 
@@ -223,12 +224,13 @@ namespace GU_Exchange
         /// Returns the current list of cards that can be offered on the market.
         /// </summary>
         /// <returns></returns>
-        public static Dictionary<int, CardData> getCards()
+        public static async Task<Dictionary<int, CardData>> getCards()
         {
             if (listUpdated)
             {
                 return CardList;
             }
+            listUpdated = true;
             string oldCards = "{}";
             if (File.Exists("cards.json"))
             {
@@ -237,16 +239,24 @@ namespace GU_Exchange
                     oldCards = reader.ReadToEnd();
                 }
             }
+            else
+            {
+                Console.WriteLine("1");
+                await updateCardList();
+                Console.WriteLine("3");
+                return CardList;
+            }
+
             JObject? jsonData = (JObject?)JsonConvert.DeserializeObject(oldCards);
             if (jsonData == null)
             {
-                updateCardList();
+                _ = updateCardList();
                 return CardList;
             }
             Dictionary<string, JObject>? dictObj = jsonData.ToObject<Dictionary<string, JObject>?>();
             if (dictObj == null)
             {
-                updateCardList();
+                _ = updateCardList();
                 return CardList;
             }
             foreach (string key in dictObj.Keys)
@@ -272,8 +282,7 @@ namespace GU_Exchange
                 CardList[proto] = card;
             }
             Console.WriteLine("Updating cards...");
-            updateCardList();
-            listUpdated = true;
+            _ = updateCardList();
             return CardList;
         }
 

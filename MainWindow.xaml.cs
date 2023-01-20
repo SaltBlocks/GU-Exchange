@@ -26,8 +26,6 @@ namespace GU_Exchange
         public MainWindow()
         {
             InitializeComponent();
-            int bits = IntPtr.Size * 8;
-            Console.WriteLine("{0}-bit", bits);
             cardTiles = new();
             cardList = new();
             tileIndex = 0;
@@ -39,7 +37,7 @@ namespace GU_Exchange
         /// </summary>
         private async void setupTiles()
         {
-            cardList.AddRange(Inventory.getCards().Values);
+            cardList.AddRange((await Inventory.getCards()).Values);
             for (int i = 0; i < 30; i++)
             {
                 CardTile tile = new CardTile(1);

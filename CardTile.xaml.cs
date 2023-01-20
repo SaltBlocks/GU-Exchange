@@ -41,9 +41,9 @@ namespace GU_Exchange
         /// <summary>
         /// Updates the text on this tile to match the cards in the connected <see cref="Inventory"/>.
         /// </summary>
-        public void updateTileText()
+        public async void updateTileText()
         {
-            Dictionary<int, CardData> dict = Inventory.getCards();
+            Dictionary<int, CardData> dict = await Inventory.getCards();
             if (dict.ContainsKey(cardID))
             {
                 this.lblName.Content = dict[cardID].name;
