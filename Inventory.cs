@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Reflection.Metadata.Ecma335;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -111,7 +112,12 @@ namespace GU_Exchange
     internal class Inventory
     {
         private static bool listUpdated = false;
+        private static bool queriesUpdated = false;
         private static Dictionary<int, CardData> CardList = new();
+        private static HashSet<string> setList = new();
+        private static HashSet<string> godList = new();
+        private static HashSet<string> rarityList = new();
+        private static HashSet<string> tribeList = new();
         public static Inventory connectedInventory = new(Settings.globalSettings.apolloID);
 
         /// <summary>
@@ -121,7 +127,7 @@ namespace GU_Exchange
         /// <param name="cancelToken">Token used to cancel the search.</param>
         /// <returns></returns>
         /// <exception cref="OperationCanceledException">Thrown if the search is cancelled.</exception>
-        public static async Task<List<CardData>> searchCardsAsync(string searchText, CancellationToken cancelToken)
+        public static async Task<List<CardData>> searchCardsAsync(string searchText, CancellationToken cancelToken, string? set=null, string? god=null, string? rarity=null, string? tribe=null, List<int>? manaCosts=null)
         {
             Task<List<CardData>> cardsGet = Task.Run(() =>
             {
@@ -130,17 +136,21 @@ namespace GU_Exchange
                 foreach (CardData card in CardList.Values)
                 {
                     if (cancelToken.IsCancellationRequested)
-                    {
                         throw new OperationCanceledException();
-                    }
+                    if (set != null && !card.set.ToLower().Equals(set.ToLower()))
+                        continue;
+                    if (god != null && !card.god.ToLower().Equals(god.ToLower()))
+                        continue;
+                    if (rarity != null && !card.rarity.ToLower().Equals(rarity.ToLower()))
+                        continue;
+                    if (tribe != null && !card.tribe.ToLower().Equals(tribe.ToLower()))
+                        continue;
+                    if (manaCosts != null && !manaCosts.Contains(card.mana) && !(card.mana > 9 && manaCosts.Contains(9)))
+                        continue;
                     if (card.name.ToLower().Contains(searchText.ToLower()))
-                    {
                         result.Add(card);
-                    }
                     else if (card.effect.ToLower().Contains(searchText.ToLower()))
-                    {
                         textInBody.Add(card);
-                    }
                 }
                 result = result.OrderBy(x => x.name.ToLower().IndexOf(searchText.ToLower())).ToList();
                 result.AddRange(textInBody);
@@ -208,11 +218,17 @@ namespace GU_Exchange
                         tribe, (int)mana, (int)attack, (int)health, type, set);
                     updatedList[proto] = card;
                 }
+                CancellationTokenSource imgUpdateTokenSource = new CancellationTokenSource();
+                CancellationToken token = imgUpdateTokenSource.Token;
                 foreach (int key in updatedList.Keys) // Delete images of cards that were modified so the user always sees the most recent one.
                 {
                     if (File.Exists("cards/" + key + "q5.webp") && (!CardList.ContainsKey(key) || !CardList[key].Equals(updatedList[key])))
                     {
                         File.Delete("cards/" + key + "q5.webp");
+                    }
+                    if (!File.Exists("cards/" + key + "q5.webp"))
+                    {
+                        _ = ResourceFactory.FetchCardImageAsync(key, token);
                     }
                 }
                 CardList = updatedList;
@@ -284,6 +300,56 @@ namespace GU_Exchange
             Console.WriteLine("Updating cards...");
             _ = updateCardList();
             return CardList;
+        }
+
+        private static async Task setupQueries()
+        {
+            Dictionary<int, CardData> data = await getCards();
+            foreach (CardData card in data.Values)
+            {
+                char[] set = card.set.ToCharArray();
+                set[0] = char.ToUpper(set[0]);
+                setList.Add(new string(set));
+                char[] god = card.god.ToCharArray();
+                god[0] = char.ToUpper(god[0]);
+                godList.Add(new string(god));
+                char[] rarity = card.rarity.ToCharArray();
+                rarity[0] = char.ToUpper(rarity[0]);
+                rarityList.Add(new string(rarity));
+                char[] tribe = card.tribe.ToCharArray();
+                if (tribe.Length > 0)
+                    tribe[0] = char.ToUpper(tribe[0]);
+                tribeList.Add(new string(tribe));
+            }
+            queriesUpdated = true;
+        }
+
+
+        public static async Task<HashSet<string>> getSets()
+        {
+            if (!queriesUpdated)
+                await setupQueries();
+            return setList;
+        }
+
+        public static async Task<HashSet<string>> getGods()
+        {
+            if (!queriesUpdated)
+                await setupQueries();
+            return godList;
+        }
+
+        public static async Task<HashSet<string>> getRarities()
+        {
+            if (!queriesUpdated)
+                await setupQueries();
+            return rarityList;
+        }
+        public static async Task<HashSet<string>> getTribes()
+        {
+            if (!queriesUpdated)
+                await setupQueries();
+            return tribeList;
         }
 
         private int apolloID;

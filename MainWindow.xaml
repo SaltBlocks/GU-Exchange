@@ -6,7 +6,14 @@
         xmlns:local="clr-namespace:GU_Exchange"
         mc:Ignorable="d"
         Title="GU Exchange" Height="500" Width="900" SizeChanged="Window_SizeChanged">
-
+    <Window.Resources>
+        <DataTemplate x:Key="CheckBoxTemplate">
+            <StackPanel Orientation="Horizontal" MouseLeftButtonUp="TextBlock_MouseLeftButtonUp">
+                <CheckBox IsChecked="{Binding IsChecked}" Checked="CheckBox_action" Unchecked="CheckBox_action" />
+                <TextBlock Text="{Binding Label}" Margin="5,0,0,0" />
+            </StackPanel>
+        </DataTemplate>
+    </Window.Resources>
     <Grid>
         <Menu DockPanel.Dock="Top">
             <MenuItem Header="Menu">
@@ -17,10 +24,15 @@
                 <MenuItem Header="Exit" />
             </MenuItem>
         </Menu>
+        <ComboBox x:Name="cbSet" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,30,0,0" Height="25" Width="100" SelectionChanged="filters_SelectionChanged"/>
+        <ComboBox x:Name="cbGod" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="120,30,0,0" Height="25" Width="100" SelectionChanged="filters_SelectionChanged"/>
+        <ComboBox x:Name="cbRarity" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="230,30,0,0" Height="25" Width="100" SelectionChanged="filters_SelectionChanged"/>
+        <ComboBox x:Name="cbTribe" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="340,30,0,0" Height="25" Width="100" SelectionChanged="filters_SelectionChanged"/>
+        <ComboBox x:Name="cbCost" ItemTemplate="{StaticResource CheckBoxTemplate}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="450,30,0,0" Height="25" Width="100" />
         <ScrollViewer x:Name="scrollBar" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Auto" Margin="0,77,0,0" Grid.ColumnSpan="2" ScrollChanged="ScrollViewer_ScrollChanged">
             <WrapPanel x:Name="cardPanel" Margin="0,0,0,0" ScrollViewer.CanContentScroll="True" ScrollViewer.HorizontalScrollBarVisibility="Visible" MaxWidth="800"/>
         </ScrollViewer>
-        <TextBox x:Name="searchBar" HorizontalAlignment="Left" Height="20" Margin="10,20,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="780" Grid.ColumnSpan="2" TextChanged="searchBar_TextChanged"/>
+        <TextBox x:Name="searchBar" HorizontalAlignment="Left" Height="20" Margin="10,50,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="780" TextChanged="searchBar_TextChanged"/>
 
     </Grid>
 </Window>
