@@ -1,0 +1,92 @@
+﻿<UserControl x:Class="GU_Exchange.SetupWallet"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:GU_Exchange"
+             xmlns:fa="http://schemas.fontawesome.io/icons/"
+             mc:Ignorable="d" 
+             d:DesignHeight="200" d:DesignWidth="365">
+    <Grid>
+        <Grid x:Name="optionGrid" Height="200" Width="365" Visibility="Visible">
+            <!-- #region Header & Instructions. -->
+            <Label Content="Link wallet?" HorizontalAlignment="Center" Margin="0,10,0,0" VerticalAlignment="Top" FontSize="20"/>
+            <TextBlock x:Name="txtAccountInfo" HorizontalAlignment="Center" Margin="0,52,0,0" TextWrapping="Wrap" Text="Please select the type of wallet you would like to add." VerticalAlignment="Top" Height="18" Width="330"/>
+            <!--#endregion-->
+            <!-- #region Radiobuttons. -->
+            <RadioButton x:Name="rbCreateWallet" Content="Create new wallet." HorizontalAlignment="Left" Margin="18,80,0,0" VerticalAlignment="Top" IsChecked="True"/>
+            <RadioButton x:Name="rbImportKey" Content="Import from private key." HorizontalAlignment="Left" Margin="18,100,0,0" VerticalAlignment="Top"/>
+            <RadioButton x:Name="rbImportWeb" Content="Import web wallet." HorizontalAlignment="Left" Margin="18,120,0,0" VerticalAlignment="Top"/>
+            <!-- #endregion -->
+            <!-- #region Buttons -->
+            <Button Content="Next" HorizontalAlignment="Left" Height="25" VerticalAlignment="Top" Width="90" Margin="170,165,0,0" Click="NextButton_Click"/>
+            <Button Content="Cancel" HorizontalAlignment="Right" Height="25" Margin="0,165,10,0" VerticalAlignment="Top" Width="90" Click="CloseButton_Click"/>
+            <!-- #endregion -->
+        </Grid>
+        <Grid x:Name="createGrid" Height="200" Width="365" Visibility="Collapsed">
+            <!-- #region Header & Instructions. -->
+            <Label Content="Add ETH Wallet" HorizontalAlignment="Center" Margin="0,10,0,0" VerticalAlignment="Top" FontSize="20"/>
+            <TextBlock HorizontalAlignment="Center" Margin="0,52,0,0" TextWrapping="Wrap" Text="Please type a password to secure the wallet." VerticalAlignment="Top" Height="18" Width="330"/>
+
+            <TextBlock HorizontalAlignment="Left" Margin="11,75,0,0" TextWrapping="Wrap" Text="Address:" VerticalAlignment="Top"/>
+            <TextBlock HorizontalAlignment="Left" Margin="11,100,0,0" TextWrapping="Wrap" Text="Password:" VerticalAlignment="Top"/>
+            <TextBlock HorizontalAlignment="Left" Margin="11,125,0,0" TextWrapping="Wrap" Text="Repeat Password:" VerticalAlignment="Top"/>
+            <!-- #endregion -->
+            <!-- #region User Input. -->
+            <TextBox x:Name="tbAddress" HorizontalAlignment="Left" Margin="119,75,0,0" Text="" VerticalAlignment="Top" Width="166" IsEnabled="False"/>
+            <PasswordBox x:Name="pbPassword" HorizontalAlignment="Left" Margin="119,100,0,0" VerticalAlignment="Top" Width="236"/>
+            <PasswordBox x:Name="pbPasswordRepeat" HorizontalAlignment="Left" Margin="119,125,0,0" VerticalAlignment="Top" Width="236"/>
+            <Button Content="Regenerate" HorizontalAlignment="Left" Margin="290,75,0,0" VerticalAlignment="Top" Click="Regenerate_Click"/>
+            <!-- #endregion -->
+            <!-- #region Window Output. -->
+            <TextBlock x:Name="txtError" HorizontalAlignment="Left" Height="20" Margin="122,141,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="232" Foreground="Red" FontSize="10"/>
+            <!-- #endregion -->
+            <!-- #region Add Wallet / Cancel. -->
+            <Button x:Name="btnAddWallet" Content="Add wallet" HorizontalAlignment="Left" Height="25" VerticalAlignment="Top" Width="90" Margin="170,165,0,0" Click="StoreWalletButton_Click"/>
+            <Button Content="Cancel" HorizontalAlignment="Right" Height="25" Margin="0,165,10,0" VerticalAlignment="Top" Width="90" Click="CloseButton_Click"/>
+            <!-- #endregion -->
+        </Grid>
+        <Grid x:Name="importGrid" Height="200" Width="365" Visibility="Collapsed">
+            <!-- #region Header & Instructions. -->
+            <Label Content="Import ETH Wallet" HorizontalAlignment="Center" Margin="0,10,0,0" VerticalAlignment="Top" FontSize="20"/>
+            <TextBlock HorizontalAlignment="Center" Margin="0,52,0,0" TextWrapping="Wrap" Text="Please type a private key and password to secure the wallet." VerticalAlignment="Top" Height="18" Width="330"/>
+            <TextBlock HorizontalAlignment="Left" Margin="11,75,0,0" TextWrapping="Wrap" Text="Private key:" VerticalAlignment="Top"/>
+            <TextBlock HorizontalAlignment="Left" Margin="11,92,0,0" TextWrapping="Wrap" Text="Address:" VerticalAlignment="Top" FontSize="10"/>
+            <TextBlock HorizontalAlignment="Left" Margin="11,105,0,0" TextWrapping="Wrap" Text="Password:" VerticalAlignment="Top"/>
+            <TextBlock HorizontalAlignment="Left" Margin="11,130,0,0" TextWrapping="Wrap" Text="Repeat Password:" VerticalAlignment="Top"/>
+            <!-- #endregion -->
+            <!-- #region User Input. -->
+            <PasswordBox x:Name="pbPrivateKey" HorizontalAlignment="Left" Margin="119,75,0,0" VerticalAlignment="Top" Width="236" PasswordChanged="pbPrivateKey_PasswordChanged"/>
+            <PasswordBox x:Name="pbPasswordImport" HorizontalAlignment="Left" Margin="119,105,0,0" VerticalAlignment="Top" Width="236"/>
+            <PasswordBox x:Name="pbPasswordRepeatImport" HorizontalAlignment="Left" Margin="119,132,0,0" VerticalAlignment="Top" Width="236"/>
+            <!-- #endregion -->
+            <!-- #region Window Output. -->
+            <TextBlock x:Name="lblAddressImport" HorizontalAlignment="Left" Margin="120,92,0,0" TextWrapping="Wrap" Text="0x" VerticalAlignment="Top" Width="235" FontSize="10"/>
+            <TextBlock x:Name="txtErrorImport" HorizontalAlignment="Left" Height="16" Margin="122,149,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="232" Foreground="Red" FontSize="10"/>
+            <!-- #endregion -->
+            <!-- #region Add Wallet / Cancel. -->
+            <Button x:Name="btnImportWallet" Content="Add wallet" HorizontalAlignment="Left" Height="25" VerticalAlignment="Top" Width="90" Margin="170,165,0,0" Click="btnImportWallet_Click"/>
+            <Button Content="Cancel" HorizontalAlignment="Right" Height="25" Margin="0,165,10,0" VerticalAlignment="Top" Width="90" Click="CloseButton_Click"/>
+            <!-- #endregion -->
+        </Grid>
+        <Grid x:Name="webImportGrid" Height="200" Width="365" Visibility="Collapsed">
+            <!-- #region Header & Instructions. -->
+            <Label Content="Import ETH Wallet" HorizontalAlignment="Center" Margin="0,10,0,0" VerticalAlignment="Top" FontSize="20"/>
+            <Label x:Name="lblWebInstructions" Content="Please visit the link below to connect your wallet." HorizontalAlignment="Center" Margin="0,52,0,0" VerticalAlignment="Top" Width="345" HorizontalContentAlignment="Center"/>
+            <!-- #endregion -->
+            <!-- #region Status images. -->
+            <fa:ImageAwesome x:Name="spinner" Icon="CircleOutlineNotch" Spin="True" SpinDuration="4" Margin="0,83,0,0" Width="50" Height="50" HorizontalAlignment="Center" VerticalAlignment="Top" Visibility="Visible" />
+            <fa:ImageAwesome x:Name="success" Icon="CheckCircle" Margin="0,83,0,0" Width="50" Height="50" HorizontalAlignment="Center" VerticalAlignment="Top" Visibility="Collapsed" />
+            <fa:ImageAwesome x:Name="error" Icon="TimesCircle" Margin="0,83,0,0" Width="50" Height="50" HorizontalAlignment="Center" VerticalAlignment="Top" Visibility="Collapsed" />
+            <!-- #endregion -->
+            <!--#region Client link. -->
+            <Label x:Name="lblLink" HorizontalAlignment="Center" Margin="0,133,0,0" VerticalAlignment="Top" Foreground="Blue">
+                <TextBlock x:Name="tbLink" TextDecorations="Underline" MouseDown="ClientLink_MouseDown">http://localhost:8080/</TextBlock>
+            </Label>
+            <!-- #endregion -->
+            <!-- #region Cancel/Finish Button. -->
+            <Button x:Name="btnEnd" Content="Cancel" HorizontalAlignment="Center" Margin="0,161,0,0" VerticalAlignment="Top" Width="90" Click="CloseButton_Click"/>
+            <!-- #endregion -->
+        </Grid>
+    </Grid>
+</UserControl>

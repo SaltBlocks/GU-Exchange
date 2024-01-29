@@ -1,0 +1,30 @@
+﻿<UserControl x:Class="GU_Exchange.LinkAccount"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:GU_Exchange"
+             mc:Ignorable="d" 
+             d:DesignHeight="200" d:DesignWidth="365">
+    <Grid>
+        <!-- #region Instructions -->
+        <Label Content="Select GU account to link" HorizontalAlignment="Center" Margin="0,10,0,0" VerticalAlignment="Top" FontSize="20"/>
+        <TextBlock HorizontalAlignment="Center" Margin="0,52,0,0" TextWrapping="Wrap" Text="Please search for your GU account using either it's ApolloID or current username." VerticalAlignment="Top" Height="43" Width="330"/>
+        <!-- #endregion -->
+        <!--#region Text -->
+        <TextBlock HorizontalAlignment="Left" Margin="62,97,0,0" TextWrapping="Wrap" Text="ApolloID" VerticalAlignment="Top"/>
+        <TextBlock HorizontalAlignment="Left" Margin="62,123,0,0" TextWrapping="Wrap" Text="Username" VerticalAlignment="Top"/>
+        <TextBlock x:Name="txtError" HorizontalAlignment="Left" Height="20" Margin="122,141,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="169" Foreground="Red" FontSize="10"/>
+        <!--#endregion -->
+        <!--#region User Input -->
+        <TextBox x:Name="txtApolloID" HorizontalAlignment="Center" Margin="0,96,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="120" TextChanged="txtApolloIDChanged"/>
+        <local:SuggestionsTextBox x:Name="stbUsername" HorizontalAlignment="Center" Margin="0,123,0,59" Width="120" TextChanged="txtUsernameChanged"/>
+        <!--#endregion -->
+        <!--#region Buttons -->
+        <Button x:Name="btnLookup1" Content="Lookup" HorizontalAlignment="Left" Margin="247,95,0,0" VerticalAlignment="Top" Click="Button_ApolloLookup"/>
+        <Button x:Name="btnLookup2" Content="Lookup" HorizontalAlignment="Left" Margin="247,121,0,0" VerticalAlignment="Top" Click="Button_UserLookup"/>
+        <Button x:Name="btnLink" Content="Link account" HorizontalAlignment="Center" Margin="-120,170,0,0" VerticalAlignment="Top" Width="80" IsEnabled="False" Click="btnLink_Click"/>
+        <Button x:Name="btnCancel" Content="Cancel" HorizontalAlignment="Center" Margin="120,170,0,0" VerticalAlignment="Top" Width="80" Click="Button_Close"/>
+        <!--#endregion -->
+    </Grid>
+</UserControl>

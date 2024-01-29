@@ -1,0 +1,63 @@
+﻿<UserControl x:Class="GU_Exchange.CardControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:fa="http://schemas.fontawesome.io/icons/"
+             xmlns:local="clr-namespace:GU_Exchange"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800" Background="#FFE4E4E4" MinWidth="580" MinHeight="330" SizeChanged="UserControl_SizeChanged">
+    <Grid x:Name="controlGrid" Height="450" Width="800" MaxWidth="1400" MaxHeight="700">
+        <!-- #region Card Image and number of cards owned per qualities. -->
+        <Image x:Name="imgCard" HorizontalAlignment="Left" Height="300" Margin="536,20,0,0" VerticalAlignment="Top" Width="235"/>
+        <Ellipse x:Name="elMeteorite" HorizontalAlignment="Left" Height="26" Margin="553,320,0,0" Stroke="Black" Fill="#FF6E3741" VerticalAlignment="Top" Width="26"/>
+        <Ellipse x:Name="elShadow" HorizontalAlignment="Left" Height="26" Margin="611,320,0,0" Stroke="Black" Fill="#FF3C2850" VerticalAlignment="Top" Width="26"/>
+        <Ellipse x:Name="elGold" HorizontalAlignment="Left" Height="26" Margin="670,320,0,0" Stroke="Black" Fill="#FFDCA000" VerticalAlignment="Top" Width="26"/>
+        <Ellipse x:Name="elDiamond" HorizontalAlignment="Left" Height="26" Margin="728,320,0,0" Stroke="Black" Fill="#FF87AAEB" VerticalAlignment="Top" Width="26"/>
+        <TextBlock x:Name="tbMeteorite" HorizontalAlignment="Left" Margin="553,320,0,0" TextWrapping="Wrap" Text="?" VerticalAlignment="Top" Width="26" Height="26" Padding="10,5,0,0" Foreground="White" MouseUp="tbMeteorite_MouseUp"/>
+        <TextBlock x:Name="tbShadow" HorizontalAlignment="Left" Margin="611,320,0,0" TextWrapping="Wrap" Text="?" VerticalAlignment="Top" Width="26" Height="26" Padding="10,5,0,0" Foreground="White" MouseUp="tbShadow_MouseUp"/>
+        <TextBlock x:Name="tbGold" HorizontalAlignment="Left" Margin="670,320,0,0" TextWrapping="Wrap" Text="?" VerticalAlignment="Top" Width="26" Height="26" Padding="10,5,0,0" Foreground="White" MouseUp="tbGold_MouseUp"/>
+        <TextBlock x:Name="tbDiamond" HorizontalAlignment="Left" Margin="728,320,0,0" TextWrapping="Wrap" Text="?" VerticalAlignment="Top" Width="26" Height="26" Padding="10,5,0,0" Foreground="White" MouseUp="tbDiamond_MouseUp"/>
+        <!-- #endregion -->
+        
+        <!-- #region No wallet connected bar. -->
+        <TextBlock x:Name="tbNoWallet" HorizontalAlignment="Left" Margin="589,355,0,0" TextWrapping="Wrap" Text="No Wallet Connected" VerticalAlignment="Top" Width="130" Height="26" Padding="10,5,0,0" Foreground="Black" Visibility="Visible"/>
+        <Rectangle x:Name="rectNoWallet" HorizontalAlignment="Left" Height="26" Margin="553,355,0,0" Stroke="Black" Fill="#7FA5A4A4" VerticalAlignment="Top" Width="201" Visibility="Visible" MouseEnter="rectNoWallet_MouseEnter" MouseLeave="rectNoWallet_MouseLeave" MouseLeftButtonDown="rectNoWallet_MouseLeftButtonDown"/>
+        <!-- #endregion -->
+        
+        <!-- #region Card information (god, set, rarity, etc.) -->
+        <Label x:Name="lblCardName" Content="CardName" HorizontalAlignment="Left" Height="39" Margin="20,20,0,0" VerticalAlignment="Top" Width="491" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" FontSize="18"/>
+        <Rectangle x:Name="rectInfo" HorizontalAlignment="Left" Height="98" Margin="31,70,0,0" Stroke="Black" VerticalAlignment="Top" Width="469"/>
+        <TextBlock x:Name="tbSet" HorizontalAlignment="Left" Margin="48,80,0,0" TextWrapping="Wrap" Text="Set: " VerticalAlignment="Top"/>
+        <TextBlock x:Name="tbGod" HorizontalAlignment="Left" Margin="48,100,0,0" TextWrapping="Wrap" Text="God: " VerticalAlignment="Top"/>
+        <TextBlock x:Name="tbQuality" HorizontalAlignment="Left" Margin="48,120,0,0" TextWrapping="Wrap" Text="Quality: " VerticalAlignment="Top"/>
+        <TextBlock x:Name="tbRarity" HorizontalAlignment="Left" Margin="48,140,0,0" TextWrapping="Wrap" Text="Rarity: " VerticalAlignment="Top"/>
+        <TextBlock x:Name="lblSet" HorizontalAlignment="Left" Margin="110,80,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top"/>
+        <TextBlock x:Name="lblGod" HorizontalAlignment="Left" Margin="110,100,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top"/>
+        <ComboBox x:Name="cbQuality" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="110,120,0,0" Height="20" Width="100" SelectionChanged="cbQuality_SelectionChanged"/>
+        <TextBlock x:Name="lblRarity" HorizontalAlignment="Left" Margin="110,140,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top"/>
+        <!--#endregion-->
+        
+        <!-- #region Buy token selector. -->
+        <TextBlock x:Name="lblOffers" HorizontalAlignment="Left" Margin="31,180,0,0" TextWrapping="Wrap" Text="Offers" VerticalAlignment="Top"/>
+        <ComboBox x:Name="cbToken" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="70,180,0,0" Height="20" Width="61" SelectionChanged="cbToken_SelectionChanged"/>
+        <!--#endregion-->
+        
+        <!-- #region Available offers pannel. -->
+        <fa:ImageAwesome x:Name="spinner" Icon="CircleOutlineNotch" Spin="True" SpinDuration="4" Margin="31,202,0,0" Width="50" Height="50" HorizontalAlignment="Left" VerticalAlignment="Top" Visibility="Visible" />
+        <ScrollViewer x:Name="svOrders" HorizontalAlignment="Left" Height="190" Margin="31,202,0,0" VerticalAlignment="Top" Width="469">
+            <WrapPanel x:Name="orderPanel" Margin="0,0,0,0" ScrollViewer.CanContentScroll="True" ScrollViewer.HorizontalScrollBarVisibility="Visible" Width="470" />
+        </ScrollViewer>
+        <!--#endregion-->
+        
+        <!-- #region Buy, sell and transfer buttons. -->
+        <Button x:Name="btnBuy" Content="Buy" HorizontalAlignment="Left" Margin="536,358,0,0" Width="70" VerticalAlignment="Top"/>
+        <Button x:Name="btnOrders" Content="List" HorizontalAlignment="Left" Margin="624,358,0,0" Width="59" VerticalAlignment="Top"/>
+        <Button x:Name="btnTransfer" Content="Transfer" HorizontalAlignment="Left" Margin="700,358,0,0" Width="70" VerticalAlignment="Top"/>
+        <!--#endregion-->
+        
+        <!-- #region Close button. -->
+        <Button x:Name="btnClose" Content="X" HorizontalAlignment="Right" Height="20" Margin="0,0,0,0" VerticalAlignment="Top" Width="20" Click="btnClose_Click"/>
+        <!--#endregion-->
+    </Grid>
+</UserControl>

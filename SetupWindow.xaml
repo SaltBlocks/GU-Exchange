@@ -1,0 +1,32 @@
+﻿<Window x:Class="GU_Exchange.SetupWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:GU_Exchange"
+        mc:Ignorable="d"
+        Title="SetupWindow" WindowStartupLocation="CenterOwner" Background="#FFE4E4E4" ResizeMode="NoResize" SizeToContent="WidthAndHeight">
+    <Grid x:Name="setupGrid" Height="200" Width="365">
+        <Grid x:Name="childGrid">
+            <!-- #region Title label. -->
+            <Label Content="Linked GU account / Wallets" HorizontalAlignment="Center" Margin="0,10,0,0" VerticalAlignment="Top" FontSize="20"/>
+            <!-- #endregion -->
+            <!--#region Link GU account. -->
+            <Label Content="Linked GU account" HorizontalAlignment="Left" Margin="10,52,0,0" VerticalAlignment="Top"/>
+            <TextBox x:Name="txtLinkedAccount" HorizontalAlignment="Left" Margin="125,56,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="230" IsEnabled="False"/>
+            <Button Content="Change" HorizontalAlignment="Left" Margin="125,79,0,0" VerticalAlignment="Top" Width="50" Click="LinkAccount_Click"/>
+            <!--#endregion-->
+            <!--#region Connected Wallet. -->
+            <Label Content="Connected Wallet" HorizontalAlignment="Left" Margin="10,105,0,0" VerticalAlignment="Top"/>
+            <ComboBox x:Name="cbWallets" HorizontalAlignment="Left" Margin="125,107,0,0" VerticalAlignment="Top" Width="230" SelectionChanged="WalletSelector_SelectionChanged"/>
+            <Button Content="New" HorizontalAlignment="Left" Margin="125,134,0,0" VerticalAlignment="Top" Width="50" Click="LinkWallet_Click"/>
+            <Button x:Name="btnExport" Content="Export" HorizontalAlignment="Left" Margin="250,134,0,0" VerticalAlignment="Top" Width="50" Click="ExportWallet_Click"/>
+            <Button Content="Delete" HorizontalAlignment="Left" Margin="305,134,0,0" VerticalAlignment="Top" Width="50" Click="DeleteWallet_Click"/>
+            <!-- #endregion -->
+            <!-- #region General Buttons. -->
+            <Button Content="Save" HorizontalAlignment="Left" Margin="250,170,0,0" VerticalAlignment="Top" Width="50" Click="SaveSettings_Click"/>
+            <Button Content="Close" HorizontalAlignment="Left" Margin="305,170,0,0" VerticalAlignment="Top" Width="50" Click="Close_Click"/>
+            <!-- #endregion -->
+        </Grid>
+    </Grid>
+</Window>
