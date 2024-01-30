@@ -224,14 +224,10 @@ namespace GU_Exchange
         public async Task SetupWalletInfoAsync()
         {
             Wallet? connectedWallet = Wallet.GetConnectedWallet();
-            if (connectedWallet == null)
-            {
-                Console.WriteLine("Null");
-            }
-            else
-            {
-                Console.WriteLine(connectedWallet.Address);
-            }
+
+            Task? updateCardControl = null;
+            if (_cardControl != null)
+                updateCardControl = _cardControl.SetupInventoryAsync();
             if (connectedWallet == null)
             {
                 rectNoWallet.Visibility = Visibility.Visible;
@@ -251,6 +247,8 @@ namespace GU_Exchange
                     Console.WriteLine($"Failed to fetch wallet contents: {e.StackTrace}");
                 }
             }
+            if (updateCardControl != null)
+                await updateCardControl;
         }
 
         #endregion

@@ -121,7 +121,7 @@ namespace GU_Exchange
                 Wallet.SaveWallet(wallet, FS);
                 Settings.SetSetting("ConnectedWallet", tbAddress.Text);
                 Settings.SaveSettings();
-                Wallet.SetConnectedWallet(wallet);
+                await Wallet.SetConnectedWallet(wallet);
             }
             try
             {
@@ -198,7 +198,7 @@ namespace GU_Exchange
                 Wallet.SaveWallet(wallet, FS);
                 Settings.SetSetting("ConnectedWallet", wallet.Address);
                 Settings.SaveSettings();
-                Wallet.SetConnectedWallet(wallet);
+                await Wallet.SetConnectedWallet(wallet);
             }
             try
             {

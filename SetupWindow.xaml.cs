@@ -104,7 +104,7 @@ namespace GU_Exchange
             this.setupGrid.Children.Add(link);
         }
 
-        private async void ExportWallet_Click(object sender, RoutedEventArgs e)
+        private void ExportWallet_Click(object sender, RoutedEventArgs e)
         {
             Wallet? wallet = GetWalletFromPartialAddress((string)cbWallets.SelectedValue);
             if (wallet == null)
@@ -118,8 +118,10 @@ namespace GU_Exchange
             }
 
             bool wasLocked = wallet.IsLocked();
-            UnlockWalletWindow unlockWindow = new UnlockWalletWindow(wallet, false);
-            unlockWindow.Owner = this;
+            UnlockWalletWindow unlockWindow = new UnlockWalletWindow(wallet, false)
+            {
+                Owner = this
+            };
             unlockWindow.ShowDialog();
             if (unlockWindow.Result != UnlockWalletWindow.UnlockResult.Unlock)
             {
@@ -153,7 +155,7 @@ namespace GU_Exchange
 
                     if (Wallet.GetConnectedWallet() == Wallet.wallets[wallet])
                     {
-                        Wallet.SetConnectedWallet(null);
+                        await Wallet.SetConnectedWallet(null);
                         Settings.SetSetting("ConnectedWallet", "None");
                         Settings.SaveSettings();
                         await((MainWindow)Application.Current.MainWindow).SetupWalletInfoAsync();
@@ -201,7 +203,7 @@ namespace GU_Exchange
             string selectedWallet = (string) cbWallets.SelectedValue;
             if (selectedWallet.Length < 13)
             {
-                Wallet.SetConnectedWallet(null);
+                await Wallet.SetConnectedWallet(null);
                 Settings.SetSetting("ConnectedWallet", "None");
                 Settings.SaveSettings();
                 await ((MainWindow)Application.Current.MainWindow).SetupWalletInfoAsync();
@@ -212,7 +214,7 @@ namespace GU_Exchange
             {
                 if (wallet.StartsWith(selectedWallet.Substring(0, 6)) && wallet.EndsWith(selectedWallet.Substring(10, 4)))
                 {
-                    Wallet.SetConnectedWallet(Wallet.wallets[wallet]);
+                    await Wallet.SetConnectedWallet(Wallet.wallets[wallet]);
                     Settings.SetSetting("ConnectedWallet", Wallet.wallets[wallet].Address);
                     Settings.SaveSettings();
                     await ((MainWindow)Application.Current.MainWindow).SetupWalletInfoAsync();

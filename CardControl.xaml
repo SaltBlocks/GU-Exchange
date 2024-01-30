@@ -6,8 +6,12 @@
              xmlns:fa="http://schemas.fontawesome.io/icons/"
              xmlns:local="clr-namespace:GU_Exchange"
              mc:Ignorable="d" 
-             d:DesignHeight="450" d:DesignWidth="800" Background="#FFE4E4E4" MinWidth="580" MinHeight="330" SizeChanged="UserControl_SizeChanged">
+             d:DesignHeight="450" d:DesignWidth="800" Background="#7FE4E4E4" MinWidth="580" MinHeight="330" SizeChanged="UserControl_SizeChanged">
     <Grid x:Name="controlGrid" Height="450" Width="800" MaxWidth="1400" MaxHeight="700">
+        <!--#region Background. -->
+        <Rectangle x:Name="rectBackground" HorizontalAlignment="Center" Height="450" VerticalAlignment="Center" Width="800" Fill="#FFE4E4E4" Stroke="Black"/>
+        <!-- #endregion -->
+        
         <!-- #region Card Image and number of cards owned per qualities. -->
         <Image x:Name="imgCard" HorizontalAlignment="Left" Height="300" Margin="536,20,0,0" VerticalAlignment="Top" Width="235"/>
         <Ellipse x:Name="elMeteorite" HorizontalAlignment="Left" Height="26" Margin="553,320,0,0" Stroke="Black" Fill="#FF6E3741" VerticalAlignment="Top" Width="26"/>
@@ -19,12 +23,12 @@
         <TextBlock x:Name="tbGold" HorizontalAlignment="Left" Margin="670,320,0,0" TextWrapping="Wrap" Text="?" VerticalAlignment="Top" Width="26" Height="26" Padding="10,5,0,0" Foreground="White" MouseUp="tbGold_MouseUp"/>
         <TextBlock x:Name="tbDiamond" HorizontalAlignment="Left" Margin="728,320,0,0" TextWrapping="Wrap" Text="?" VerticalAlignment="Top" Width="26" Height="26" Padding="10,5,0,0" Foreground="White" MouseUp="tbDiamond_MouseUp"/>
         <!-- #endregion -->
-        
+
         <!-- #region No wallet connected bar. -->
         <TextBlock x:Name="tbNoWallet" HorizontalAlignment="Left" Margin="589,355,0,0" TextWrapping="Wrap" Text="No Wallet Connected" VerticalAlignment="Top" Width="130" Height="26" Padding="10,5,0,0" Foreground="Black" Visibility="Visible"/>
         <Rectangle x:Name="rectNoWallet" HorizontalAlignment="Left" Height="26" Margin="553,355,0,0" Stroke="Black" Fill="#7FA5A4A4" VerticalAlignment="Top" Width="201" Visibility="Visible" MouseEnter="rectNoWallet_MouseEnter" MouseLeave="rectNoWallet_MouseLeave" MouseLeftButtonDown="rectNoWallet_MouseLeftButtonDown"/>
         <!-- #endregion -->
-        
+
         <!-- #region Card information (god, set, rarity, etc.) -->
         <Label x:Name="lblCardName" Content="CardName" HorizontalAlignment="Left" Height="39" Margin="20,20,0,0" VerticalAlignment="Top" Width="491" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" FontSize="18"/>
         <Rectangle x:Name="rectInfo" HorizontalAlignment="Left" Height="98" Margin="31,70,0,0" Stroke="Black" VerticalAlignment="Top" Width="469"/>
@@ -37,25 +41,25 @@
         <ComboBox x:Name="cbQuality" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="110,120,0,0" Height="20" Width="100" SelectionChanged="cbQuality_SelectionChanged"/>
         <TextBlock x:Name="lblRarity" HorizontalAlignment="Left" Margin="110,140,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top"/>
         <!--#endregion-->
-        
+
         <!-- #region Buy token selector. -->
         <TextBlock x:Name="lblOffers" HorizontalAlignment="Left" Margin="31,180,0,0" TextWrapping="Wrap" Text="Offers" VerticalAlignment="Top"/>
         <ComboBox x:Name="cbToken" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="70,180,0,0" Height="20" Width="61" SelectionChanged="cbToken_SelectionChanged"/>
         <!--#endregion-->
-        
+
         <!-- #region Available offers pannel. -->
         <fa:ImageAwesome x:Name="spinner" Icon="CircleOutlineNotch" Spin="True" SpinDuration="4" Margin="31,202,0,0" Width="50" Height="50" HorizontalAlignment="Left" VerticalAlignment="Top" Visibility="Visible" />
         <ScrollViewer x:Name="svOrders" HorizontalAlignment="Left" Height="190" Margin="31,202,0,0" VerticalAlignment="Top" Width="469">
             <WrapPanel x:Name="orderPanel" Margin="0,0,0,0" ScrollViewer.CanContentScroll="True" ScrollViewer.HorizontalScrollBarVisibility="Visible" Width="470" />
         </ScrollViewer>
         <!--#endregion-->
-        
+
         <!-- #region Buy, sell and transfer buttons. -->
-        <Button x:Name="btnBuy" Content="Buy" HorizontalAlignment="Left" Margin="536,358,0,0" Width="70" VerticalAlignment="Top"/>
-        <Button x:Name="btnOrders" Content="List" HorizontalAlignment="Left" Margin="624,358,0,0" Width="59" VerticalAlignment="Top"/>
-        <Button x:Name="btnTransfer" Content="Transfer" HorizontalAlignment="Left" Margin="700,358,0,0" Width="70" VerticalAlignment="Top"/>
+        <Button x:Name="btnBuy" Content="Buy" HorizontalAlignment="Left" Margin="536,358,0,0" Width="70" VerticalAlignment="Top" Visibility="Collapsed"/>
+        <Button x:Name="btnOrders" Content="List" HorizontalAlignment="Left" Margin="624,358,0,0" Width="59" VerticalAlignment="Top" Visibility="Collapsed"/>
+        <Button x:Name="btnTransfer" Content="Transfer" HorizontalAlignment="Left" Margin="700,358,0,0" Width="70" VerticalAlignment="Top" Visibility="Collapsed"/>
         <!--#endregion-->
-        
+
         <!-- #region Close button. -->
         <Button x:Name="btnClose" Content="X" HorizontalAlignment="Right" Height="20" Margin="0,0,0,0" VerticalAlignment="Top" Width="20" Click="btnClose_Click"/>
         <!--#endregion-->

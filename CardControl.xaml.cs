@@ -104,18 +104,35 @@ namespace GU_Exchange
         /// TODO implement loading of wallet contents.
         /// </summary>
         /// <returns>Task setting up the cards owned display</returns>
-        private async Task SetupInventoryAsync()
+        public async Task SetupInventoryAsync()
         {
             // Show the No wallet connected message if no wallet it connected.
-            if (Wallet.GetConnectedWallet() == null)
+            Wallet? connectedWallet = Wallet.GetConnectedWallet();
+            if (connectedWallet == null)
             {
                 this.rectNoWallet.Visibility = Visibility.Visible;
                 this.tbNoWallet.Visibility = Visibility.Visible;
                 this.btnBuy.Visibility = Visibility.Collapsed;
                 this.btnOrders.Visibility = Visibility.Collapsed;
                 this.btnTransfer.Visibility = Visibility.Collapsed;
+                this.tbNoWallet.Text = "No Wallet Connected";
                 return;
             }
+            if (!await connectedWallet.IsLinkedAsync())
+            {
+                this.rectNoWallet.Visibility = Visibility.Visible;
+                this.tbNoWallet.Visibility = Visibility.Visible;
+                this.btnBuy.Visibility = Visibility.Collapsed;
+                this.btnOrders.Visibility = Visibility.Collapsed;
+                this.btnTransfer.Visibility = Visibility.Collapsed;
+                this.tbNoWallet.Text = "Link wallet to IMX";
+                return;
+            }
+            this.rectNoWallet.Visibility = Visibility.Collapsed;
+            this.tbNoWallet.Visibility = Visibility.Collapsed;
+            this.btnBuy.Visibility = Visibility.Visible;
+            this.btnOrders.Visibility = Visibility.Visible;
+            this.btnTransfer.Visibility = Visibility.Visible;
         }
 
         /// <summary>
@@ -324,6 +341,8 @@ namespace GU_Exchange
 
             this.controlGrid.Height = height;
             this.controlGrid.Width = width;
+            this.rectBackground.Height = Math.Min(height, 700);
+            this.rectBackground.Width = Math.Min(width, 1400);
 
             this.lblCardName.Width = 491f / 800f * width;
             this.rectInfo.Margin = new Thickness(31f / 800f * width, 70f / 450f * height, 0, 0);
@@ -411,11 +430,23 @@ namespace GU_Exchange
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void rectNoWallet_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        private async void rectNoWallet_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
-            SetupWalletWindow setup = new();
-            setup.Owner = (MainWindow)Application.Current.MainWindow;
-            setup.ShowDialog();
+            Wallet? connectedWallet = Wallet.GetConnectedWallet();
+            if (connectedWallet == null)
+            {
+                SetupWalletWindow setup = new();
+                setup.Owner = (MainWindow)Application.Current.MainWindow;
+                setup.ShowDialog();
+                return;
+            }
+            if (await connectedWallet.RequestLinkAsync((MainWindow)Application.Current.MainWindow))
+            {
+                MessageWindow window = new MessageWindow($"Wallet linked to IMX successfully.", "Link wallet", MessageType.INFORM);
+                window.Owner = (MainWindow)Application.Current.MainWindow;
+                window.ShowDialog();
+                await SetupInventoryAsync();
+            }
         }
 
         #endregion

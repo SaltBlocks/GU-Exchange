@@ -452,10 +452,14 @@ namespace GU_Exchange
                     SignatureRequestServer.StopServer();
                 }
                 bool isLinked = await wallet.IsLinkedAsync();
-                Console.WriteLine(isLinked);
                 if (!isLinked)
                 {
-                    Console.WriteLine(await wallet.RequestLinkAsync((MainWindow)Application.Current.MainWindow));
+                    if (await wallet.RequestLinkAsync((MainWindow)Application.Current.MainWindow))
+                    {
+                        MessageWindow window = new MessageWindow($"Wallet linked to IMX successfully.", "Link wallet", MessageType.INFORM);
+                        window.Owner = (MainWindow)Application.Current.MainWindow;
+                        window.ShowDialog();
+                    }
                 }
             } else
             {
@@ -470,6 +474,7 @@ namespace GU_Exchange
         public string Address { get; protected set; }
         protected byte[] _salt;
         protected string _lockedKey;
+        [NonSerialized()] private bool? _isLinked;
         [NonSerialized()] protected byte[]? _key;
         [NonSerialized()] protected Dictionary<string, decimal> _tokenAmountOwned;
         #endregion
@@ -592,6 +597,7 @@ namespace GU_Exchange
         /// <returns></returns>
         public async Task<bool> IsLinkedAsync()
         {
+            if (_isLinked != null) return (bool)_isLinked;
             string linkData;
             try {
                 HttpResponseMessage response = await ResourceManager.Client.GetAsync($"https://api.x.immutable.com/v1/users/{(Address)}");
@@ -612,7 +618,11 @@ namespace GU_Exchange
                 return false;
             }
             if (linkData.Contains("Account not found"))
+            {
+                _isLinked = false;
                 return false;
+            }
+            _isLinked = true;
             return true;
         }
 
@@ -649,7 +659,10 @@ namespace GU_Exchange
                 if (reLock)
                     LockWallet();
                 if (!result.Contains("tx_hash"))
+                {
                     return false;
+                }
+                _isLinked = true;
                 return true;
             });
             return await linkWallet;
