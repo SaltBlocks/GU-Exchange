@@ -55,7 +55,7 @@
         <!--#endregion-->
 
         <!-- #region Buy, sell and transfer buttons. -->
-        <Button x:Name="btnBuy" Content="Buy" HorizontalAlignment="Left" Margin="536,358,0,0" Width="70" VerticalAlignment="Top" Visibility="Collapsed"/>
+        <Button x:Name="btnBuy" Content="Buy" HorizontalAlignment="Left" Margin="536,358,0,0" Width="70" VerticalAlignment="Top" Visibility="Collapsed" Click="btnBuy_Click"/>
         <Button x:Name="btnOrders" Content="List" HorizontalAlignment="Left" Margin="624,358,0,0" Width="59" VerticalAlignment="Top" Visibility="Collapsed"/>
         <Button x:Name="btnTransfer" Content="Transfer" HorizontalAlignment="Left" Margin="700,358,0,0" Width="70" VerticalAlignment="Top" Visibility="Collapsed"/>
         <!--#endregion-->

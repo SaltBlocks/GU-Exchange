@@ -45,6 +45,7 @@ namespace GU_Exchange
     {
         #region Class Properties.
         public string Name;
+        public string Quality;
         public string Currency;
         public string Seller;
         public UInt64 OrderID;
@@ -66,6 +67,25 @@ namespace GU_Exchange
         {
             // Collect data pertaining to the order from the json object.
             string? name = (string?)json_order.SelectToken("sell.data.properties.name");
+            string? image_url = (string?)json_order.SelectToken("sell.data.properties.image_url");
+            switch (image_url?.Substring(image_url.Length - 1))
+            {
+                case "4":
+                    Quality = "Meteorite";
+                    break;
+                case "3":
+                    Quality = "Shadow";
+                    break;
+                case "2":
+                    Quality = "Gold";
+                    break;
+                case "1":
+                    Quality = "Diamond";
+                    break;
+                default:
+                    Quality = "None";
+                    break;
+            }
             string? seller = (string?)json_order["user"];
             UInt64? orderID = (UInt64?)json_order.SelectToken("order_id");
             string? tokenAddress = (string?)json_order.SelectToken("sell.data.token_address");

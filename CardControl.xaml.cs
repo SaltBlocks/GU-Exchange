@@ -32,6 +32,7 @@ namespace GU_Exchange
         private readonly Task<BitmapSource?> _imgShadow;
         private readonly Task<BitmapSource?> _imgGold;
         private readonly Task<BitmapSource?> _imgDiamond;
+        private BuyControl _buyControl;
         #endregion
 
         #region Default Constructor
@@ -133,6 +134,42 @@ namespace GU_Exchange
             this.btnBuy.Visibility = Visibility.Visible;
             this.btnOrders.Visibility = Visibility.Visible;
             this.btnTransfer.Visibility = Visibility.Visible;
+
+            string cardData = HttpUtility.UrlEncode("{\"proto\":[\"" + _cardID + "\"]}");
+            string urlInventory = $"https://api.x.immutable.com/v1/assets?page_size=10&user={connectedWallet.Address}&metadata={cardData}&sell_orders=true";
+            string cardString = await ResourceManager.Client.GetStringAsync(urlInventory);
+            // Extract cards owned from the return data.
+            JObject? jsonData = (JObject?)JsonConvert.DeserializeObject(cardString);
+            if (jsonData == null)
+                return;
+            JToken? result = jsonData["result"];
+            if (result == null)
+                return;
+            int meteorite = 0;
+            int shadow = 0;
+            int gold = 0;
+            int diamond = 0;
+            foreach (JToken card in result)
+            {
+                JToken? metaData = card["metadata"];
+                if (metaData == null)
+                    continue;
+                string? quality = (string?)metaData["quality"];
+                if (quality == null)
+                    continue;
+                if (quality.Equals("Meteorite"))
+                    meteorite++;
+                else if (quality.Equals("Shadow"))
+                    shadow++;
+                else if (quality.Equals("Gold"))
+                    gold++;
+                else if (quality.Equals("Diamond"))
+                    diamond++;
+            }
+            this.tbMeteorite.Text = meteorite.ToString();
+            this.tbShadow.Text = shadow.ToString();
+            this.tbGold.Text = gold.ToString();
+            this.tbDiamond.Text = diamond.ToString();
         }
 
         /// <summary>
@@ -333,6 +370,7 @@ namespace GU_Exchange
         {
             double width = Math.Min(this.ActualWidth, 1400);
             double height = width / 800 * 450;
+            Console.WriteLine($"{width}x{height}");
             if (height > this.ActualHeight)
             {
                 height = Math.Min(this.ActualHeight, 940);
@@ -493,5 +531,17 @@ namespace GU_Exchange
         }
 
         #endregion
+
+        private void btnBuy_Click(object sender, RoutedEventArgs e)
+        {
+            if (orderPanel.Children.Count == 0)
+            {
+                return;
+            }
+            Order cheapestOffer = ((OrderBar)orderPanel.Children[0]).Order;
+            _buyControl = new BuyControl(cheapestOffer, this.imgCard.Source);
+            _buyControl.Margin = new Thickness(0, 0, 0, 0);
+            this.controlGrid.Children.Add(_buyControl);
+        }
     }
 }
