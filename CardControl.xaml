@@ -6,62 +6,206 @@
              xmlns:fa="http://schemas.fontawesome.io/icons/"
              xmlns:local="clr-namespace:GU_Exchange"
              mc:Ignorable="d" 
-             d:DesignHeight="450" d:DesignWidth="800" Background="#7FE4E4E4" MinWidth="580" MinHeight="330" SizeChanged="UserControl_SizeChanged">
-    <Grid x:Name="controlGrid" Height="450" Width="800" MaxWidth="1400" MaxHeight="700">
-        <!--#region Background. -->
-        <Rectangle x:Name="rectBackground" HorizontalAlignment="Center" Height="450" VerticalAlignment="Center" Width="800" Fill="#FFE4E4E4" Stroke="Black"/>
+             d:DesignHeight="450" d:DesignWidth="800" Background="#7FE4E4E4" MinWidth="580" MinHeight="330" SizeChanged="UserControl_SizeChanged" MouseDown="UserControl_MouseDown">
+    <!-- #region Window Resources. -->
+    <UserControl.Resources>
+        <local:HalfValueConverter x:Key="HalfConverter"/>
+    </UserControl.Resources>
+    <!-- #endregion -->
+    <Grid x:Name="controlGrid" Background="#FFE4E4E4">
+        <!-- #region Grid Layout. -->
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="3*"/>
+            <ColumnDefinition Width="1*"/>
+        </Grid.ColumnDefinitions>
         <!-- #endregion -->
-        
-        <!-- #region Card Image and number of cards owned per qualities. -->
-        <Image x:Name="imgCard" HorizontalAlignment="Left" Height="300" Margin="536,20,0,0" VerticalAlignment="Top" Width="235"/>
-        <Ellipse x:Name="elMeteorite" HorizontalAlignment="Left" Height="26" Margin="553,320,0,0" Stroke="Black" Fill="#FF6E3741" VerticalAlignment="Top" Width="26"/>
-        <Ellipse x:Name="elShadow" HorizontalAlignment="Left" Height="26" Margin="611,320,0,0" Stroke="Black" Fill="#FF3C2850" VerticalAlignment="Top" Width="26"/>
-        <Ellipse x:Name="elGold" HorizontalAlignment="Left" Height="26" Margin="670,320,0,0" Stroke="Black" Fill="#FFDCA000" VerticalAlignment="Top" Width="26"/>
-        <Ellipse x:Name="elDiamond" HorizontalAlignment="Left" Height="26" Margin="728,320,0,0" Stroke="Black" Fill="#FF87AAEB" VerticalAlignment="Top" Width="26"/>
-        <TextBlock x:Name="tbMeteorite" HorizontalAlignment="Left" Margin="553,320,0,0" TextWrapping="Wrap" Text="?" VerticalAlignment="Top" Width="26" Height="26" Padding="10,5,0,0" Foreground="White" MouseUp="tbMeteorite_MouseUp"/>
-        <TextBlock x:Name="tbShadow" HorizontalAlignment="Left" Margin="611,320,0,0" TextWrapping="Wrap" Text="?" VerticalAlignment="Top" Width="26" Height="26" Padding="10,5,0,0" Foreground="White" MouseUp="tbShadow_MouseUp"/>
-        <TextBlock x:Name="tbGold" HorizontalAlignment="Left" Margin="670,320,0,0" TextWrapping="Wrap" Text="?" VerticalAlignment="Top" Width="26" Height="26" Padding="10,5,0,0" Foreground="White" MouseUp="tbGold_MouseUp"/>
-        <TextBlock x:Name="tbDiamond" HorizontalAlignment="Left" Margin="728,320,0,0" TextWrapping="Wrap" Text="?" VerticalAlignment="Top" Width="26" Height="26" Padding="10,5,0,0" Foreground="White" MouseUp="tbDiamond_MouseUp"/>
+        <!-- #region Grid Border. -->
+        <Border BorderBrush="Black" BorderThickness="1" Grid.ColumnSpan="2"/>
+        <!--#endregion-->
+        <!-- #region Left panel for displaying card info and sell offers. -->
+        <Grid x:Name="gridLeft" Grid.Column="0">
+            <!--#region Grid Layout. -->
+            <Grid.RowDefinitions>
+                <RowDefinition Height="2*"/>
+                <RowDefinition Height="120"/>
+                <RowDefinition Height="30"/>
+                <RowDefinition Height="8*"/>
+            </Grid.RowDefinitions>
+            <!-- #endregion -->
+            <!-- #region Card Name. -->
+            <Viewbox Grid.Row="0" Margin="10,10,10,10">
+                <TextBlock x:Name="tbCardName" Text="CardName" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
+            </Viewbox>
+            <!-- #endregion -->
+            <!--#region Card Info. -->
+            <Grid x:Name="gridCardInfo" Grid.Row="1" Margin="10,0,10,0">
+                <!--#region Grid Layout. -->
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="1*"/>
+                    <RowDefinition Height="1*"/>
+                    <RowDefinition Height="1*"/>
+                    <RowDefinition Height="1*"/>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="1*"/>
+                    <ColumnDefinition Width="5*"/>
+                </Grid.ColumnDefinitions>
+                <!-- #endregion -->
+                <Rectangle x:Name="rectInfo" Grid.RowSpan="4" Grid.ColumnSpan="2" Stroke="Black"/>
+                <Viewbox Margin="5,5,5,5" Grid.Row="0">
+                    <TextBlock Text="Set: " HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
+                </Viewbox>
+                <Viewbox Margin="5,5,5,5" Grid.Row="1">
+                    <TextBlock Text="God: " HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
+                </Viewbox>
+                <Viewbox Margin="5,5,5,5" Grid.Row="2">
+                    <TextBlock Text="Quality: " HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
+                </Viewbox>
+                <Viewbox Margin="5,5,5,5" Grid.Row="3">
+                    <TextBlock Text="Rarity: " HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
+                </Viewbox>
+
+                <Viewbox Grid.Row="0" Grid.Column="1" Margin="5,5,5,5" HorizontalAlignment="Left">
+                    <TextBlock x:Name="tbSet" Text="SET" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
+                </Viewbox>
+                <Viewbox Grid.Row="1" Grid.Column="1" Margin="5,5,5,5" HorizontalAlignment="Left">
+                    <TextBlock x:Name="tbGod" Text="GOD" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
+                </Viewbox>
+                <Viewbox Grid.Row="2" Grid.Column="1" Margin="5,5,5,5" HorizontalAlignment="Left">
+                    <ComboBox x:Name="cbQuality" SelectionChanged="cbQuality_SelectionChanged"/>
+                </Viewbox>
+                <Viewbox Grid.Row="3" Grid.Column="1" Margin="5,5,5,5" HorizontalAlignment="Left">
+                    <TextBlock x:Name="tbRarity" Text="RARITY" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
+                </Viewbox>
+            </Grid>
+            <!-- #endregion -->
+            <!-- #region Currency selector.-->
+            <Grid x:Name="gridCurrencySelector" Grid.Row="2" Margin="10,0,10,0">
+                <!--#region Grid Layout. -->
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="1*"/>
+                    <ColumnDefinition Width="5*"/>
+                </Grid.ColumnDefinitions>
+                <!-- #endregion -->
+                <Viewbox Margin="5,10,5,0" Grid.Column="0">
+                    <TextBlock Text="Offers: " HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
+                </Viewbox>
+                <Viewbox Grid.Column="1" Margin="5,10,5,0" HorizontalAlignment="Left">
+                    <ComboBox x:Name="cbToken" SelectionChanged="cbToken_SelectionChanged"/>
+                </Viewbox>
+            </Grid>
+            <!-- #endregion -->
+            <!-- #region Sell offers. -->
+            <Grid x:Name="gridOfferInfo" Grid.Row="3" Margin="10,10,10,10">
+                <!-- #region Grid Border. -->
+                <Border BorderBrush="Black" BorderThickness="1" Grid.ColumnSpan="2"/>
+                <!--#endregion-->
+                <fa:ImageAwesome x:Name="spinner" Icon="CircleOutlineNotch" Spin="True" SpinDuration="4" Width="50" Height="50" Visibility="Visible" />
+                <ScrollViewer x:Name="svOrders">
+                    <WrapPanel x:Name="orderPanel" Margin="0,0,0,0" ScrollViewer.CanContentScroll="True" ScrollViewer.HorizontalScrollBarVisibility="Visible" SizeChanged="orderPanel_SizeChanged" />
+                </ScrollViewer>
+            </Grid>
+            <!-- #endregion -->
+        </Grid>
         <!-- #endregion -->
+        <!-- #region Right panel for card image, wallet image and buttons. -->
+        <Grid x:Name="gridRight" Grid.Column="1">
+            <!--#region Grid Layout. -->
+            <Grid.RowDefinitions>
+                <RowDefinition Height="2*"/>
+                <RowDefinition Height="1*"/>
+            </Grid.RowDefinitions>
+            <!-- #endregion -->
+            <!-- #region Card Image -->
+            <Image x:Name="imgCard" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Grid.Row="0"/>
+            <!-- #endregion -->
+            <!-- #region Close button. -->
+            <Button x:Name="btnClose" Content="X" HorizontalAlignment="Right" Height="20" Grid.Row="0" Margin="0,0,0,0" VerticalAlignment="Top" Width="20" Click="btnClose_Click"/>
+            <!--#endregion-->
+            <!-- #region Wallet info and buttons. -->
+            <Grid x:Name="gridWalletInfo" Grid.Row="1">
+                <!-- #region Grid Layout. -->
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="1*"/>
+                    <RowDefinition Height="2*"/>
+                </Grid.RowDefinitions>
+                <!-- #endregion -->
+                <Grid x:Name="gridWalletContents" Grid.Row="0">
+                    <!-- #region Grid Layout. -->
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="1*"/>
+                        <ColumnDefinition Width="1*"/>
+                        <ColumnDefinition Width="1*"/>
+                        <ColumnDefinition Width="1*"/>
+                    </Grid.ColumnDefinitions>
+                    <!-- #endregion -->
+                    <!-- #region No wallet connected bar. -->
+                    <Grid x:Name="gridNoWallet" Grid.ColumnSpan="4" Height="{Binding ActualHeight, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Grid}}, Converter={StaticResource HalfConverter}}" Margin="10,0,10,0" Visibility="Collapsed">
+                        <Rectangle x:Name="rectNoWallet" Stroke="Black" Fill="#7FA5A4A4" MouseEnter="rectNoWallet_MouseEnter" MouseLeave="rectNoWallet_MouseLeave" MouseLeftButtonDown="rectNoWallet_MouseLeftButtonDown"/>
+                        <Viewbox>
+                            <TextBlock x:Name="tbConnectWallet" Text="No Wallet Connected" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black" Margin="10,0,10,0"/>
+                        </Viewbox>
+                    </Grid>
+                    <!-- #endregion -->
+                    <!-- #region Wallet content display. -->
+                    <!-- Meteorite -->
+                    <Grid x:Name="gridMeteorite" Grid.Column="0" >
+                        <Grid Width="{Binding ActualWidth, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Grid}}, Converter={StaticResource HalfConverter}}" Height="{Binding ActualWidth, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Grid}}, Converter={StaticResource HalfConverter}}" MouseDown="tbMeteorite_MouseDown">
+                            <Ellipse Stroke="Black" Fill="#FF6E3741"/>
+                            <Viewbox>
+                                <TextBlock x:Name="tbMeteorite" Text="?" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="White"/>
+                            </Viewbox>
+                        </Grid>
+                    </Grid>
 
-        <!-- #region No wallet connected bar. -->
-        <TextBlock x:Name="tbNoWallet" HorizontalAlignment="Left" Margin="589,355,0,0" TextWrapping="Wrap" Text="No Wallet Connected" VerticalAlignment="Top" Width="130" Height="26" Padding="10,5,0,0" Foreground="Black" Visibility="Visible"/>
-        <Rectangle x:Name="rectNoWallet" HorizontalAlignment="Left" Height="26" Margin="553,355,0,0" Stroke="Black" Fill="#7FA5A4A4" VerticalAlignment="Top" Width="201" Visibility="Visible" MouseEnter="rectNoWallet_MouseEnter" MouseLeave="rectNoWallet_MouseLeave" MouseLeftButtonDown="rectNoWallet_MouseLeftButtonDown"/>
+                    <!-- Shadow -->
+                    <Grid x:Name="gridShadow" Grid.Column="1">
+                        <Grid Width="{Binding ActualWidth, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Grid}}, Converter={StaticResource HalfConverter}}" Height="{Binding ActualWidth, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Grid}}, Converter={StaticResource HalfConverter}}" MouseDown="tbShadow_MouseDown">
+                            <Ellipse Stroke="Black" Fill="#FF3C2850"/>
+                            <Viewbox>
+                                <TextBlock x:Name="tbShadow" Text="?" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="White"/>
+                            </Viewbox>
+                        </Grid>
+                    </Grid>
+
+                    <!-- Gold -->
+                    <Grid x:Name="gridGold" Grid.Column="2">
+                        <Grid Width="{Binding ActualWidth, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Grid}}, Converter={StaticResource HalfConverter}}" Height="{Binding ActualWidth, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Grid}}, Converter={StaticResource HalfConverter}}" MouseDown="tbGold_MouseDown">
+                            <Ellipse Stroke="Black" Fill="#FFDCA000"/>
+                            <Viewbox>
+                                <TextBlock x:Name="tbGold" Text="?" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="White"/>
+                            </Viewbox>
+                        </Grid>
+                    </Grid>
+
+                    <!-- Diamond -->
+                    <Grid x:Name="gridDiamond" Grid.Column="3">
+                        <Grid Width="{Binding ActualWidth, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Grid}}, Converter={StaticResource HalfConverter}}" Height="{Binding ActualWidth, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Grid}}, Converter={StaticResource HalfConverter}}" MouseDown="tbDiamond_MouseDown">
+                            <Ellipse Stroke="Black" Fill="#FF87AAEB"/>
+                            <Viewbox>
+                                <TextBlock x:Name="tbDiamond" Text="?" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="White"/>
+                            </Viewbox>
+                        </Grid>
+                    </Grid>
+                    <!-- #endregion -->
+                </Grid>
+                <Grid x:Name="gridWalletActions" Grid.Row="1">
+                    <!-- #region Grid Layout. -->
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="1*"/>
+                        <ColumnDefinition Width="1*"/>
+                        <ColumnDefinition Width="1*"/>
+                    </Grid.ColumnDefinitions>
+                    <!-- #endregion -->
+                    <!-- #region Action buttons. -->
+                    <Button x:Name="btnBuy" Content="Buy" Grid.Column="0" Height="20" Margin="5,0,5,0" Click="btnBuy_Click"/>
+                    <Button x:Name="btnOrders" Content="List" Grid.Column="1" Height="20" Margin="5,0,5,0"/>
+                    <Button x:Name="btnTransfer" Content="Transfer" Grid.Column="2" Height="20" Margin="5,0,5,0"/>
+                    <!-- #endregion -->
+                </Grid>
+            </Grid>
+            <!-- #endregion -->
+        </Grid>
         <!-- #endregion -->
-
-        <!-- #region Card information (god, set, rarity, etc.) -->
-        <Label x:Name="lblCardName" Content="CardName" HorizontalAlignment="Left" Height="39" Margin="20,20,0,0" VerticalAlignment="Top" Width="491" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" FontSize="18"/>
-        <Rectangle x:Name="rectInfo" HorizontalAlignment="Left" Height="98" Margin="31,70,0,0" Stroke="Black" VerticalAlignment="Top" Width="469"/>
-        <TextBlock x:Name="tbSet" HorizontalAlignment="Left" Margin="48,80,0,0" TextWrapping="Wrap" Text="Set: " VerticalAlignment="Top"/>
-        <TextBlock x:Name="tbGod" HorizontalAlignment="Left" Margin="48,100,0,0" TextWrapping="Wrap" Text="God: " VerticalAlignment="Top"/>
-        <TextBlock x:Name="tbQuality" HorizontalAlignment="Left" Margin="48,120,0,0" TextWrapping="Wrap" Text="Quality: " VerticalAlignment="Top"/>
-        <TextBlock x:Name="tbRarity" HorizontalAlignment="Left" Margin="48,140,0,0" TextWrapping="Wrap" Text="Rarity: " VerticalAlignment="Top"/>
-        <TextBlock x:Name="lblSet" HorizontalAlignment="Left" Margin="110,80,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top"/>
-        <TextBlock x:Name="lblGod" HorizontalAlignment="Left" Margin="110,100,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top"/>
-        <ComboBox x:Name="cbQuality" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="110,120,0,0" Height="20" Width="100" SelectionChanged="cbQuality_SelectionChanged"/>
-        <TextBlock x:Name="lblRarity" HorizontalAlignment="Left" Margin="110,140,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top"/>
-        <!--#endregion-->
-
-        <!-- #region Buy token selector. -->
-        <TextBlock x:Name="lblOffers" HorizontalAlignment="Left" Margin="31,180,0,0" TextWrapping="Wrap" Text="Offers" VerticalAlignment="Top"/>
-        <ComboBox x:Name="cbToken" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="70,180,0,0" Height="20" Width="61" SelectionChanged="cbToken_SelectionChanged"/>
-        <!--#endregion-->
-
-        <!-- #region Available offers pannel. -->
-        <fa:ImageAwesome x:Name="spinner" Icon="CircleOutlineNotch" Spin="True" SpinDuration="4" Margin="31,202,0,0" Width="50" Height="50" HorizontalAlignment="Left" VerticalAlignment="Top" Visibility="Visible" />
-        <ScrollViewer x:Name="svOrders" HorizontalAlignment="Left" Height="190" Margin="31,202,0,0" VerticalAlignment="Top" Width="469">
-            <WrapPanel x:Name="orderPanel" Margin="0,0,0,0" ScrollViewer.CanContentScroll="True" ScrollViewer.HorizontalScrollBarVisibility="Visible" Width="470" />
-        </ScrollViewer>
-        <!--#endregion-->
-
-        <!-- #region Buy, sell and transfer buttons. -->
-        <Button x:Name="btnBuy" Content="Buy" HorizontalAlignment="Left" Margin="536,358,0,0" Width="70" VerticalAlignment="Top" Visibility="Collapsed" Click="btnBuy_Click"/>
-        <Button x:Name="btnOrders" Content="List" HorizontalAlignment="Left" Margin="624,358,0,0" Width="59" VerticalAlignment="Top" Visibility="Collapsed"/>
-        <Button x:Name="btnTransfer" Content="Transfer" HorizontalAlignment="Left" Margin="700,358,0,0" Width="70" VerticalAlignment="Top" Visibility="Collapsed"/>
-        <!--#endregion-->
-
-        <!-- #region Close button. -->
-        <Button x:Name="btnClose" Content="X" HorizontalAlignment="Right" Height="20" Margin="0,0,0,0" VerticalAlignment="Top" Width="20" Click="btnClose_Click"/>
-        <!--#endregion-->
     </Grid>
 </UserControl>

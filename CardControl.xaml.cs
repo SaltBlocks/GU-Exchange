@@ -3,6 +3,7 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Net.Http;
 using System.Threading;
@@ -10,6 +11,7 @@ using System.Threading.Tasks;
 using System.Web;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -32,11 +34,9 @@ namespace GU_Exchange
         private readonly Task<BitmapSource?> _imgShadow;
         private readonly Task<BitmapSource?> _imgGold;
         private readonly Task<BitmapSource?> _imgDiamond;
-        private BuyControl _buyControl;
         #endregion
 
         #region Default Constructor
-
         /// <summary>
         /// Default contructor for a cardcontrol.
         /// Will automatically load and cache images corresponding to the given cardID.
@@ -45,7 +45,7 @@ namespace GU_Exchange
         public CardControl(int CardID)
         {
             InitializeComponent();
-            this._cardID = CardID;
+            _cardID = CardID;
             s_imgTokenSource.Cancel();
             s_imgTokenSource = new();
             s_ordersTokenSource.Cancel();
@@ -60,11 +60,9 @@ namespace GU_Exchange
             cbToken.SelectedIndex = 0;
             _ = SetupAsync();
         }
-
         #endregion
 
         #region Data loading and setup
-
         /// <summary>
         /// Setup method for the image, inventory and orders.
         /// </summary>
@@ -87,10 +85,10 @@ namespace GU_Exchange
             if (dict != null && dict.ContainsKey(_cardID))
             {
                 CardData data = dict[_cardID];
-                this.lblCardName.Content = data.Name;
-                this.lblSet.Text = Capitalize(data.Set);
-                this.lblGod.Text = Capitalize(data.God);
-                this.lblRarity.Text = Capitalize(data.Rarity);
+                this.tbCardName.Text = data.Name;
+                this.tbSet.Text = Capitalize(data.Set);
+                this.tbGod.Text = Capitalize(data.God);
+                this.tbRarity.Text = Capitalize(data.Rarity);
                 this.cbQuality.Items.Add("Meteorite");
                 this.cbQuality.Items.Add("Shadow");
                 this.cbQuality.Items.Add("Gold");
@@ -111,29 +109,38 @@ namespace GU_Exchange
             Wallet? connectedWallet = Wallet.GetConnectedWallet();
             if (connectedWallet == null)
             {
-                this.rectNoWallet.Visibility = Visibility.Visible;
-                this.tbNoWallet.Visibility = Visibility.Visible;
-                this.btnBuy.Visibility = Visibility.Collapsed;
-                this.btnOrders.Visibility = Visibility.Collapsed;
-                this.btnTransfer.Visibility = Visibility.Collapsed;
-                this.tbNoWallet.Text = "No Wallet Connected";
+                gridNoWallet.Visibility = Visibility.Visible;
+                gridMeteorite.Visibility = Visibility.Collapsed;
+                gridShadow.Visibility = Visibility.Collapsed;
+                gridGold.Visibility = Visibility.Collapsed;
+                gridDiamond.Visibility = Visibility.Collapsed;
+                btnBuy.IsEnabled = false;
+                btnOrders.IsEnabled = false;
+                btnTransfer.IsEnabled = false;
+                tbConnectWallet.Text = "No Wallet Connected";
                 return;
             }
             if (!await connectedWallet.IsLinkedAsync())
             {
-                this.rectNoWallet.Visibility = Visibility.Visible;
-                this.tbNoWallet.Visibility = Visibility.Visible;
-                this.btnBuy.Visibility = Visibility.Collapsed;
-                this.btnOrders.Visibility = Visibility.Collapsed;
-                this.btnTransfer.Visibility = Visibility.Collapsed;
-                this.tbNoWallet.Text = "Link wallet to IMX";
+                gridNoWallet.Visibility = Visibility.Visible;
+                gridMeteorite.Visibility = Visibility.Collapsed;
+                gridShadow.Visibility = Visibility.Collapsed;
+                gridGold.Visibility = Visibility.Collapsed;
+                gridDiamond.Visibility = Visibility.Collapsed;
+                btnBuy.IsEnabled = false;
+                btnOrders.IsEnabled = false;
+                btnTransfer.IsEnabled = false;
+                tbConnectWallet.Text = "Link wallet to IMX";
                 return;
             }
-            this.rectNoWallet.Visibility = Visibility.Collapsed;
-            this.tbNoWallet.Visibility = Visibility.Collapsed;
-            this.btnBuy.Visibility = Visibility.Visible;
-            this.btnOrders.Visibility = Visibility.Visible;
-            this.btnTransfer.Visibility = Visibility.Visible;
+            gridNoWallet.Visibility = Visibility.Collapsed;
+            gridMeteorite.Visibility = Visibility.Visible;
+            gridShadow.Visibility = Visibility.Visible;
+            gridGold.Visibility = Visibility.Visible;
+            gridDiamond.Visibility = Visibility.Visible;
+            btnBuy.IsEnabled = true;
+            btnOrders.IsEnabled = true;
+            btnTransfer.IsEnabled = true;
 
             string cardData = HttpUtility.UrlEncode("{\"proto\":[\"" + _cardID + "\"]}");
             string urlInventory = $"https://api.x.immutable.com/v1/assets?page_size=10&user={connectedWallet.Address}&metadata={cardData}&sell_orders=true";
@@ -205,8 +212,8 @@ namespace GU_Exchange
                 if (wallet != null)
                 {
                     //TODO setup fetching of cards in users wallet.
-                    //string urlInventory = $"https://api.x.immutable.com/v3/orders?buy_token_address={token_str}&direction=asc&include_fees=true&order_by=buy_quantity&page_size=50&sell_metadata={cardData}&sell_token_address=0xacb3c6a43d15b907e8433077b6d38ae40936fe2c&status=active&user={wallet.address}";
-                    //strInventory = await ResourceManager.client.GetStringAsync(urlInventory);
+                    string urlInventory = $"https://api.x.immutable.com/v3/orders?buy_token_address={token_str}&direction=asc&include_fees=true&order_by=buy_quantity&page_size=50&sell_metadata={cardData}&sell_token_address=0xacb3c6a43d15b907e8433077b6d38ae40936fe2c&status=active&user={wallet.Address}";
+                    strInventory = await ResourceManager.Client.GetStringAsync(urlInventory);
                 }
                 strOrderBook = await taskGetOrders;
             }
@@ -272,10 +279,10 @@ namespace GU_Exchange
             {
                 OrderBar bar = new OrderBar(order);
                 // TODO once user wallets are implemented, change the color of orders posted by the user to make them easy to identify.
-                //if (Wallet.ConnectedWallet != null && order.seller.Equals(Wallet.ConnectedWallet.address))
-                //{
-                //    bar.setBackgroundColor("#3F00FF00");
-                //}
+                if (wallet != null && order.Seller.Equals(wallet.Address))
+                {
+                    bar.setBackgroundColor("#3F00FF00");
+                }
                 this.orderPanel.Children.Add(bar);
                 bar.Width = 450f / 800f * this.controlGrid.ActualWidth;
             }
@@ -316,7 +323,7 @@ namespace GU_Exchange
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void tbMeteorite_MouseUp(object sender, MouseButtonEventArgs e)
+        private void tbMeteorite_MouseDown(object sender, MouseButtonEventArgs e)
         {
             this.cbQuality.SelectedIndex = 0;
         }
@@ -326,7 +333,7 @@ namespace GU_Exchange
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void tbShadow_MouseUp(object sender, MouseButtonEventArgs e)
+        private void tbShadow_MouseDown(object sender, MouseButtonEventArgs e)
         {
             this.cbQuality.SelectedIndex = 1;
         }
@@ -336,7 +343,7 @@ namespace GU_Exchange
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void tbGold_MouseUp(object sender, MouseButtonEventArgs e)
+        private void tbGold_MouseDown(object sender, MouseButtonEventArgs e)
         {
             this.cbQuality.SelectedIndex = 2;
         }
@@ -346,7 +353,7 @@ namespace GU_Exchange
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void tbDiamond_MouseUp(object sender, MouseButtonEventArgs e)
+        private void tbDiamond_MouseDown(object sender, MouseButtonEventArgs e)
         {
             this.cbQuality.SelectedIndex = 3;
         }
@@ -362,81 +369,60 @@ namespace GU_Exchange
         }
 
         /// <summary>
-        /// Adjust the size of elements on the CardControl when the window size is changed.
+        /// Adjust the size of the CardControl when the window size is changed.
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
         private void UserControl_SizeChanged(object sender, SizeChangedEventArgs e)
         {
-            double width = Math.Min(this.ActualWidth, 1400);
-            double height = width / 800 * 450;
-            Console.WriteLine($"{width}x{height}");
+            double maxWidth = 1400;
+            double maxHeight = 700;
+
+            double width = Math.Min(this.ActualWidth, maxWidth);
+            double height = width / 2;
+
             if (height > this.ActualHeight)
             {
-                height = Math.Min(this.ActualHeight, 940);
-                width = height / 450 * 800;
+                height = Math.Min(this.ActualHeight, maxHeight);
+                width = height * 2;
             }
 
             this.controlGrid.Height = height;
             this.controlGrid.Width = width;
-            this.rectBackground.Height = Math.Min(height, 700);
-            this.rectBackground.Width = Math.Min(width, 1400);
+        }
 
-            this.lblCardName.Width = 491f / 800f * width;
-            this.rectInfo.Margin = new Thickness(31f / 800f * width, 70f / 450f * height, 0, 0);
-            this.rectInfo.Width = 469f / 800f * width;
-            this.rectInfo.Height = 98f / 450f * height;
+        /// <summary>
+        /// Close the window when the user clicks on the greyed out background.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void UserControl_MouseDown(object sender, MouseButtonEventArgs e)
+        {
+            // Get the position of the mouse click relative to the controlGrid
+            Point clickPoint = e.GetPosition(controlGrid);
 
-            this.tbSet.Margin = new Thickness(48f / 800f * width, 80f / 450f * height, 0, 0);
-            this.tbGod.Margin = new Thickness(48f / 800f * width, 100f / 450f * height, 0, 0);
-            this.tbQuality.Margin = new Thickness(48f / 800f * width, 120f / 450f * height, 0, 0);
-            this.tbRarity.Margin = new Thickness(48f / 800f * width, 140f / 450f * height, 0, 0);
+            // Check if the click occurred on the controlGrid
+            if (clickPoint.X >= 0 && clickPoint.X < controlGrid.ActualWidth &&
+                clickPoint.Y >= 0 && clickPoint.Y < controlGrid.ActualHeight)
+            {
+                return;
+            }
+            // Click occurred outside controlGrid, you can call your function here
+            ((MainWindow)Application.Current.MainWindow).CloseCardControl();
+        }
 
-            this.lblSet.Margin = new Thickness(110f / 800f * width, 80f / 450f * height, 0, 0);
-            this.lblGod.Margin = new Thickness(110f / 800f * width, 100f / 450f * height, 0, 0);
-            this.cbQuality.Margin = new Thickness(110f / 800f * width, 120f / 450f * height, 0, 0);
-            this.lblRarity.Margin = new Thickness(110f / 800f * width, 140f / 450f * height, 0, 0);
-            this.lblOffers.Margin = new Thickness(31f / 800f * width, 180f / 450f * height, 0, 0);
-            this.cbToken.Margin = new Thickness(70f / 800f * width, 180f / 450f * height, 0, 0);
-
-            
-            this.svOrders.Margin = new Thickness(31f / 800f * width, 202f / 450f * height, 0, 0);
-            this.svOrders.Width = 469f / 800f * width;
-            this.svOrders.Height = 190f / 450f * height;
-            this.orderPanel.Width = 470f / 800f * width;
+        /// <summary>
+        /// Update the size of the order selection bars when the window is resized.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void orderPanel_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
             for (int i = 0; i < orderPanel.Children.Count; i++)
             {
                 var child = (OrderBar)orderPanel.Children[i];
-                child.Width = 450f / 800f * width;
+                child.Width = orderPanel.ActualWidth;
             }
-            this.spinner.Margin = new Thickness(31f / 800f * width + this.svOrders.Width / 2 - 25, 202f / 450f * height + this.svOrders.Height / 2 - 25, 0, 0);
-
-            this.imgCard.Margin = new Thickness(536f / 800f * width, 20, 0, 0);
-            this.imgCard.Width = 235f / 800f * width;
-            this.imgCard.Height = 300f / 450f * height;
-
-            this.tbMeteorite.Margin = new Thickness(553f / 800f * width, 320f / 450f * height, 0, 0);
-            this.tbShadow.Margin = new Thickness(611f / 800f * width, 320f / 450f * height, 0, 0);
-            this.tbGold.Margin = new Thickness(670f / 800f * width, 320f / 450f * height, 0, 0);
-            this.tbDiamond.Margin = new Thickness(728f / 800f * width, 320f / 450f * height, 0, 0);
-            this.elMeteorite.Margin = new Thickness(553f / 800f * width, 320f / 450f * height, 0, 0);
-            this.elShadow.Margin = new Thickness(611f / 800f * width, 320f / 450f * height, 0, 0);
-            this.elGold.Margin = new Thickness(670f / 800f * width, 320f / 450f * height, 0, 0);
-            this.elDiamond.Margin = new Thickness(728f / 800f * width, 320f / 450f * height, 0, 0);
-
-            double btnWidth = 59d / 800d * width;
-            double centerPos = 611f / 800f * width + 13;
-            double NoWalletTextPosX = (611f / 800f * width + 26 + 670f / 800f * width) / 2 - this.tbNoWallet.Width / 2;
-            this.btnBuy.Margin = new Thickness(centerPos - btnWidth - 20, 358f / 450f * height, 0, 0);
-            this.btnOrders.Margin = new Thickness(centerPos, 358f / 450f * height, 0, 0);
-            this.btnTransfer.Margin = new Thickness(centerPos + btnWidth + 20, 358f / 450f * height, 0, 0);
-            this.tbNoWallet.Margin = new Thickness(NoWalletTextPosX, 355f / 450f * height, 0, 0);
-            this.rectNoWallet.Margin = new Thickness(centerPos - btnWidth - 20, 355f / 450f * height, 0, 0);
-            this.rectNoWallet.Width = btnWidth * 3 + 40;
-
-            this.btnBuy.Width = btnWidth;
-            this.btnOrders.Width = btnWidth;
-            this.btnTransfer.Width = btnWidth;
         }
 
         /// <summary>
@@ -487,6 +473,24 @@ namespace GU_Exchange
             }
         }
 
+        /// <summary>
+        /// Prompt the user to buy the cheapest card on sale.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void btnBuy_Click(object sender, RoutedEventArgs e)
+        {
+            if (orderPanel.Children.Count == 0)
+            {
+                return;
+            }
+            Order cheapestOffer = ((OrderBar)orderPanel.Children[0]).Order;
+            BuyControl _buyControl = new BuyControl(cheapestOffer, this.imgCard.Source);
+            _buyControl.Margin = new Thickness(0, 0, 0, 0);
+            Grid.SetColumnSpan(_buyControl, 2);
+            controlGrid.Children.Add(_buyControl);
+        }
+
         #endregion
 
         #region Supporting methods
@@ -531,17 +535,22 @@ namespace GU_Exchange
         }
 
         #endregion
+    }
 
-        private void btnBuy_Click(object sender, RoutedEventArgs e)
+    public class HalfValueConverter : IValueConverter
+    {
+        public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
         {
-            if (orderPanel.Children.Count == 0)
+            if (value is double)
             {
-                return;
+                return (double)value / 2;
             }
-            Order cheapestOffer = ((OrderBar)orderPanel.Children[0]).Order;
-            _buyControl = new BuyControl(cheapestOffer, this.imgCard.Source);
-            _buyControl.Margin = new Thickness(0, 0, 0, 0);
-            this.controlGrid.Children.Add(_buyControl);
+            return value;
+        }
+
+        public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
+        {
+            throw new NotImplementedException();
         }
     }
 }

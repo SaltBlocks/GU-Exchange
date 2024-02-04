@@ -128,7 +128,7 @@ namespace GU_Exchange
         /// <summary>
         /// Opens the card trading window if the card is clicked.
         /// </summary>
-        private void UserControl_MouseUp(object sender, MouseButtonEventArgs e)
+        private void UserControl_MouseDown(object sender, MouseButtonEventArgs e)
         {
             ((MainWindow)Application.Current.MainWindow).OpenCardControl(CardID);
         }

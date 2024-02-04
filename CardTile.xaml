@@ -5,7 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:GU_Exchange"
              mc:Ignorable="d" 
-             d:DesignHeight="400" d:DesignWidth="273" MouseEnter="UserControl_MouseEnter" MouseLeave="UserControl_MouseLeave" MouseUp="UserControl_MouseUp">
+             d:DesignHeight="400" d:DesignWidth="273" MouseEnter="UserControl_MouseEnter" MouseLeave="UserControl_MouseLeave" MouseDown="UserControl_MouseDown">
     <Grid>
         <!-- #region Tile highlighting -->
         <Rectangle x:Name="rectHighlight" HorizontalAlignment="Left" Height="370" Margin="20,0,0,0" Stroke="Black" VerticalAlignment="Top" Width="233" Fill="#7FA5A4A4" Visibility="Hidden"/>

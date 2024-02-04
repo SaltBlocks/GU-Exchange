@@ -21,28 +21,51 @@ namespace GU_Exchange
     /// </summary>
     public partial class BuyControl : UserControl
     {
+        #region Class Properties
         private Order _order;
+        #endregion
 
+        #region Default Constructor
+        /// <summary>
+        /// Create a BuyControl that can be used to purchase the provided Order.
+        /// </summary>
+        /// <param name="order">The order that should be purchased.</param>
+        /// <param name="image">An image to display to the user.</param>
         public BuyControl(Order order, ImageSource image)
         {
             InitializeComponent();
             _order = order;
             DataContext = new PurchaseConfirmationViewModel(order, image);
         }
+        #endregion
 
+        #region Event Handlers
+        /// <summary>
+        /// Handle the user clicking the buy button.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void BuyButton_Click(object sender, RoutedEventArgs e)
         {
             // Handle buy button click logic
             MessageBox.Show("Buy button clicked!");
         }
 
+        /// <summary>
+        /// Handle the user clicking cancel by closing the usercontrol.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void CancelButton_Click(object sender, RoutedEventArgs e)
         {
-            // Handle cancel button click logic
-            MessageBox.Show("Cancel button clicked!");
             this.Visibility = Visibility.Collapsed;
         }
 
+        /// <summary>
+        /// Close the usercontrol if the user clicks outside of it.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void UserControl_MouseDown(object sender, MouseButtonEventArgs e)
         {
             // Get the position of the mouse click relative to the buyGrid
@@ -57,8 +80,12 @@ namespace GU_Exchange
             // Click occurred outside buyGrid, you can call your function here
             this.Visibility = Visibility.Collapsed;
         }
+        #endregion
     }
 
+    /// <summary>
+    /// Class used to display details about the order to the user.
+    /// </summary>
     public class PurchaseConfirmationViewModel : INotifyPropertyChanged
     {
         private string cardName;
