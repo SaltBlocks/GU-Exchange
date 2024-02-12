@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -91,8 +92,9 @@ namespace GU_Exchange
         /// </summary>
         public MainWindow()
         {
+            Stopwatch loadTime = Stopwatch.StartNew();
             InitializeComponent();
-            Console.WriteLine(Directory.GetCurrentDirectory());
+            //Console.WriteLine(Directory.GetCurrentDirectory());
             _cardList = new List<CardData>();
             _cardTiles = new List<CardTile>();
             _checkBoxes = new CheckBoxItems();
@@ -101,6 +103,8 @@ namespace GU_Exchange
             SetupSearchAsync();
             SetupAsync();
             _ = SetupWalletInfoAsync();
+            loadTime.Stop();
+            Console.WriteLine($"{loadTime.ElapsedMilliseconds}ms to load main window.");
         }
         #endregion
 
@@ -215,10 +219,17 @@ namespace GU_Exchange
             if (inv == null)
                 return;
             await inv.SetApolloIDAsync(Settings.GetApolloID());
+            await RefreshTilesAsync();
+        }
+
+        public async Task RefreshTilesAsync()
+        {
+            List<Task> tasks = new List<Task>();
             foreach (CardTile tile in _cardTiles)
             {
-                _ = tile.UpdateTileTextAsync(); // Update the text of all tiles to reflect the newly linked inventory.
+                tasks.Add(tile.UpdateTileTextAsync()); // Update the text of all tiles to reflect the newly linked inventory.
             }
+            await Task.WhenAll(tasks);
         }
 
         public async Task SetupWalletInfoAsync()
@@ -231,25 +242,36 @@ namespace GU_Exchange
             if (connectedWallet == null)
             {
                 rectNoWallet.Visibility = Visibility.Visible;
-                lblNoWallet.Visibility = Visibility.Visible;
+                tbNoWallet.Visibility = Visibility.Visible;
             } else
             {
                 rectNoWallet.Visibility= Visibility.Collapsed;
-                lblNoWallet.Visibility = Visibility.Collapsed;
-                try
-                {
-                    Console.WriteLine($"Fetching wallet content for wallet {connectedWallet.Address}");
-                    txtEth.Text = $"{Math.Round(await connectedWallet.GetTokenAmountAsync("ETH"), 6)} ETH";
-                    txtGods.Text = $"{Math.Round(await connectedWallet.GetTokenAmountAsync("GODS"), 2)} GODS";
-                    txtImx.Text = $"{Math.Round(await connectedWallet.GetTokenAmountAsync("IMX"), 2)} IMX";
-                } catch (HttpRequestException e)
-                {
-                    Console.WriteLine($"Failed to fetch wallet contents: {e.StackTrace}");
-                }
+                tbNoWallet.Visibility = Visibility.Collapsed;
+                await RefreshWalletInfoAsync();
             }
             if (updateCardControl != null)
                 await updateCardControl;
         }
+
+        public async Task RefreshWalletInfoAsync()
+        {
+            Wallet? connectedWallet = Wallet.GetConnectedWallet();
+            if (connectedWallet == null)
+                return;
+            try
+            {
+                Console.WriteLine($"Fetching wallet content for wallet {connectedWallet.Address}");
+                txtEth.Text = $"{Math.Round(await connectedWallet.GetTokenAmountAsync("ETH"), 6)} ETH";
+                txtGods.Text = $"{Math.Round(await connectedWallet.GetTokenAmountAsync("GODS"), 2)} GODS";
+                txtImx.Text = $"{Math.Round(await connectedWallet.GetTokenAmountAsync("IMX"), 2)} IMX";
+            }
+            catch (HttpRequestException e)
+            {
+                Console.WriteLine($"Failed to fetch wallet contents: {e.StackTrace}");
+            }
+        }
+
+
 
         #endregion
 
@@ -355,10 +377,10 @@ namespace GU_Exchange
         /// <param name="e"></param>
         private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
         {
-            this.cardPanel.MaxWidth = e.NewSize.Width;
+            /*this.cardPanel.MaxWidth = e.NewSize.Width;
             this.searchBar.Width = e.NewSize.Width - 35;
             this.rectNoWallet.Width = e.NewSize.Width - 95;
-            this.lblNoWallet.Width = e.NewSize.Width - 95;
+            this.tbNoWallet.Width = e.NewSize.Width - 95;
             ComboBox[] searchBoxes = { cbSet, cbGod, cbRarity, cbTribe, cbCost, cbSort };
             Label[] searchLabels = { lblSet, lblGod, lblRarity, lblTribe, lblCost, lblSort };
             for (int i = 0; i < searchBoxes.Length; i++)
@@ -376,7 +398,7 @@ namespace GU_Exchange
             this.imgImx.Margin = new Thickness(3 * this.searchBar.Width / 4 - 70, 25, 0, 0);
             this.txtImx.Margin = new Thickness(3 * this.searchBar.Width / 4 - 35, 25, 0, 0);
             this.rectNoWallet.Width = e.NewSize.Width - 35;
-            this.lblNoWallet.Width = e.NewSize.Width - 35;
+            this.tbNoWallet.Width = e.NewSize.Width - 35;*/
         }
 
         /// <summary>
@@ -530,7 +552,9 @@ namespace GU_Exchange
         public void OpenCardControl(int CardID)
         {
             _cardControl = new CardControl(CardID);
-            _cardControl.Margin = new Thickness(0, 60, 0, 0);
+            _cardControl.Margin = new Thickness(0, 0, 0, 0);
+            Grid.SetRow(_cardControl, 2);
+            Grid.SetRowSpan(_cardControl, 4);
             this.MainGrid.Children.Add(_cardControl);
         }
 

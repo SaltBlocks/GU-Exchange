@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
@@ -14,6 +15,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using static GU_Exchange.IMXlib;
 
 namespace GU_Exchange
 {
@@ -29,12 +31,18 @@ namespace GU_Exchange
         {
             InitializeComponent();
             this.parent = parent;
-            char[] data = new char[65];
-            IMXlib.eth_generate_key(data, data.Length);
-            _privateKey = new string(data).Trim('\0');
-            char[] address = new char[43];
-            IMXlib.eth_get_address((_privateKey + "\0").ToCharArray(), address, address.Length);
-            tbAddress.Text = new string(address).Trim('\0');
+            IntPtr keyBuffer = Marshal.AllocHGlobal(67);
+            string? result = IntPtrToString(eth_generate_key(keyBuffer, 67));
+            Marshal.FreeHGlobal(keyBuffer);
+            if (result == null)
+                throw new NullReferenceException("IMXLib returned a null reference while generating an address.");
+            _privateKey = result;
+
+            IntPtr addressBuffer = Marshal.AllocHGlobal(43);
+            string? address = IntPtrToString(eth_get_address(_privateKey, addressBuffer, 43));
+            if (address == null)
+                throw new NullReferenceException("IMXLib returned a null reference while generating an address.");
+            tbAddress.Text = address;
         }
 
         #region Event Handlers for starting window.
@@ -84,12 +92,18 @@ namespace GU_Exchange
         /// <param name="e"></param>
         private void Regenerate_Click(object sender, RoutedEventArgs e)
         {
-            char[] data = new char[65];
-            IMXlib.eth_generate_key(data, data.Length);
-            _privateKey = new string(data).Trim('\0');
-            char[] address = new char[43];
-            IMXlib.eth_get_address((_privateKey + "\0").ToCharArray(), address, address.Length);
-            tbAddress.Text = new string(address).Trim('\0');
+            IntPtr keyBuffer = Marshal.AllocHGlobal(67);
+            string? result = IntPtrToString(eth_generate_key(keyBuffer, 67));
+            Marshal.FreeHGlobal(keyBuffer);
+            if (result == null)
+                throw new NullReferenceException("IMXLib returned a null reference while generating an address.");
+            _privateKey = result;
+
+            IntPtr addressBuffer = Marshal.AllocHGlobal(43);
+            string? address = IntPtrToString(eth_get_address(_privateKey, addressBuffer, 43));
+            if (address == null)
+                throw new NullReferenceException("IMXLib returned a null reference while generating an address.");
+            tbAddress.Text = address;
         }
 
         /// <summary>
@@ -156,9 +170,11 @@ namespace GU_Exchange
                 _privateKey = _privateKey.Substring(2);
             if (IsHexadecimal(_privateKey))
             {
-                char[] address = new char[43];
-                IMXlib.eth_get_address(("0x" + _privateKey + "\0").ToCharArray(), address, address.Length);
-                lblAddressImport.Text = new string(address).Trim('\0');
+                IntPtr addressBuffer = Marshal.AllocHGlobal(43);
+                string? address = IntPtrToString(eth_get_address("0x" + _privateKey, addressBuffer, 43));
+                if (address == null)
+                    throw new NullReferenceException("IMXLib returned a null reference while generating an address.");
+                lblAddressImport.Text = address;
                 txtErrorImport.Text = "";
                 this.btnImportWallet.IsEnabled = true;
             }
@@ -192,7 +208,7 @@ namespace GU_Exchange
             {
                 Directory.CreateDirectory("wallets");
             }
-            Wallet wallet = new Wallet("0x" + _privateKey, pbPassword.Password);
+            Wallet wallet = new Wallet("0x" + _privateKey, pbPasswordImport.Password);
             using (FileStream FS = new FileStream($"wallets\\{wallet.Address}.wlt", FileMode.Create))
             {
                 Wallet.SaveWallet(wallet, FS);

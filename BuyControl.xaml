@@ -17,21 +17,28 @@
                 </Grid.ColumnDefinitions>
                 <!-- #endregion -->
                 <!-- #region Purchase details. -->
-                <StackPanel Grid.Column="0" Margin="10" VerticalAlignment="Center" HorizontalAlignment="Center">
+                <StackPanel x:Name="loadingPanel" VerticalAlignment="Center" HorizontalAlignment="Center" Visibility="Collapsed">
+                    <fa:ImageAwesome x:Name="spinner" Icon="CircleOutlineNotch" Spin="True" SpinDuration="4" Width="70" Height="70" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Visible" />
+                    <fa:ImageAwesome x:Name="success" Icon="CheckCircle" Width="70" Height="70" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" />
+                    <fa:ImageAwesome x:Name="error" Icon="TimesCircle" Width="70" Height="70" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" />
+                    <TextBlock x:Name="tbStatus" Text="Waiting for wallet..." Margin="10" FontWeight="Bold" TextWrapping="Wrap" />
+                    <Button x:Name="btnClose" Content="Close" Width="75" Height="25" Click="CloseButton_Click" Visibility="Collapsed" />
+                </StackPanel>
+                <StackPanel x:Name="userChoicePanel" Grid.Column="0" Margin="10" VerticalAlignment="Center" HorizontalAlignment="Center" Visibility="Visible">
                     <!-- #region Information text. -->
                     <TextBlock Text="Card Name:" FontWeight="Bold" />
-                    <TextBox Text="{Binding CardName}" Width="200" Margin="0,0,0,10" />
+                    <TextBox Text="{Binding CardName}" Width="200" Margin="0,0,0,10" IsReadOnly="True" />
 
                     <TextBlock Text="Quality:" FontWeight="Bold" />
-                    <TextBox Text="{Binding CardQuality}" Width="200" Margin="0,0,0,10" />
+                    <TextBox Text="{Binding CardQuality}" Width="200" Margin="0,0,0,10" IsReadOnly="True" />
 
                     <TextBlock Text="Price:" FontWeight="Bold" />
-                    <TextBox Text="{Binding CardPrice}" Width="200" Margin="0,0,0,10" />
+                    <TextBox Text="{Binding CardPrice}" Width="200" Margin="0,0,0,10" IsReadOnly="True" />
                     <!-- #endregion -->
                     <!-- #region Buttons. -->
                     <StackPanel HorizontalAlignment="Center">
                         <Button Content="Buy" Width="75" Height="25" Margin="0,10" Click="BuyButton_Click" />
-                        <Button Content="Cancel" Width="75" Height="25" Margin="0,5" Click="CancelButton_Click" />
+                        <Button Content="Cancel" Width="75" Height="25" Margin="0,5" Click="CloseButton_Click" />
                     </StackPanel>
                     <!-- #endregion -->
                 </StackPanel>

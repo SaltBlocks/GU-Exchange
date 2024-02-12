@@ -16,9 +16,14 @@ using System.Net;
 using System.Runtime.Serialization;
 using System.Security.Policy;
 using System.Windows;
+using System.Windows.Controls;
+using static GU_Exchange.IMXlib;
 
 namespace GU_Exchange
 {
+    /// <summary>
+    /// Used to store price and address data of a token that can be traded on IMX.
+    /// </summary>
     public class Token
     {
         #region Class Properties
@@ -27,6 +32,7 @@ namespace GU_Exchange
         public decimal? Value { get; set; }
         #endregion
 
+        #region Default Constructor.
         /// <summary>
         /// Class for storing information regarding currencies used for trading on IMX.
         /// </summary>
@@ -39,8 +45,12 @@ namespace GU_Exchange
             this.Address = address;
             this.Value = value;
         }
+        #endregion
     }
 
+    /// <summary>
+    /// Used to store order data on the IMX public orderbook.
+    /// </summary>
     public class Order
     {
         #region Class Properties.
@@ -419,7 +429,6 @@ namespace GU_Exchange
                     {
                         Wallet wlt = Wallet.LoadWallet(File.Open(wallet, FileMode.Open));
                         wallets.Add(wlt.Address, wlt);
-                        Console.WriteLine($"{wlt.Address}, Locked: {wlt.IsLocked()}, Webwallet: {wlt is WebWallet}");
                     }
                     catch (Exception e)
                     {
@@ -435,6 +444,11 @@ namespace GU_Exchange
         #endregion
 
         #region Get/Set connected wallet.
+        
+        /// <summary>
+        /// Load the default <see cref="Wallet"/> as is currently defined in the user settings.
+        /// </summary>
+        /// <returns>The default wallet</returns>
         private static Wallet? SetupConnectedWallet()
         {
             string address = Settings.GetSetting("ConnectedWallet");
@@ -453,11 +467,20 @@ namespace GU_Exchange
             return null;
         }
 
+        /// <summary>
+        /// Get the currently connected <see cref="Wallet"/>.
+        /// </summary>
+        /// <returns></returns>
         public static Wallet? GetConnectedWallet()
         {
             return s_connectedWallet;
         }
 
+        /// <summary>
+        /// Set the currently connected wallet and start/stof the local <see cref="SignatureRequestServer"/> depending on whether or not this is a <see cref="WebWallet"/>. 
+        /// </summary>
+        /// <param name="wallet"></param>
+        /// <returns></returns>
         public static async Task SetConnectedWallet(Wallet? wallet)
         {
             if (wallet != null)
@@ -612,7 +635,7 @@ namespace GU_Exchange
 
         #region IMX link status.
         /// <summary>
-        /// Check if this wallet is linked to IMX.
+        /// Check if this <see cref="Wallet"/> is linked to IMX.
         /// </summary>
         /// <returns></returns>
         public async Task<bool> IsLinkedAsync()
@@ -646,6 +669,12 @@ namespace GU_Exchange
             return true;
         }
 
+        /// <summary>
+        /// Request that the user link this wallet to IMX.
+        /// </summary>
+        /// <param name="parent">The window used to center the request window on.</param>
+        /// <returns></returns>
+        /// <exception cref="NullReferenceException">Thrown if IMXlib does not return any data. This should never happen.</exception>
         virtual public async Task<bool> RequestLinkAsync(Window parent)
         {
             MessageWindow window = new MessageWindow("Before your wallet can be used to trade on IMX, it must be linked to the platform.\nWould you like to link it now?", "Link wallet", MessageType.CONFIRM);
@@ -672,10 +701,11 @@ namespace GU_Exchange
 
             Task<bool> linkWallet = Task.Run(() =>
             {
-                char[] data = new char[500];
-                IMXlib.imx_register_address((GetPrivateKey() + "\0").ToCharArray(), data, data.Length);
-                string result = new string(data).Trim('\0');
-                Console.WriteLine(result);
+                IntPtr resultBuffer = Marshal.AllocHGlobal(500);
+                string? result = IntPtrToUtf8String(imx_register_address(GetPrivateKey(), resultBuffer, 500));
+                Marshal.FreeHGlobal(resultBuffer);
+                if (result == null)
+                    throw new NullReferenceException("IMXLib returned a null reference while registering an address.");
                 if (reLock)
                     LockWallet();
                 if (!result.Contains("tx_hash"))
@@ -733,29 +763,134 @@ namespace GU_Exchange
         }
         #endregion
 
+        #region Modify Wallet contents.
+        /// <summary>
+        /// Reduce the total amount of a specific token owned by this <see cref="Wallet"/> on the client side.
+        /// </summary>
+        /// <param name="token_name">The name of the token to reduce the amount of</param>
+        /// <param name="amount">The amount to reduce it by.</param>
+        public void DeductTokenAmount(string tokenName, decimal amount)
+        {
+            if (!_tokenAmountOwned.ContainsKey(tokenName))
+            {
+                return; // Cannot deduct below 0;
+            }
+            decimal amountOwned = _tokenAmountOwned[tokenName] - amount;
+            if (amountOwned < 0)
+                amountOwned = 0;
+            _tokenAmountOwned[tokenName] = amountOwned;
+        }
+        #endregion
+
+        #region IMX trading.
+        /// <summary>
+        /// Request the user to buy a specific <see cref="Order"/>.
+        /// This will purchase immediately if the private key for the <see cref="Wallet"/> is unlocked and available.
+        /// </summary>
+        /// <param name="parent"></param>
+        /// <param name="order"></param>
+        /// <param name="tbStatus"></param>
+        /// <returns></returns>
+        virtual public async Task<bool> RequestBuyOrder(Window parent, Order order, TextBlock tbStatus)
+        {
+            tbStatus.Text = "Waiting for wallet to be unlocked...";
+            bool reLock = false;
+            if (IsLocked())
+            {
+                UnlockWalletWindow unlockWindow = new UnlockWalletWindow(this);
+                unlockWindow.Owner = parent;
+                unlockWindow.ShowDialog();
+                if (unlockWindow.Result == UnlockWalletWindow.UnlockResult.Cancel)
+                {
+                    tbStatus.Text = "Purchase cancelled";
+                    return false;
+                }
+                if (unlockWindow.Result == UnlockWalletWindow.UnlockResult.Relock)
+                    reLock = true;
+            }
+
+            tbStatus.Text = "Submitting order to IMX...";
+            Task<string?> purchaseOrder = Task.Run(() =>
+            {
+                int bufferSize = 1024;
+                IntPtr resultBuffer = Marshal.AllocHGlobal(bufferSize);
+                IntPtr resultPtr = imx_buy_order(order.OrderID.ToString(), (double)order.PriceTotal(), new Fee[0], 0, this.GetPrivateKey(), resultBuffer, bufferSize);
+                string? result = IMXlib.IntPtrToString(resultPtr);
+                Marshal.FreeHGlobal(resultBuffer);
+                return result;
+            });
+            string? result = await purchaseOrder;
+
+            if (reLock)
+                LockWallet();
+
+            // Handle the result
+            if (result == null)
+            {
+                tbStatus.Text = "An unknown error occurred";
+                return false;
+            }
+
+            if (!result.Contains("trade_id"))
+            {
+                JObject? jsonResult = (JObject?)JsonConvert.DeserializeObject(result);
+                string? message = (string?)jsonResult?.SelectToken("message");
+                if (message == null) 
+                {
+                    tbStatus.Text = "An unknown error occurred";
+                    return false;
+                }
+                tbStatus.Text = message;
+                return false;
+            }
+            tbStatus.Text = "Purchase complete";
+            return true;
+        }
+        #endregion
+
         #region Supporting functions.
+        /// <summary>
+        /// Calculate the address belonging to this wallet.
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="NullReferenceException"></exception>
         virtual protected string CalculateAddress()
         {
-            char[] address = new char[43];
-            IMXlib.eth_get_address((GetPrivateKey() + "\0").ToCharArray(), address, address.Length);
-            return new string(address).Trim('\0');
+            IntPtr addressBuffer = Marshal.AllocHGlobal(43);
+            string? address = IntPtrToString(eth_get_address(GetPrivateKey(), addressBuffer, 43));
+            if (address == null)
+                throw new NullReferenceException("IMXLib returned a null reference while generating an address.");
+            return address;
         }
         #endregion
     }
 
+    /// <summary>
+    /// Used to interact with a wallet in the browser like MetaMask.
+    /// </summary>
     [Serializable()]
     internal class WebWallet : Wallet
     {
-        public WebWallet(string privateKey, string address, string password = "password") : base(privateKey, password)
+        #region Default Constructor.
+        /// <summary>
+        /// Generate a new webwallet, instead of a private key, the signature to the IMX seed message is provided.
+        /// </summary>
+        /// <param name="privateKey"></param>
+        /// <param name="address"></param>
+        /// <param name="password"></param>
+        public WebWallet(string imxSeedSignature, string address, string password = "password") : base(imxSeedSignature, password)
         {
             this.Address = address;
         }
-         protected override string CalculateAddress()
-        {
-            // Do nothing, we can't calculate the address for this wallet.
-            return "";
-        }
+        #endregion
 
+        #region IMX link status.
+        /// <summary>
+        /// Request that the user link this wallet to IMX.
+        /// </summary>
+        /// <param name="parent"></param>
+        /// <returns></returns>
+        /// <exception cref="NullReferenceException"></exception>
         public override async Task<bool> RequestLinkAsync(Window parent)
         {
             MessageWindow window = new MessageWindow("Before your wallet can be used to trade on IMX, it must be linked to the platform.\nWould you like to link it now?", "Link wallet", MessageType.CONFIRM);
@@ -776,10 +911,11 @@ namespace GU_Exchange
                     await this.UnlockWallet();
                 Task<bool> linkWallet = Task.Run(() =>
                 {
-                    char[] data = new char[500];
-                    IMXlib.imx_register_address_presigned((Address + "\0").ToCharArray(), (linkSignature.Signature + "\0").ToCharArray(), (this.GetPrivateKey() + "\0").ToCharArray(), data, data.Length);
-                    string result = new string(data).Trim('\0');
-                    Console.WriteLine(result);
+                    IntPtr resultBuffer = Marshal.AllocHGlobal(500);
+                    string? result = IntPtrToUtf8String(imx_register_address_presigned(Address, linkSignature.Signature, GetPrivateKey(), resultBuffer, 500));
+                    Marshal.FreeHGlobal(resultBuffer);
+                    if (result == null)
+                        throw new NullReferenceException("IMXLib returned a null reference while registering an address.");
                     if (!result.Contains("tx_hash"))
                         return false;
                     return true;
@@ -792,5 +928,112 @@ namespace GU_Exchange
                 return false;
             }
         }
+        #endregion
+
+        #region IMX trading.
+        /// <summary>
+        /// Request the user to buy a specific <see cref="Order"/>.
+        /// </summary>
+        /// <param name="parent"></param>
+        /// <param name="order"></param>
+        /// <param name="tbStatus"></param>
+        /// <returns></returns>
+        public override async Task<bool> RequestBuyOrder(Window parent, Order order, TextBlock tbStatus)
+        {
+            tbStatus.Text = "Waiting for wallet...";
+            if (this.IsLocked())
+                await this.UnlockWallet();
+            tbStatus.Text = "Requesting order to purchase...";
+            Task<string?> requestBuy = Task.Run(() =>
+            {
+                int bufferSize = 1024;
+                IntPtr resultBuffer = Marshal.AllocHGlobal(bufferSize);
+                IntPtr resultPtr = imx_request_buy_order(order.OrderID.ToString(), this.Address, new Fee[0], 0, resultBuffer, bufferSize);
+                string? result = IMXlib.IntPtrToUtf8String(resultPtr);
+                Marshal.FreeHGlobal(resultBuffer);
+                return result;
+            });
+            string? signableRequest = await requestBuy;
+            if (signableRequest == null)
+            {
+                tbStatus.Text = "An unknown error occurred";
+                return false;
+            }
+            JObject? jsonBuyRequest = (JObject?)JsonConvert.DeserializeObject(signableRequest);
+            string? nonce = (string?)jsonBuyRequest?.SelectToken("nonce");
+            string? signableMessage = (string?)jsonBuyRequest?.SelectToken("signable_message");
+            if (nonce == null || signableMessage == null)
+            {
+                string? message = (string?)jsonBuyRequest?.SelectToken("message");
+                if (message == null)
+                {
+                    tbStatus.Text = "An unknown error occurred";
+                    return false;
+                }
+                tbStatus.Text = message;
+                return false;
+            }
+            tbStatus.Text = "Waiting for user signature...";
+            Task<SignatureData> fetchSignature = SignatureRequestServer.RequestSignatureAsync(signableMessage);
+            UseWebWalletWindow useWalletWindow = new(fetchSignature);
+            useWalletWindow.Owner = parent;
+            useWalletWindow.ShowDialog();
+            SignatureData buySignature;
+            try
+            {
+                buySignature = await fetchSignature;
+            }
+            catch (OperationCanceledException)
+            {
+                tbStatus.Text = "Purchase cancelled";
+                return false;
+            }
+            tbStatus.Text = "Submitting order to IMX...";
+            Task<string?> purchaseOrder = Task.Run(() =>
+            {
+                int bufferSize = 1024;
+                IntPtr resultBuffer = Marshal.AllocHGlobal(bufferSize);
+                IntPtr resultPtr = imx_finish_buy_order(nonce, (double)order.PriceTotal(), this.GetPrivateKey(), buySignature.Signature, resultBuffer, bufferSize);
+                string? result = IMXlib.IntPtrToUtf8String(resultPtr);
+                Marshal.FreeHGlobal(resultBuffer);
+                return result;
+            });
+            string? result = await purchaseOrder;
+
+            // Handle the result
+            if (result == null)
+            {
+                tbStatus.Text = "An unknown error occurred";
+                return false;
+            }
+
+            if (!result.Contains("trade_id"))
+            {
+                JObject? jsonResult = (JObject?)JsonConvert.DeserializeObject(result);
+                string? message = (string?)jsonResult?.SelectToken("message");
+                if (message == null)
+                {
+                    tbStatus.Text = "An unknown error occurred";
+                    return false;
+                }
+                tbStatus.Text = message;
+                return false;
+            }
+            tbStatus.Text = "Purchase complete";
+            return true;
+        }
+        #endregion
+
+        #region Supporting functions.
+        /// <summary>
+        /// No address can be calculated since no private key is available.
+        /// </summary>
+        /// <returns></returns>
+        protected override string CalculateAddress()
+        {
+            // Do nothing, we can't calculate the address for this wallet.
+            return "";
+        }
+        #endregion
     }
 }

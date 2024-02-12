@@ -168,6 +168,9 @@ namespace GU_Exchange
         private static Dictionary<int, CardData> s_loadedCardList = new();
         private static readonly Task<Dictionary<int, decimal>> s_cardPriceFetchTask = FetchCardPricesAsync();
 
+        // Wallets linked to players.
+        private static Dictionary<int, JObject> _playerWalletData = new();
+
         // Data used for searching cards.
         private static readonly Task s_setupQueries = SetupQueriesAsync();
         private static readonly HashSet<string> s_setList = new();
@@ -333,6 +336,58 @@ namespace GU_Exchange
             }
         }
 
+        #endregion
+
+        #region Fetch and query player connected wallets.
+        /// <summary>
+        /// Fetch wallets connected to a specific apolloID.
+        /// </summary>
+        /// <param name="apolloID">The apolloID to get the connected wallets for.</param>
+        /// <returns></returns>
+        /// <exception cref="NullReferenceException"></exception>
+        private static async Task<JObject> FetchPlayerConnectedWalletData(int apolloID)
+        {
+            if (_playerWalletData.ContainsKey(apolloID))
+                return _playerWalletData[apolloID];
+            byte[] data = await ResourceManager.Client.GetByteArrayAsync($"https://apollo-auth.prod.prod.godsunchained.com/v2/account/{apolloID}");
+
+            JObject? json = (JObject?)JsonConvert.DeserializeObject(System.Text.Encoding.UTF8.GetString(data));
+            if (json == null)
+                throw new NullReferenceException("Failed to fetch account data.");
+            return json;
+        }
+
+        /// <summary>
+        /// Check if the provided wallet address is linked to the gien apolloID.
+        /// </summary>
+        /// <param name="apolloID"></param>
+        /// <param name="walletAddress"></param>
+        /// <returns></returns>
+        public static async Task<bool> IsWalletLinked(int apolloID, string walletAddress)
+        {
+            try
+            {
+                JObject json = await FetchPlayerConnectedWalletData(apolloID);
+                JToken? addresses = json.GetValue("addresses");
+                if (addresses == null)
+                    return false;
+                List<string?> addressList = addresses.
+                    Select(a => (string?)a["address"]).
+                    ToList();
+                foreach (var address in addressList)
+                {
+                    bool? isAddress = address?.ToLower().Equals(walletAddress.ToLower());
+                    if (isAddress != null && isAddress == true)
+                    {
+                        return true;
+                    }
+                }
+            }
+            catch (NullReferenceException)
+            {
+            }
+            return false;
+        }
         #endregion
 
         #region Fetch and process games played

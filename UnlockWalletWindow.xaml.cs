@@ -48,6 +48,29 @@ namespace GU_Exchange
         /// <param name="e"></param>
         private async void Button_Unlock(object sender, RoutedEventArgs e)
         {
+            await attemptUnlock();
+        }
+
+        /// <summary>
+        /// Handle when the cancel button is pressed.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void Button_Cancel(object sender, RoutedEventArgs e)
+        {
+            Close();
+        }
+
+        private async void TxtPassword_KeyUp(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                await attemptUnlock();
+            }
+        }
+
+        private async Task attemptUnlock()
+        {
             bool result;
             if (Wallet.IsLocked())
             {
@@ -71,28 +94,6 @@ namespace GU_Exchange
             else
                 Result = UnlockResult.Unlock;
             Close();
-        }
-
-        /// <summary>
-        /// Handle when the cancel button is pressed.
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void Button_Cancel(object sender, RoutedEventArgs e)
-        {
-            Close();
-        }
-
-        private void TxtPassword_KeyUp(object sender, KeyEventArgs e)
-        {
-            if (e.Key == Key.Enter)
-            {
-                if (chkRelock.IsChecked == true)
-                    Result = UnlockResult.Relock;
-                else
-                    Result = UnlockResult.Unlock;
-                Close();
-            }
         }
     }
 }

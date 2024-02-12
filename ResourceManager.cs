@@ -1,6 +1,7 @@
 ﻿using ImageProcessor;
 using ImageProcessor.Common.Exceptions;
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Net.Http;
@@ -15,6 +16,7 @@ namespace GU_Exchange
     class ResourceManager
     {
         public static HttpClient Client = new();
+        public static SizedDictionary<string, BitmapSource> imgCache = new(30);
 
         #region Supporting Methods.
         [DllImport("gdi32.dll")]
@@ -168,6 +170,9 @@ namespace GU_Exchange
         /// <returns>The image of the card as a <see cref="System.Windows.Media.Imaging.BitmapSource" />.</returns>
         public static async Task<BitmapSource?> GetCardImageAsync(int CardID, int quality, bool save, CancellationToken cancelToken)
         {
+            string cacheKey = CardID.ToString() + '_' + quality.ToString();
+            if (imgCache.ContainsKey(cacheKey))
+                return imgCache[cacheKey];
             BitmapSource? res;
             if (!File.Exists("cards/" + CardID + "q" + quality + ".webp"))
             {
@@ -177,8 +182,52 @@ namespace GU_Exchange
             {
                 res = await GetImageFromDiskAsync(CardID, quality);
             }
+            if (res != null && !imgCache.ContainsKey(cacheKey))
+            {
+                imgCache.Add(cacheKey, res);
+            }
             return res;
         }
         #endregion
+    }
+
+    /// <summary>
+    /// A dictionary of a fixed size, used to maintain a buffer of previously searched card images.
+    /// </summary>
+    /// <typeparam name="TKey"></typeparam>
+    /// <typeparam name="TValue"></typeparam>
+    public sealed class SizedDictionary<TKey, TValue> : Dictionary<TKey, TValue>
+    {
+
+        private int maxSize;
+        private Queue<TKey> keys;
+
+        public SizedDictionary(int size)
+        {
+            maxSize = size;
+            keys = new Queue<TKey>();
+        }
+
+        new public void Add(TKey key, TValue value)
+        {
+            if (key == null) throw new ArgumentNullException();
+            base.Add(key, value);
+            keys.Enqueue(key);
+            if (keys.Count > maxSize) base.Remove(keys.Dequeue());
+        }
+
+        new public bool Remove(TKey key)
+        {
+            if (key == null) throw new ArgumentNullException();
+            if (!keys.Contains(key)) return false;
+            var newQueue = new Queue<TKey>();
+            while (keys.Count > 0)
+            {
+                var thisKey = keys.Dequeue();
+                if (!thisKey.Equals(key)) newQueue.Enqueue(thisKey);
+            }
+            keys = newQueue;
+            return base.Remove(key);
+        }
     }
 }

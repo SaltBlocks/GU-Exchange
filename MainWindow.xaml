@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:GU_Exchange"
         mc:Ignorable="d"
-        Title="MainWindow" Height="500" Width="900" Background="#FFE4E4E4" SizeChanged="Window_SizeChanged">
+        Title="MainWindow" Height="600" Width="950" Background="#FFE4E4E4">
     <Window.Resources>
         <ResourceDictionary>
             <!-- #region Import images for ETH, IMX and GODS logos. -->
@@ -24,9 +24,19 @@
             <!-- #endregion -->
         </ResourceDictionary>
     </Window.Resources>
+
     <Grid x:Name="MainGrid">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="20"/>
+            <RowDefinition Height="30"/>
+            <RowDefinition Height="45"/>
+            <RowDefinition Height="20"/>
+            <RowDefinition Height="20"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
         <!-- #region Menubar. -->
-        <Menu DockPanel.Dock="Top" VerticalContentAlignment="Top" MaxHeight="50" VerticalAlignment="Top">
+        <Menu DockPanel.Dock="Top" VerticalContentAlignment="Top" Grid.Row="0" VerticalAlignment="Top">
             <MenuItem Header="Menu">
                 <MenuItem Header="Link Account / Wallet" Click="MenuItem_Click" />
                 <MenuItem x:Name="miLock" Header="Unlock Wallet" Click="miLock_Click" />
@@ -36,53 +46,138 @@
             </MenuItem>
         </Menu>
         <!-- #endregion -->
-        
-        <!-- #region Display currency images. -->
-        <Image x:Name="imgEth" Source="{StaticResource eth_img}" HorizontalAlignment="Left" Height="30" Margin="210,25,0,0" VerticalAlignment="Top" Width="30"/>
-        <Image x:Name="imgGods" Source="{StaticResource gods_img}" HorizontalAlignment="Left" Height="30" Margin="420,25,0,0" VerticalAlignment="Top" Width="30"/>
-        <Image x:Name="imgImx" Source="{StaticResource imx_img}" HorizontalAlignment="Left" Height="30" Margin="672,25,0,0" VerticalAlignment="Top" Width="30"/>
+
+        <!-- #region Display wallet token contents. -->
+        <Grid Grid.Row="1" Margin="20,0,20,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Grid Grid.Column="0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Image x:Name="imgEth" Source="{StaticResource eth_img}" HorizontalAlignment="Left" Grid.Column="0" MinWidth="30" MinHeight="30"/>
+                <Viewbox Grid.Column="1" Margin="5,5,5,5">
+                    <TextBlock x:Name="txtEth" HorizontalAlignment="Left" TextWrapping="Wrap" Text="00.00000 ETH"/>
+                </Viewbox>
+            </Grid>
+            <Grid Grid.Column="1" HorizontalAlignment="Center">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Image x:Name="imgGods" Source="{StaticResource gods_img}" HorizontalAlignment="Left" Grid.Column="0"/>
+                <Viewbox Grid.Column="1" Margin="5,5,5,5">
+                    <TextBlock x:Name="txtGods" HorizontalAlignment="Left" TextWrapping="Wrap" Text="0000.00 GODS"/>
+                </Viewbox>
+            </Grid>
+            <Grid Grid.Column="2" HorizontalAlignment="Right">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Image x:Name="imgImx" Source="{StaticResource imx_img}" HorizontalAlignment="Left" Grid.Column="0"/>
+                <Viewbox Grid.Column="1" Margin="5,5,5,5">
+                    <TextBlock x:Name="txtImx" HorizontalAlignment="Left" TextWrapping="Wrap" Text="0000.00 IMX"/>
+                </Viewbox>
+            </Grid>
+        </Grid>
         <!-- #endregion-->
-        
-        <!-- #region Textblocks for the currency amounts. -->
-        <TextBlock x:Name="txtEth" HorizontalAlignment="Left" Height="30" Margin="240,25,0,0" TextWrapping="Wrap" Text="00.00000 ETH" VerticalAlignment="Top" Width="110" Padding="0,4,0,0" FontSize="16"/>
-        <TextBlock x:Name="txtGods" HorizontalAlignment="Left" Height="30" Margin="455,25,0,0" TextWrapping="Wrap" Text="0000.00 GODS" VerticalAlignment="Top" Width="110" Padding="0,4,0,0" FontSize="16"/>
-        <TextBlock x:Name="txtImx" HorizontalAlignment="Left" Height="30" Margin="707,23,0,0" TextWrapping="Wrap" Text="0000.00 IMX" VerticalAlignment="Top" Width="110" Padding="0,4,0,0" FontSize="16"/>
-        <!-- #endregion -->
-        
+
         <!-- #region No wallet banner. -->
-        <Rectangle x:Name="rectNoWallet" HorizontalAlignment="Left" Height="30" Margin="10,25,0,0" Stroke="Black" VerticalAlignment="Top" Width="807" Fill="#FF8AB3F7" RadiusX="10" RadiusY="10" Visibility="Visible"/>
-        <Label x:Name="lblNoWallet" Content="No wallet connected" HorizontalAlignment="Left" Margin="10,25,0,0" VerticalAlignment="Top" Width="807" Height="30" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" FontSize="16" Foreground="White" Visibility="Visible" MouseEnter="rectNoWallet_MouseEnter" MouseLeave="rectNoWallet_MouseLeave" MouseLeftButtonDown="noWallet_MouseLeftButtonDown"/>
+        <Rectangle x:Name="rectNoWallet" Margin="10,0,10,0" Stroke="Black" Fill="#FF8AB3F7" RadiusX="10" RadiusY="10" Visibility="Visible" Grid.Row="1" MouseEnter="rectNoWallet_MouseEnter" MouseLeave="rectNoWallet_MouseLeave" MouseLeftButtonDown="noWallet_MouseLeftButtonDown"/>
+        <Viewbox Grid.Row="1">
+            <TextBlock x:Name="tbNoWallet" Text="No wallet connected" Foreground="White" Grid.Row="1" MouseEnter="rectNoWallet_MouseEnter" MouseLeave="rectNoWallet_MouseLeave" MouseLeftButtonDown="noWallet_MouseLeftButtonDown"/>
+        </Viewbox>
         <!-- #endregion -->
-        
+
         <!-- #region Search filter combo boxes-->
-        <ComboBox x:Name="cbSet" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="10,80,0,0" Height="25" Width="100" SelectionChanged="Filter_SelectionChangedAsync" />
-        <ComboBox x:Name="cbGod" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="120,80,0,0" Height="25" Width="100" SelectionChanged="Filter_SelectionChangedAsync" />
-        <ComboBox x:Name="cbRarity" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="230,80,0,0" Height="25" Width="100" SelectionChanged="Filter_SelectionChangedAsync" />
-        <ComboBox x:Name="cbTribe" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="340,80,0,0" Height="25" Width="100" SelectionChanged="Filter_SelectionChangedAsync" />
-        <ComboBox x:Name="cbCost" ItemTemplate="{StaticResource CheckBoxTemplate}" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="450,80,0,0" Height="25" Width="100" />
-        <ComboBox x:Name="cbSort" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="560,80,0,0" Height="25" Width="100" SelectionChanged="Filter_SelectionChangedAsync" />
+        <Grid Grid.Row="2" Margin="10,0,10,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <Grid Grid.Column="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="20"/>
+                    <RowDefinition Height="25"/>
+                </Grid.RowDefinitions>
+                <Viewbox Grid.Row="0">
+                    <TextBlock x:Name="tbSet" Text="Set"/>
+                </Viewbox>
+                <ComboBox x:Name="cbSet" Width="{Binding ActualWidth, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Grid}}}" Grid.Row="1" SelectionChanged="Filter_SelectionChangedAsync" />
+            </Grid>
+            <Grid Grid.Column="1">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="20"/>
+                    <RowDefinition Height="25"/>
+                </Grid.RowDefinitions>
+                <Viewbox Grid.Row="0">
+                    <TextBlock x:Name="tbGod" Text="God"/>
+                </Viewbox>
+                <ComboBox x:Name="cbGod" Width="{Binding ActualWidth, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Grid}}}" Grid.Row="1" SelectionChanged="Filter_SelectionChangedAsync" />
+            </Grid>
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="20"/>
+                    <RowDefinition Height="25"/>
+                </Grid.RowDefinitions>
+                <Viewbox Grid.Row="0">
+                    <TextBlock x:Name="tbRarity" Text="Rarity"/>
+                </Viewbox>
+                <ComboBox x:Name="cbRarity" Width="{Binding ActualWidth, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Grid}}}" Grid.Row="1" SelectionChanged="Filter_SelectionChangedAsync" />
+            </Grid>
+            <Grid Grid.Column="3">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="20"/>
+                    <RowDefinition Height="25"/>
+                </Grid.RowDefinitions>
+                <Viewbox Grid.Row="0">
+                    <TextBlock x:Name="tbTribe" Text="Tribe"/>
+                </Viewbox>
+                <ComboBox x:Name="cbTribe" Width="{Binding ActualWidth, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Grid}}}" Grid.Row="1" SelectionChanged="Filter_SelectionChangedAsync" />
+            </Grid>
+            <Grid Grid.Column="4">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="20"/>
+                    <RowDefinition Height="25"/>
+                </Grid.RowDefinitions>
+                <Viewbox Grid.Row="0">
+                    <TextBlock x:Name="tbCost" Text="Mana cost"/>
+                </Viewbox>
+                <ComboBox x:Name="cbCost" Width="{Binding ActualWidth, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Grid}}}" ItemTemplate="{StaticResource CheckBoxTemplate}" Grid.Row="1" />
+            </Grid>
+            <Grid Grid.Column="5">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="20"/>
+                    <RowDefinition Height="25"/>
+                </Grid.RowDefinitions>
+                <Viewbox Grid.Row="0">
+                    <TextBlock x:Name="tbSort" Text="Sort by"/>
+                </Viewbox>
+                <ComboBox x:Name="cbSort" Width="{Binding ActualWidth, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Grid}}}" Grid.Row="1" SelectionChanged="Filter_SelectionChangedAsync" />
+            </Grid>
+        </Grid>
         <!-- #endregion -->
-        
-        <!-- #region Filter combobox text. -->
-        <Label x:Name="lblSet" Content="Set" HorizontalAlignment="Left" Height="30" Margin="10,55,0,0" VerticalAlignment="Top" Width="100" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" FontSize="14"/>
-        <Label x:Name="lblGod" Content="God" HorizontalAlignment="Left" Height="30" Margin="120,55,0,0" VerticalAlignment="Top" Width="100" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" FontSize="14"/>
-        <Label x:Name="lblRarity" Content="Rarity" HorizontalAlignment="Left" Height="30" Margin="230,55,0,0" VerticalAlignment="Top" Width="100" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" FontSize="14"/>
-        <Label x:Name="lblTribe" Content="Tribe" HorizontalAlignment="Left" Height="30" Margin="340,55,0,0" VerticalAlignment="Top" Width="100" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" FontSize="14"/>
-        <Label x:Name="lblCost" Content="Mana cost" HorizontalAlignment="Left" Height="30" Margin="455,55,0,0" VerticalAlignment="Top" Width="100" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" FontSize="14"/>
-        <Label x:Name="lblSort" Content="Sort by" HorizontalAlignment="Left" Height="30" Margin="560,55,0,0" VerticalAlignment="Top" Width="100" VerticalContentAlignment="Center" HorizontalContentAlignment="Center" FontSize="14"/>
-        <!-- #endregion -->
-        
-        <!-- #region Filter buttons. -->
-        <Button x:Name="btnReset" Content="Reset filters" HorizontalAlignment="Left" Height="20" Margin="710,125,0,0" VerticalAlignment="Top" Width="80" Click="btnReset_Click"/>
-        <!-- #endregion -->
-        
+
         <!-- #region Search bar. -->
-        <TextBox x:Name="searchBar" HorizontalAlignment="Left" Height="20" Margin="10,100,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="780" TextChanged="Search_TextChanged" />
+        <TextBox x:Name="searchBar" Grid.Row="3" Margin="10,0,10,0"  TextChanged="Search_TextChanged" />
         <!-- #endregion -->
-        
+
+        <!-- #region Filter buttons. -->
+        <Button x:Name="btnReset" Content="Reset filters" HorizontalAlignment="Right" Margin="0,0,10,0" Width="80" Grid.Row="4" Click="btnReset_Click"/>
+        <!-- #endregion -->
+
         <!--  #region Panel to display cards. -->
-        <ScrollViewer x:Name="scrollBar" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Auto" Margin="0,147,0,0" Grid.ColumnSpan="2" ScrollChanged="ScrollViewer_ScrollChanged" >
-            <WrapPanel x:Name="cardPanel" Margin="0,0,0,0" ScrollViewer.CanContentScroll="True" ScrollViewer.HorizontalScrollBarVisibility="Visible" MaxWidth="800" HorizontalAlignment="Center"/>
+        <ScrollViewer x:Name="scrollBar" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Auto" Margin="0,0,0,0" Grid.Row="5" ScrollChanged="ScrollViewer_ScrollChanged" >
+            <WrapPanel x:Name="cardPanel" Margin="0,0,0,0" ScrollViewer.CanContentScroll="True" ScrollViewer.HorizontalScrollBarVisibility="Visible" MaxWidth="{Binding ActualWidth, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ScrollViewer}}}" HorizontalAlignment="Center"/>
         </ScrollViewer>
         <!-- #endregion -->
     </Grid>

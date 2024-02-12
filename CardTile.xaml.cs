@@ -43,7 +43,7 @@ namespace GU_Exchange
         /// <param name="cancellationToken"><see cref="CancellationToken"/> used for cancelling this task.</param>
         public async Task SetupTileAsync(CancellationToken cancellationToken)
         {
-            this.imgCard.Source = null;
+            imgCard.Source = null;
             Task UpdateImage = SetupImageAsync(cancellationToken);
             await UpdateTileTextAsync();
             await UpdateImage;
@@ -66,7 +66,7 @@ namespace GU_Exchange
             }
             decimal priceUSD = await GameDataManager.GetCardPriceEstimateAsync(CardID);
             string priceStr = priceUSD == -1 ? "--.--" : priceUSD.ToString("0.00");
-            this.lblPrice.Content = $"${priceStr}";
+            this.tbPrice.Text = $"${priceStr}";
             if (inv == null || inv.GetApolloID() == -1)
             {
                 this.tbLocked.Text = "?";

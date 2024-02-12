@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GU Exchange message signing page</title>
+    <style>
+		body {
+			font-family: 'Arial', sans-serif;
+			background-color: #f4f4f4;
+			margin: 0;
+			padding: 0;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			height: 100vh;
+			flex-direction: column;
+		}
+
+		#container {
+			background-color: #fff;
+			padding: 20px;
+			border-radius: 8px;
+			box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+			text-align: center;
+			width: 400px;
+		}
+
+        .stadium {
+            position: relative;
+            width: 110px;
+            height: 35px;
+            background-color: rgba(173, 216, 230, 0.5);
+            border-radius: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            margin: 0 auto;
+        }
+
+        .circle-green {
+            width: 16px;
+            height: 16px;
+            background-color: #2ecc71;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+
+        .circle-red {
+            width: 16px;
+            height: 16px;
+            background-color: #ff0000;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+
+        .wallet-address {
+            color: #3498db;
+            font-size: 8pt;
+            font-family: 'Arial', sans-serif;
+        }
+
+		h1 {
+			color: #333;
+			margin-bottom: 20px;
+		}
+
+		hr {
+			border: 1px solid #ddd;
+			margin: 20px 0;
+		}
+
+		p {
+			color: #666;
+		}
+
+		#actionText {
+			font-weight: bold;
+			margin-bottom: 20px;
+		}
+
+        button:disabled {
+            background-color: #ccc !important;
+            color: #888;
+            cursor: not-allowed;
+        }
+
+		button {
+			width: 100%;
+			background-color: #4CAF50;
+			color: white;
+			padding: 10px 0;
+			border: none;
+			border-radius: 4px;
+			cursor: pointer;
+			font-size: 14px;
+			margin-bottom: 10px;
+		}
+
+		button.cancel {
+			background-color: #f44336;
+		}
+
+		button.connect-wallet {
+			background-color: #2196F3;
+		}
+
+        .invisible {
+            display: none;
+        }
+	</style>
+</head>
+<body>
+    <div id="container">
+        <h1>GU Exchange</h1>
+        <div class="stadium">
+            <div class="circle-green invisible"></div>
+            <div class="circle-red"></div>
+            <span id="connected-address" class="wallet-address">Not connected</span>
+        </div>
+        <hr />
+        <p id="actionText"></p>
+        <button id="signButton" onclick="fetchAndSignMessages()">Sign</button>
+        <button id="connectButton" class="connect-wallet" onclick="connectWallet()">Connect Wallet</button>
+        <button id="cancelButton" class="cancel" onclick="cancelRequests()">Cancel</button>
+    </div>
+
+    <script>
+        /**
+		 * Check if a wallet is installed in the browser and setup the page.
+		 */
+        window.onload = async function () {
+            if (!isWalletInstalled()) {
+                document.getElementById('signButton').disabled = true;
+                document.getElementById('cancelButton').disabled = true;
+                document.getElementById('connectButton').disabled = true;
+                const actionTextElement = document.getElementById('actionText');
+                actionTextElement.textContent = "Error: No ETH wallet installed.";
+                console.log("No wallet installed.");
+                return;
+            }
+            await setup();
+        }
+		
+		window.ethereum.on('accountsChanged', setup);
+		
+		/**
+		 * Check if Metamask or another supported wallet is installed.
+		 */
+		function isWalletInstalled() {
+            if (typeof window.ethereum == 'undefined') {
+                return false;
+            }
+            return true;
+        }
+		
+		/**
+		 * Check if the wallet that is requested by GU Exchange is linked and update the elements on the page.
+		 */
+        async function setup() {
+            const addressRequestedResponse = await fetch('http://localhost:%PORT%/address');
+            const addressRequested = await addressRequestedResponse.text();
+            const addressTextElement = document.getElementById('connected-address');
+            const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+            if (!(await isWalletConnected(addressRequested, accounts))) {
+                const actionTextElement = document.getElementById('actionText');
+                if (addressRequested == "*") {
+                    actionTextElement.textContent = "Please connect your ETH wallet.";
+                    addressTextElement.textContent = "Not connected";
+                } else {
+                    actionTextElement.textContent = "Please connect the wallet shown above.";
+                    addressTextElement.textContent = addressRequested.substring(0, 6) + "..." + addressRequested.substring(addressRequested.length - 4, addressRequested.length);
+                }
+                document.getElementById('connectButton').style.display = '';
+                document.getElementById('signButton').style.display = 'none';
+                showRedCircle();
+                return;
+            }
+            showGreenCircle();
+            if (addressRequested == "*") {
+                addressTextElement.textContent = accounts[0].substring(0, 6) + "..." + accounts[0].substring(accounts[0].length - 4, accounts[0].length);
+				document.getElementById('connectButton').style.display = '';
+            } else {
+                addressTextElement.textContent = addressRequested.substring(0, 6) + "..." + addressRequested.substring(addressRequested.length - 4, addressRequested.length);
+				document.getElementById('connectButton').style.display = 'none';
+            }
+            
+            document.getElementById('signButton').style.display = '';
+            displayActiveAction();
+        }
+
+
+        /**
+         * Indicate to the user that their wallet is properly connected.
+         */
+        function showGreenCircle() {
+            var greenCircle = document.querySelector('.circle-green');
+            var redCircle = document.querySelector('.circle-red');
+            greenCircle.classList.remove('invisible');
+            redCircle.classList.add('invisible');
+        }
+
+        /**
+         * Indicate to the user that their wallet is not properly connected.
+         */
+        function showRedCircle() {
+            var greenCircle = document.querySelector('.circle-green');
+            var redCircle = document.querySelector('.circle-red');
+            greenCircle.classList.add('invisible');
+            redCircle.classList.remove('invisible');
+        }
+		
+		/**
+		 * Check if a wallet that GU Exchange can work with is connected to the page.
+		 */
+        function isWalletConnected(addressRequested, accounts) {
+            if (!Array.isArray(accounts) || accounts.length === 0) {
+                return false;
+            }
+
+            if (addressRequested == "*") { 
+                return true;
+            }
+
+            if (accounts.some(address => address.toLowerCase() === addressRequested.toLowerCase())) {
+                return true;
+            }
+			
+            return false;
+        }
+		
+		/**
+		 * Prompt the user to connect their webwallet.
+		 */
+        async function connectWallet() {
+            document.getElementById('signButton').disabled = true;
+			document.getElementById('connectButton').disabled = true;
+			try {
+				const addressRequestedResponse = await fetch('http://localhost:%PORT%/address');
+				const addressRequested = await addressRequestedResponse.text();
+				if (addressRequested == "*")
+				{
+					await window.ethereum.request({ method: 'wallet_requestPermissions', params: [{ eth_accounts: {} }] });
+				}
+				else {
+					accounts = await window.ethereum.request({ method: 'eth_accounts' });
+					if (accounts.length === 0) {
+						await window.ethereum.request({ method: 'eth_requestAccounts' })
+					}
+					accounts = await window.ethereum.request({ method: 'eth_accounts' });
+					if (!accounts.some(address => address.toLowerCase() === addressRequested.toLowerCase())) {
+						await window.ethereum.request({ method: 'wallet_requestPermissions', params: [{ eth_accounts: {} }] });
+					}
+				}
+                await fetchAndSignMessages();
+            } catch (error) {
+                console.error('Error connecting wallet:', error);
+            }
+			document.getElementById('signButton').disabled = false;
+			document.getElementById('connectButton').disabled = false;
+        }
+		
+		/**
+		 * Get the text to display on the signing window from GU Exchange.
+		 */
+        async function displayActiveAction() {
+            const response = await fetch('http://localhost:%PORT%/action');
+            const action = await response.text();
+            const actionTextElement = document.getElementById('actionText');
+            actionTextElement.textContent = action;
+        }
+		
+		/**
+		 * Fetch all messages that the user submitted for signing in GU Exchange and request the users signature for each.
+		 */
+        async function fetchAndSignMessages() {
+            document.getElementById('signButton').disabled = true;
+			displayActiveAction();
+			const addressRequestedResponse = await fetch('http://localhost:%PORT%/address');
+			const addressRequested = await addressRequestedResponse.text();
+			const messages = await fetchMessages();
+			var jsonArray = JSON.parse(messages);
+			if (jsonArray.length == 0)
+				alert('No messages to sign');
+			else
+				await Promise.all(jsonArray.map(message => signMessage(message, addressRequested)));
+			if (addressRequested == "*")
+				{
+					showGreenCircle()
+					accounts = await window.ethereum.request({ method: 'eth_accounts' });
+					const addressTextElement = document.getElementById('connected-address');
+					addressTextElement.textContent = accounts[0].substring(0, 6) + "..." + accounts[0].substring(accounts[0].length - 4, accounts[0].length);
+					document.getElementById('connectButton').style.display = 'none';
+					document.getElementById('signButton').style.display = '';
+				}
+			document.getElementById('signButton').disabled = false;
+        }
+		
+		/**
+		 * Get all messages that the user submitted for signing in GU Exchange.
+		 */
+        async function fetchMessages() {
+            const response = await fetch('http://localhost:%PORT%/messages');
+            const message = await response.text();
+            return message;
+        }
+		
+		/**
+		 * Request that the user sign the provided message and then pass the signature to GU Exchange.
+		 */
+        async function signMessage(message, walletAddress) {
+            try {
+				const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+				if (walletAddress == "*") {
+					walletAddress = accounts[0]
+				}
+				const signature = await window.ethereum.request({ method: 'personal_sign', params: [message, walletAddress.toLowerCase()] });
+				const data = JSON.stringify({ address: walletAddress.toLowerCase(), message: message, signature: signature });
+				const signingResponse = await fetch('http://localhost:%PORT%/signature', { method: 'POST', body: data });
+				const actionTextElement = document.getElementById('actionText');
+                actionTextElement.textContent = await signingResponse.text();
+			} catch (error) {
+				console.error('Error signing message:', error);
+            }
+        }
+		
+		/**
+		 * Cancel all signature requests in GU Exchange.
+		 */
+        async function cancelRequests() {
+            const response = await fetch('http://localhost:%PORT%/cancel');
+            alert(await response.text());
+        }
+    </script>
+</body>
+</html>

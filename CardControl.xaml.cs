@@ -29,7 +29,7 @@ namespace GU_Exchange
         #endregion
 
         #region Class properties
-        private readonly int _cardID;
+        public readonly int CardID;
         private readonly Task<BitmapSource?> _imgMeteorite;
         private readonly Task<BitmapSource?> _imgShadow;
         private readonly Task<BitmapSource?> _imgGold;
@@ -45,7 +45,7 @@ namespace GU_Exchange
         public CardControl(int CardID)
         {
             InitializeComponent();
-            _cardID = CardID;
+            this.CardID = CardID;
             s_imgTokenSource.Cancel();
             s_imgTokenSource = new();
             s_ordersTokenSource.Cancel();
@@ -82,9 +82,9 @@ namespace GU_Exchange
         private async Task SetupCardAsync()
         {
             Dictionary<int, CardData>? dict = await GameDataManager.GetCardListAsync();
-            if (dict != null && dict.ContainsKey(_cardID))
+            if (dict != null && dict.ContainsKey(CardID))
             {
-                CardData data = dict[_cardID];
+                CardData data = dict[CardID];
                 this.tbCardName.Text = data.Name;
                 this.tbSet.Text = Capitalize(data.Set);
                 this.tbGod.Text = Capitalize(data.God);
@@ -100,7 +100,6 @@ namespace GU_Exchange
 
         /// <summary>
         /// Fetches the inventory of the connected wallet and displays the number of cards owned of each quality.
-        /// TODO implement loading of wallet contents.
         /// </summary>
         /// <returns>Task setting up the cards owned display</returns>
         public async Task SetupInventoryAsync()
@@ -142,7 +141,7 @@ namespace GU_Exchange
             btnOrders.IsEnabled = true;
             btnTransfer.IsEnabled = true;
 
-            string cardData = HttpUtility.UrlEncode("{\"proto\":[\"" + _cardID + "\"]}");
+            string cardData = HttpUtility.UrlEncode("{\"proto\":[\"" + CardID + "\"]}");
             string urlInventory = $"https://api.x.immutable.com/v1/assets?page_size=10&user={connectedWallet.Address}&metadata={cardData}&sell_orders=true";
             string cardString = await ResourceManager.Client.GetStringAsync(urlInventory);
             // Extract cards owned from the return data.
@@ -193,7 +192,7 @@ namespace GU_Exchange
             this.spinner.Visibility = Visibility.Visible; // Show the loading spinner.
 
             // Fetch orders in the IMX global orderbook for the specified card of the specified quality listed in the selected token.
-            string cardData = HttpUtility.UrlEncode("{\"proto\":[\"" + _cardID + "\"],\"quality\":[\"" + quality + "\"]}");
+            string cardData = HttpUtility.UrlEncode("{\"proto\":[\"" + CardID + "\"],\"quality\":[\"" + quality + "\"]}");
             string? currency_name = (string?)this.cbToken.SelectedItem;
             if (currency_name == null)
                 return;
@@ -207,7 +206,7 @@ namespace GU_Exchange
             string strInventory = "{\"result\":[],\"cursor\":\"\",\"remaining\":0}";
             try
             {
-                Debug.WriteLine($"Fetching orders for {_cardID} of quality {quality}");
+                Debug.WriteLine($"Fetching orders for {CardID} of quality {quality}");
                 Task<string> taskGetOrders = ResourceManager.Client.GetStringAsync(urlOrderBook, token);
                 if (wallet != null)
                 {
@@ -289,6 +288,13 @@ namespace GU_Exchange
             this.spinner.Visibility = Visibility.Collapsed; // Hide the loading spinner.
         }
 
+        public async Task ReloadOrderbookAsync()
+        {
+            s_ordersTokenSource.Cancel();
+            s_ordersTokenSource = new CancellationTokenSource();
+            await SetupOrderbookAsync((string)this.cbQuality.SelectedItem, s_ordersTokenSource.Token);
+        }
+
         #endregion
 
         #region Event Handlers
@@ -300,9 +306,7 @@ namespace GU_Exchange
         /// <param name="e"></param>
         private async void cbToken_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            s_ordersTokenSource.Cancel();
-            s_ordersTokenSource = new CancellationTokenSource();
-            await SetupOrderbookAsync((string)this.cbQuality.SelectedItem, s_ordersTokenSource.Token);
+            await ReloadOrderbookAsync();
         }
 
         /// <summary>
@@ -387,8 +391,8 @@ namespace GU_Exchange
                 width = height * 2;
             }
 
-            this.controlGrid.Height = height;
-            this.controlGrid.Width = width;
+            this.controlGrid.Height = height - 10;
+            this.controlGrid.Width = width - 10;
         }
 
         /// <summary>
@@ -485,7 +489,7 @@ namespace GU_Exchange
                 return;
             }
             Order cheapestOffer = ((OrderBar)orderPanel.Children[0]).Order;
-            BuyControl _buyControl = new BuyControl(cheapestOffer, this.imgCard.Source);
+            BuyControl _buyControl = new BuyControl(this, cheapestOffer, this.imgCard.Source);
             _buyControl.Margin = new Thickness(0, 0, 0, 0);
             Grid.SetColumnSpan(_buyControl, 2);
             controlGrid.Children.Add(_buyControl);

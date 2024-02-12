@@ -1,4 +1,5 @@
-﻿using System;
+﻿using ImageProcessor.Processors;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -22,6 +23,7 @@ namespace GU_Exchange
     public partial class BuyControl : UserControl
     {
         #region Class Properties
+        private CardControl _parent;
         private Order _order;
         #endregion
 
@@ -31,9 +33,10 @@ namespace GU_Exchange
         /// </summary>
         /// <param name="order">The order that should be purchased.</param>
         /// <param name="image">An image to display to the user.</param>
-        public BuyControl(Order order, ImageSource image)
+        public BuyControl(CardControl parent, Order order, ImageSource image)
         {
             InitializeComponent();
+            _parent = parent;
             _order = order;
             DataContext = new PurchaseConfirmationViewModel(order, image);
         }
@@ -42,13 +45,79 @@ namespace GU_Exchange
         #region Event Handlers
         /// <summary>
         /// Handle the user clicking the buy button.
+        /// Purchase the order and update relevant UI elements.
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void BuyButton_Click(object sender, RoutedEventArgs e)
+        private async void BuyButton_Click(object sender, RoutedEventArgs e)
         {
-            // Handle buy button click logic
-            MessageBox.Show("Buy button clicked!");
+            userChoicePanel.Visibility = Visibility.Collapsed;
+            loadingPanel.Visibility = Visibility.Visible;
+
+            // Get the connected wallet.
+            Wallet? wallet = Wallet.GetConnectedWallet();
+            if (wallet == null)
+            {
+                // No wallet connected, cannot continue.
+                spinner.Visibility = Visibility.Collapsed;
+                error.Visibility = Visibility.Visible;
+                btnClose.Visibility = Visibility.Visible;
+                tbStatus.Text = "No wallet connected";
+                return;
+            }
+
+            // Submit the order and allow the wallet to update the status message.
+            bool result = await wallet.RequestBuyOrder(Application.Current.MainWindow, _order, tbStatus);
+            spinner.Visibility = Visibility.Collapsed;
+            if (!result)
+            {
+                // Purchase failed.
+                error.Visibility = Visibility.Visible;
+                btnClose.Visibility = Visibility.Visible;
+                return;
+            }
+            
+            // Buying the order succeeded, now update the inventory and local wallet to reflect the successfull purchase.
+            success.Visibility = Visibility.Visible;
+
+            // Update the card inventory by adding the purchased card, if the wallet used for the purchase is linked to the connected GU account.
+            if (await GameDataManager.IsWalletLinked(Settings.GetApolloID(), wallet.Address))
+            {
+                Inventory? inv = (Inventory?)App.Current.Properties["Inventory"];
+                if (inv != null)
+                {
+                    int quality = 0;
+                    switch (_order.Quality)
+                    {
+                        case "Meteorite":
+                            quality = 4;
+                            break;
+                        case "Shadow":
+                            quality = 3;
+                            break;
+                        case "Gold":
+                            quality = 2;
+                            break;
+                        case "Diamond":
+                            quality = 1;
+                            break;
+                    }
+                    if (quality != 0)
+                        inv.SetNumberOwned(_parent.CardID, quality, inv.GetNumberOwned(_parent.CardID, quality) + 1);
+                }
+            }
+            
+            
+            // Deduct the spent amount of currency from the local wallet content.
+            wallet.DeductTokenAmount(_order.Currency, _order.PriceTotal());
+
+            // Update UI.
+            await ((MainWindow)Application.Current.MainWindow).RefreshTilesAsync();
+            await ((MainWindow)Application.Current.MainWindow).RefreshWalletInfoAsync();
+            
+            // Refresh the wallet in the parent CardControl.
+            _ = _parent.SetupInventoryAsync();
+            btnClose.Visibility = Visibility.Visible;
         }
 
         /// <summary>
@@ -56,8 +125,9 @@ namespace GU_Exchange
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void CancelButton_Click(object sender, RoutedEventArgs e)
+        private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
+            _ = _parent.ReloadOrderbookAsync();
             this.Visibility = Visibility.Collapsed;
         }
 
@@ -78,6 +148,7 @@ namespace GU_Exchange
                 return;
             }
             // Click occurred outside buyGrid, you can call your function here
+            _ = _parent.ReloadOrderbookAsync();
             this.Visibility = Visibility.Collapsed;
         }
         #endregion
@@ -88,11 +159,14 @@ namespace GU_Exchange
     /// </summary>
     public class PurchaseConfirmationViewModel : INotifyPropertyChanged
     {
+        #region Class Properties
         private string cardName;
         private string cardQuality;
         private string cardPrice;
         private ImageSource cardImageSource;
+        #endregion
 
+        #region Default Constructor
         public PurchaseConfirmationViewModel(Order order, ImageSource image)
         {
             cardName = order.Name;
@@ -100,7 +174,9 @@ namespace GU_Exchange
             cardPrice = $"{order.PriceTotal()} {order.Currency}";
             cardImageSource = image;
         }
+        #endregion
 
+        #region Getters and Setters
         public string CardName
         {
             get { return cardName; }
@@ -147,5 +223,6 @@ namespace GU_Exchange
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
+        #endregion
     }
 }

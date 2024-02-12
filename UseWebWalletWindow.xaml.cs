@@ -49,7 +49,6 @@ namespace GU_Exchange
             {
                 Task completedTask = await Task.WhenAny(Tasks);
                 Tasks.Remove(completedTask);
-                Console.WriteLine("Task Removed");
                 // Update UI with the completed tasks count
                 lblWebInstructions.Content = $"{Tasks.Count} action{(Tasks.Count == 1 ? "" : "s")} require{(Tasks.Count == 1 ? "s" : "")} your wallet signature.";
             }
