@@ -6,48 +6,16 @@
         xmlns:local="clr-namespace:GU_Exchange"
         mc:Ignorable="d"
         Title="MessageWindow" WindowStartupLocation="CenterOwner" Background="#FFE4E4E4" ResizeMode="NoResize" Height="160" Width="350">
-    <!-- #region Button styles. -->
-    <!-- <Window.Resources>
-        <Style TargetType="Button">
-            <Setter Property="Padding" Value="10,5"/>
-            <Setter Property="Margin" Value="5"/>
-            <Setter Property="FontFamily" Value="Segoe UI"/>
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="3">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-        <Style x:Key="GreenButtonStyle" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-            <Setter Property="Background" Value="#4CAF50"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderBrush" Value="#4CAF50"/>
-        </Style>
-        <Style x:Key="BlueButtonStyle" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-            <Setter Property="Background" Value="#FF1F8ED4"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderBrush" Value="#FF1F8ED4"/>
-        </Style>
-        <Style x:Key="RedButtonStyle" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-            <Setter Property="Background" Value="#FF5733"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderBrush" Value="#FF5733"/>
-        </Style>
-    </Window.Resources> -->
-    <!-- #endregion -->
-    <Grid Height="115" Width="340">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="40"/>
+        </Grid.RowDefinitions>
         <!-- #region Text message. -->
-        <Label HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,10,0,0">
-            <TextBlock x:Name="tbInfo" TextWrapping="Wrap" FontSize="14"/>
-        </Label>
+        <TextBlock x:Name="tbInfo" Text="Test" TextWrapping="Wrap" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"  Grid.Row="0"/>
         <!-- #endregion -->
         <!-- #region Buttons. -->
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Bottom" Margin="10">
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="5" Grid.Row="1">
             <!-- <Button x:Name="btnYes" Content="Yes" IsDefault="True" Width="80" Margin="5" Style="{StaticResource GreenButtonStyle}" Click="YesButton_Click"/> -->
             <Button x:Name="btnYes" Content="Yes" IsDefault="True" Width="80" Margin="5" Click="YesButton_Click"/>
             <Button x:Name="btnNo" Content="No" IsCancel="True" Width="80" Margin="5" Click="NoButton_Click"/>
