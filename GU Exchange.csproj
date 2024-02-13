@@ -23,4 +23,8 @@
     <PackageReference Include="System.Drawing.Common" Version="7.0.0" />
   </ItemGroup>
 
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="xcopy &quot;$(ProjectDir)server&quot; &quot;$(TargetDir)server\&quot; /s /e /y" />
+  </Target>
+
 </Project>
