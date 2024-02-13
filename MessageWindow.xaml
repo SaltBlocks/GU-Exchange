@@ -16,7 +16,6 @@
         <!-- #endregion -->
         <!-- #region Buttons. -->
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="5" Grid.Row="1">
-            <!-- <Button x:Name="btnYes" Content="Yes" IsDefault="True" Width="80" Margin="5" Style="{StaticResource GreenButtonStyle}" Click="YesButton_Click"/> -->
             <Button x:Name="btnYes" Content="Yes" IsDefault="True" Width="80" Margin="5" Click="YesButton_Click"/>
             <Button x:Name="btnNo" Content="No" IsCancel="True" Width="80" Margin="5" Click="NoButton_Click"/>
             <Button x:Name="btnClose" Content="Close" IsCancel="True" Width="80" Margin="5" Click="NoButton_Click"/>
