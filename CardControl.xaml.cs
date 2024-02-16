@@ -489,15 +489,33 @@ namespace GU_Exchange
                 return;
             }
             Order cheapestOffer = ((OrderBar)orderPanel.Children[0]).Order;
-            BuyControl _buyControl = new BuyControl(this, cheapestOffer, this.imgCard.Source);
-            _buyControl.Margin = new Thickness(0, 0, 0, 0);
-            Grid.SetColumnSpan(_buyControl, 2);
-            controlGrid.Children.Add(_buyControl);
+            OpenOrder(cheapestOffer);
+        }
+
+        /// <summary>
+        /// Prompt the user to buy the cheapest card on sale.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void btnList_Click(object sender, RoutedEventArgs e)
+        {
+            ListControl _sellControl = new ListControl(this, imgCard.Source);
+            _sellControl.Margin = new Thickness(0, 0, 0, 0);
+            Grid.SetColumnSpan(_sellControl, 2);
+            controlGrid.Children.Add(_sellControl);
         }
 
         #endregion
 
         #region Supporting methods
+
+        public void OpenOrder(Order order)
+        {
+            BuyControl _buyControl = new BuyControl(this, order, imgCard.Source);
+            _buyControl.Margin = new Thickness(0, 0, 0, 0);
+            Grid.SetColumnSpan(_buyControl, 2);
+            controlGrid.Children.Add(_buyControl);
+        }
 
         /// <summary>
         /// Update the window after the selected card quality is changed.

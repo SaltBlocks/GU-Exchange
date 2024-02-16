@@ -814,8 +814,7 @@ namespace GU_Exchange
             {
                 int bufferSize = 1024;
                 IntPtr resultBuffer = Marshal.AllocHGlobal(bufferSize);
-                IntPtr resultPtr = imx_buy_order(order.OrderID.ToString(), (double)order.PriceTotal(), new Fee[0], 0, this.GetPrivateKey(), resultBuffer, bufferSize);
-                string? result = IMXlib.IntPtrToString(resultPtr);
+                string? result = IntPtrToString(imx_buy_order(order.OrderID.ToString(), (double)order.PriceTotal(), new Fee[0], 0, this.GetPrivateKey(), resultBuffer, bufferSize));
                 Marshal.FreeHGlobal(resultBuffer);
                 return result;
             });
@@ -858,6 +857,7 @@ namespace GU_Exchange
         {
             IntPtr addressBuffer = Marshal.AllocHGlobal(43);
             string? address = IntPtrToString(eth_get_address(GetPrivateKey(), addressBuffer, 43));
+            Marshal.FreeHGlobal(addressBuffer);
             if (address == null)
                 throw new NullReferenceException("IMXLib returned a null reference while generating an address.");
             return address;
@@ -948,8 +948,7 @@ namespace GU_Exchange
             {
                 int bufferSize = 1024;
                 IntPtr resultBuffer = Marshal.AllocHGlobal(bufferSize);
-                IntPtr resultPtr = imx_request_buy_order(order.OrderID.ToString(), this.Address, new Fee[0], 0, resultBuffer, bufferSize);
-                string? result = IMXlib.IntPtrToUtf8String(resultPtr);
+                string? result = IntPtrToUtf8String(imx_request_buy_order(order.OrderID.ToString(), this.Address, new Fee[0], 0, resultBuffer, bufferSize));
                 Marshal.FreeHGlobal(resultBuffer);
                 return result;
             });
@@ -993,8 +992,7 @@ namespace GU_Exchange
             {
                 int bufferSize = 1024;
                 IntPtr resultBuffer = Marshal.AllocHGlobal(bufferSize);
-                IntPtr resultPtr = imx_finish_buy_order(nonce, (double)order.PriceTotal(), this.GetPrivateKey(), buySignature.Signature, resultBuffer, bufferSize);
-                string? result = IMXlib.IntPtrToUtf8String(resultPtr);
+                string? result = IntPtrToUtf8String(imx_finish_buy_order(nonce, (double)order.PriceTotal(), this.GetPrivateKey(), buySignature.Signature, resultBuffer, bufferSize));
                 Marshal.FreeHGlobal(resultBuffer);
                 return result;
             });

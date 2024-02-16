@@ -543,7 +543,7 @@ namespace GU_Exchange
 
         #endregion
 
-        #region Open/Close trading overlay.
+        #region Interact with trading overlay.
 
         /// <summary>
         /// Open the trading overlay for the card with the provided CardID.
@@ -566,6 +566,12 @@ namespace GU_Exchange
             if (_cardControl != null)
                 this.MainGrid.Children.Remove(_cardControl);
             _cardControl = null;
+        }
+
+        public void OpenOrder(Order order)
+        {
+            if (_cardControl != null)
+                _cardControl.OpenOrder(order);
         }
 
         #endregion

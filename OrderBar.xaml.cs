@@ -111,7 +111,7 @@ namespace GU_Exchange
         /// <param name="e"></param>
         private void UserControl_MouseUp(object sender, MouseButtonEventArgs e)
         {
-            Console.WriteLine("Order clicked!");
+            ((MainWindow)Application.Current.MainWindow).OpenOrder(Order);
         }
 
         /// <summary>

@@ -40,6 +40,7 @@ namespace GU_Exchange
 
             IntPtr addressBuffer = Marshal.AllocHGlobal(43);
             string? address = IntPtrToString(eth_get_address(_privateKey, addressBuffer, 43));
+            Marshal.FreeHGlobal(addressBuffer);
             if (address == null)
                 throw new NullReferenceException("IMXLib returned a null reference while generating an address.");
             tbAddress.Text = address;
@@ -101,6 +102,7 @@ namespace GU_Exchange
 
             IntPtr addressBuffer = Marshal.AllocHGlobal(43);
             string? address = IntPtrToString(eth_get_address(_privateKey, addressBuffer, 43));
+            Marshal.FreeHGlobal(addressBuffer);
             if (address == null)
                 throw new NullReferenceException("IMXLib returned a null reference while generating an address.");
             tbAddress.Text = address;
@@ -172,6 +174,7 @@ namespace GU_Exchange
             {
                 IntPtr addressBuffer = Marshal.AllocHGlobal(43);
                 string? address = IntPtrToString(eth_get_address("0x" + _privateKey, addressBuffer, 43));
+                Marshal.FreeHGlobal(addressBuffer);
                 if (address == null)
                     throw new NullReferenceException("IMXLib returned a null reference while generating an address.");
                 lblAddressImport.Text = address;

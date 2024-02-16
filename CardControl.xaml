@@ -199,7 +199,7 @@
                     <!-- #endregion -->
                     <!-- #region Action buttons. -->
                     <Button x:Name="btnBuy" Content="Buy" Grid.Column="0" Height="25" Margin="5,0,5,0" Click="btnBuy_Click"/>
-                    <Button x:Name="btnOrders" Content="List" Grid.Column="1" Height="25" Margin="5,0,5,0"/>
+                    <Button x:Name="btnOrders" Content="List" Grid.Column="1" Height="25" Margin="5,0,5,0" Click="btnList_Click"/>
                     <Button x:Name="btnTransfer" Content="Transfer" Grid.Column="2" Height="25" Margin="5,0,5,0"/>
                     <!-- #endregion -->
                 </Grid>
