@@ -484,12 +484,10 @@ namespace GU_Exchange
         /// <param name="e"></param>
         private void btnBuy_Click(object sender, RoutedEventArgs e)
         {
-            if (orderPanel.Children.Count == 0)
-            {
+            Order? cheapestOrder = GetCheapestOrder();
+            if (cheapestOrder == null)
                 return;
-            }
-            Order cheapestOffer = ((OrderBar)orderPanel.Children[0]).Order;
-            OpenOrder(cheapestOffer);
+            OpenOrder(cheapestOrder);
         }
 
         /// <summary>
@@ -508,6 +506,15 @@ namespace GU_Exchange
         #endregion
 
         #region Supporting methods
+
+        public Order? GetCheapestOrder()
+        {
+            if (orderPanel.Children.Count == 0)
+            {
+                return null;
+            }
+            return ((OrderBar)orderPanel.Children[0]).Order;
+        }
 
         public void OpenOrder(Order order)
         {
