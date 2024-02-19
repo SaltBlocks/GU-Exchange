@@ -133,7 +133,7 @@ namespace GU_Exchange
             Order? cheapestOrder = await _cheapestOrders[tokenName];
             if (cheapestOrder == null) return;
             decimal listPrice = cheapestOrder.PriceTotal() - new decimal(0.00000001);
-            tbListprice.Text = listPrice.ToString("0.##########");
+            tbListPrice.Text = listPrice.ToString("0.##########");
             try
             {
                 decimal receiveAmount = listPrice / new decimal(1.08) * new decimal(0.99);
@@ -212,11 +212,11 @@ namespace GU_Exchange
 
         private void tbListprice_TextChanged(object sender, TextChangedEventArgs e)
         {
-            if (!tbListprice.IsKeyboardFocusWithin) // Prevent a loop by not updating anything when this method is called due to another event modifying the value.
+            if (!tbListPrice.IsKeyboardFocusWithin) // Prevent a loop by not updating anything when this method is called due to another event modifying the value.
                 return;
             try
             {
-                decimal listPrice = Decimal.Parse(tbListprice.Text);
+                decimal listPrice = Decimal.Parse(tbListPrice.Text);
                 decimal receiveAmount = listPrice / new decimal(1.08) * new decimal(0.99);
                 tbReceiveAmount.Text = receiveAmount.ToString("0.##########");
             } catch (FormatException)
@@ -233,24 +233,31 @@ namespace GU_Exchange
             {
                 decimal receiveAmount = Decimal.Parse(tbReceiveAmount.Text);
                 decimal listPrice = receiveAmount * new decimal(1.08) / new decimal(0.99);
-                tbListprice.Text = listPrice.ToString("0.##########");
+                tbListPrice.Text = listPrice.ToString("0.##########");
             }
             catch (FormatException)
             {
-                tbListprice.Text = "";
+                tbListPrice.Text = "";
             }
+        }
+
+        private async Task<decimal?> GetCheapestPrice()
+        {
+            string? tokenName = cbCurrency.SelectedItem.ToString();
+            if (tokenName == null) return null;
+            if (_cheapestOrders == null) return null;
+            if (!_cheapestOrders.ContainsKey(tokenName)) return null;
+            Order? cheapestOrder = await _cheapestOrders[tokenName];
+            if (cheapestOrder == null) return null;
+            return cheapestOrder.PriceTotal();
         }
 
         private async Task AutoAdjustPrice()
         {
-            string? tokenName = cbCurrency.SelectedItem.ToString();
-            if (tokenName == null) return;
-            if (_cheapestOrders == null) return;
-            if (!_cheapestOrders.ContainsKey(tokenName)) return;
-            Order? cheapestOrder = await _cheapestOrders[tokenName];
-            if (cheapestOrder == null) return;
-            decimal listPrice = cheapestOrder.PriceTotal() - new decimal(0.00000001);
-            tbListprice.Text = listPrice.ToString("0.##########");
+            decimal? cheapestPrice = await GetCheapestPrice();
+            if (cheapestPrice == null) return;
+            decimal listPrice = (decimal)cheapestPrice - new decimal(0.00000001);
+            tbListPrice.Text = listPrice.ToString("0.##########");
             try
             {
                 decimal receiveAmount = listPrice / new decimal(1.08) * new decimal(0.99);
@@ -278,6 +285,31 @@ namespace GU_Exchange
             userChoicePanel.Visibility = Visibility.Collapsed;
             loadingPanel.Visibility = Visibility.Visible;
 
+            decimal? bestPrice = await GetCheapestPrice();
+            if (bestPrice != null)
+            {
+                try
+                {
+                    decimal listPrice = decimal.Parse(tbListPrice.Text);
+                    decimal percentage = listPrice / (decimal)bestPrice;
+                    if (percentage < new decimal(0.75))
+                    {
+                        MessageWindow window = new MessageWindow($"The offer price for this listing ({listPrice.ToString("0.##########")} {(string)cbCurrency.SelectedItem}) is {100 - percentage * 100:0.00}% cheaper than then next cheapest offer. Are you sure you want to post this listing?", "Confirm listing", MessageType.CONFIRM);
+                        window.Owner = Application.Current.MainWindow;
+                        window.ShowDialog();
+                        if (!window.Result)
+                        {
+                            spinner.Visibility = Visibility.Collapsed;
+                            error.Visibility = Visibility.Visible;
+                            btnClose.Visibility = Visibility.Visible;
+                            tbStatus.Text = "Listing(s) cancelled.";
+                            return;
+                        }
+                    }
+                    Console.WriteLine(listPrice / bestPrice);
+                }
+                catch (FormatException) { }
+            }
             // Get the connected wallet.
             Wallet? wallet = Wallet.GetConnectedWallet();
             if (wallet == null)
@@ -379,9 +411,9 @@ namespace GU_Exchange
                 cbNumber.SelectedIndex = 0;
                 btnList.IsEnabled = true;
             }
+            tbNumber.Text = $"/ {_listableTokens.Count()} (0 listed)";
             loadingPanel.Visibility = Visibility.Collapsed;
             userChoicePanel.Visibility = Visibility.Visible;
-            
         }
     }
 
