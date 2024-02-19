@@ -1,20 +1,17 @@
-﻿using Newtonsoft.Json.Linq;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
-using System.Collections.Generic;
-using System.Runtime.InteropServices;
-using System.Threading.Tasks;
 using System.Collections;
-using System.Net.Http;
-using System.Security.Cryptography;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Windows.Input;
-using System.Diagnostics;
-using System.Runtime.Serialization.Formatters.Soap;
-using System.Net;
+using System.Net.Http;
+using System.Net.NetworkInformation;
+using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
-using System.Security.Policy;
+using System.Runtime.Serialization.Formatters.Soap;
+using System.Security.Cryptography;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using static GU_Exchange.IMXlib;
@@ -845,14 +842,106 @@ namespace GU_Exchange
             tbStatus.Text = "Purchase complete";
             return true;
         }
+
+        /// <summary>
+        /// Request the user to List one or multiple .
+        /// This will purchase immediately if the private key for the <see cref="Wallet"/> is unlocked and available.
+        /// </summary>
+        /// <param name="parent"></param>
+        /// <param name="order"></param>
+        /// <param name="tbStatus"></param>
+        /// <returns></returns>
+        virtual public async Task<Dictionary<NFT, bool>> RequestCreateOrders(Window parent, (NFT card, string tokenID, double price, TextBlock? tbStatusListing)[] listings, TextBlock tbStatus)
+        {
+            foreach ((NFT card, string tokenID, double price, TextBlock? tbStatusListing) listing in listings)
+            {
+                if (listing.tbStatusListing != null) listing.tbStatusListing.Text = "Waiting for wallet to be unlocked...";
+            }
+            tbStatus.Text = "Waiting for wallet to be unlocked...";
+            bool reLock = false;
+            if (IsLocked())
+            {
+                UnlockWalletWindow unlockWindow = new UnlockWalletWindow(this);
+                unlockWindow.Owner = parent;
+                unlockWindow.ShowDialog();
+                if (unlockWindow.Result == UnlockWalletWindow.UnlockResult.Cancel)
+                {
+                    foreach ((NFT card, string tokenID, double price, TextBlock? tbStatusListing) listing in listings)
+                    {
+                        if (listing.tbStatusListing != null)
+                        {
+                            listing.tbStatusListing.Text = "Listing cancelled.";
+                        }
+                        tbStatus.Text = "Listing(s) cancelled.";
+                    }
+                    return listings.ToDictionary(x => x.card, x => false); ;
+                }
+                reLock = unlockWindow.Result == UnlockWalletWindow.UnlockResult.Relock;
+            }
+
+            tbStatus.Text = "Submitting listing(s) to IMX...";
+            List<Task<(NFT card, bool result)>> listTasks = new();
+            foreach ((NFT card, string tokenID, double price, TextBlock? tbStatusListing) listing in listings)
+            {
+                Task<(NFT card, bool result)> createListing = Task.Run(() =>
+                {
+                    int bufferSize = 1024;
+                    IntPtr resultBuffer = Marshal.AllocHGlobal(bufferSize);
+                    Console.WriteLine(listing.tokenID);
+                    Console.WriteLine(listing.price);
+                    string? result = IntPtrToString(imx_sell_nft(listing.card.token_address, listing.card.token_id.ToString(), listing.tokenID, listing.price, new Fee[0], 0, GetPrivateKey(), resultBuffer, bufferSize));
+                    Marshal.FreeHGlobal(resultBuffer);
+                    
+                    // Handle the result
+                    if (result == null)
+                    {
+                        if (listing.tbStatusListing != null) listing.tbStatusListing.Text = "An unknown error occurred";
+                        return (listing.card, false);
+                    }
+                    if (!result.Contains("order_id"))
+                    {
+                        JObject? jsonResult = (JObject?)JsonConvert.DeserializeObject(result);
+                        string? message = (string?)jsonResult?.SelectToken("message");
+                        if (message == null)
+                        {
+                            if (listing.tbStatusListing != null) listing.tbStatusListing.Text = "An unknown error occurred";
+                            return (listing.card, false);
+                        }
+                        if (listing.tbStatusListing != null) listing.tbStatusListing.Text = message;
+                        return (listing.card, false);
+                    }
+
+                    return (listing.card, true);
+                });
+                listTasks.Add(createListing);
+            }
+            (NFT card, bool res)[] results = await Task.WhenAll(listTasks);
+            if (reLock)
+                LockWallet();
+
+            if (results.All(x => x.res))
+            {
+                tbStatus.Text = "Listing(s) submitted to IMX";
+            }
+            else if (results.All(x => !x.res))
+            {
+                tbStatus.Text = "Listing(s) submission failed";
+            }
+            else
+            {
+                tbStatus.Text = "Not all listings were submitted.";
+            }
+
+            return results.ToDictionary(x => x.card, x => x.res);
+        }
         #endregion
 
-        #region Supporting functions.
-        /// <summary>
-        /// Calculate the address belonging to this wallet.
-        /// </summary>
-        /// <returns></returns>
-        /// <exception cref="NullReferenceException"></exception>
+            #region Supporting functions.
+            /// <summary>
+            /// Calculate the address belonging to this wallet.
+            /// </summary>
+            /// <returns></returns>
+            /// <exception cref="NullReferenceException"></exception>
         virtual protected string CalculateAddress()
         {
             IntPtr addressBuffer = Marshal.AllocHGlobal(43);

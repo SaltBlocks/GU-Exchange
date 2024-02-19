@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace GU_Exchange
 {
-    internal interface IMXlib
+    public interface IMXlib
     {
         #region Constants.
         public const string IMX_SEED_MESSAGE = "Only sign this request if you’ve initiated an action with Immutable X.";
@@ -22,6 +22,14 @@ namespace GU_Exchange
             public string address;
             public double percentage;
         }
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
+        public struct NFT
+        {
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 43)]
+            public string token_address;
+            public ulong token_id;
+        };
         #endregion
 
         // DLL functions used to interact with IMX.
@@ -45,10 +53,18 @@ namespace GU_Exchange
         [DllImport("IMXlib.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern IntPtr imx_finish_buy_order(string nonce_str, double price_limit, string imx_seed_sig_str, string imx_transaction_sig_str, IntPtr result_buffer, int buffer_size);
         #endregion
-
+        #region Creating listings on the IMX orderbook.
+        [DllImport("IMXlib.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr imx_sell_nft(string nft_address_str, string nft_id_str, string token_id_str, double price, Fee[] fees, int fee_count, string eth_priv_str, IntPtr result_buffer, int buffer_size);
+        [DllImport("IMXlib.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr imx_request_sell_nft(string nft_address_str, string nft_id_str, string token_id_str, double price, Fee[] fees, int fee_count, string seller_address_str, IntPtr result_buffer, int buffer_size);
+        #endregion
+        #region Finish sale or offer creation.
+        [DllImport("IMXlib.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr imx_finish_sell_or_offer_nft(string nonce_str, string imx_seed_sig_str, string imx_transaction_sig_str, IntPtr result_buffer, int buffer_size);
+        #endregion
         public static string? IntPtrToString(IntPtr ptr)
         {
-
             return Marshal.PtrToStringAnsi(ptr);
         }
 

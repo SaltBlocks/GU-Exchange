@@ -29,18 +29,20 @@ namespace GU_Exchange
     /// </summary>
     public partial class ListControl : UserControl
     {
-        private CardControl _parent;
-        Dictionary<string, Task<Order?>> cheapestOrders;
+        private readonly CardControl parent;
+        private readonly Dictionary<string, Task<Order?>> cheapestOrders;
+        private List<string> listableTokens;
 
         public ListControl(CardControl parent, ImageSource image)
         {
             InitializeComponent();
-            _parent = parent;
+            this.parent = parent;
             List<string> items = new List<string> { "ETH", "GODS", "IMX" };
             cbCurrency.ItemsSource = items;
             cbCurrency.SelectedIndex = 0;
             DataContext = new ListCardViewModel(parent.tbCardName.Text, (string)parent.cbQuality.SelectedItem, image);
             cheapestOrders = new();
+            listableTokens = new();
             FetchCheapestOrders();
             setup();
         }
@@ -52,11 +54,11 @@ namespace GU_Exchange
             if (wallet == null)
             {
                 // No wallet connected, close this window.
-                _ = _parent.ReloadOrderbookAsync();
+                _ = parent.ReloadOrderbookAsync();
                 this.Visibility = Visibility.Collapsed;
                 return;
             }
-            string cardData = HttpUtility.UrlEncode("{\"proto\":[\"" + _parent.CardID + "\"]}");
+            string cardData = HttpUtility.UrlEncode("{\"proto\":[\"" + parent.CardID + "\"]}");
             string urlInventory = $"https://api.x.immutable.com/v1/assets?page_size=10&user={wallet.Address}&metadata={cardData}&sell_orders=true";
             string cardString;
             try 
@@ -81,6 +83,12 @@ namespace GU_Exchange
                     num_owned++;
                     if (card["orders"] != null)
                         num_listed++;
+                    else
+                    {
+                        string? tokenID = card["token_id"]?.Value<string>();
+                        if (tokenID != null) listableTokens.Add(tokenID);
+                    }
+                        
                 }
             }
             this.tbNumber.Text = $"/ {num_owned} ({num_listed} listed)";
@@ -128,7 +136,7 @@ namespace GU_Exchange
             string token_str = tokenAddress;
             if (token_str.Equals("ETH"))
                 token_str = "&buy_token_type=ETH";
-            string cardData = HttpUtility.UrlEncode("{\"proto\":[\"" + _parent.CardID + "\"],\"quality\":[\"" + ((ListCardViewModel)DataContext).CardQuality + "\"]}");
+            string cardData = HttpUtility.UrlEncode("{\"proto\":[\"" + parent.CardID + "\"],\"quality\":[\"" + ((ListCardViewModel)DataContext).CardQuality + "\"]}");
             string urlOrderBook = $"https://api.x.immutable.com/v3/orders?buy_token_address={token_str}&direction=asc&include_fees=true&order_by=buy_quantity&page_size=1&sell_metadata={cardData}&sell_token_address=0xacb3c6a43d15b907e8433077b6d38ae40936fe2c&status=active";
             try
             {
@@ -172,7 +180,7 @@ namespace GU_Exchange
                 return;
             }
             // Click occurred outside buyGrid, you can call your function here
-            _ = _parent.ReloadOrderbookAsync();
+            _ = parent.ReloadOrderbookAsync();
             this.Visibility = Visibility.Collapsed;
         }
 
@@ -235,8 +243,70 @@ namespace GU_Exchange
 
         private void Button_Click_1(object sender, RoutedEventArgs e)
         {
-            _ = _parent.ReloadOrderbookAsync();
+            _ = parent.ReloadOrderbookAsync();
             this.Visibility = Visibility.Collapsed;
+        }
+
+        private async void btnList_Click(object sender, RoutedEventArgs e)
+        {
+            userChoicePanel.Visibility = Visibility.Collapsed;
+            loadingPanel.Visibility = Visibility.Visible;
+
+            // Get the connected wallet.
+            Wallet? wallet = Wallet.GetConnectedWallet();
+            if (wallet == null)
+            {
+                // No wallet connected, cannot continue.
+                spinner.Visibility = Visibility.Collapsed;
+                error.Visibility = Visibility.Visible;
+                btnClose.Visibility = Visibility.Visible;
+                tbStatus.Text = "No wallet connected";
+                return;
+            }
+
+            // Submit the order and allow the wallet to update the status message.
+            List<(NFT card, string tokenID, double price, TextBlock? tbListing)> listings = new();
+            for (int i = 0; i < int.Parse((string)cbNumber.SelectedItem); i++)
+            {
+                try
+                {
+                    NFT card = new NFT()
+                    {
+                        token_address = "0xacb3c6a43d15b907e8433077b6d38ae40936fe2c",
+                        token_id = ulong.Parse(listableTokens[i])
+                    };
+                    Dictionary<string, Token> tokens = await Wallet.FetchTokens();
+                    Token token = tokens[(string)cbCurrency.SelectedItem];
+                    double basePrice = double.Parse(tbReceiveAmount.Text) / 0.99;
+                    listings.Add((card, token.Address, basePrice, null));
+                }
+                catch (FormatException) 
+                {
+                    // Purchase failed.
+                    spinner.Visibility = Visibility.Collapsed;
+                    error.Visibility = Visibility.Visible;
+                    btnClose.Visibility = Visibility.Visible;
+                    tbStatus.Text = "Sell price improperly formatted.";
+                    return;
+                }
+            }
+            Dictionary<NFT, bool> result = await wallet.RequestCreateOrders(Application.Current.MainWindow, listings.ToArray(), this.tbStatus);
+            bool resTotal = result.All(x => x.Value);
+            spinner.Visibility = Visibility.Collapsed;
+            if (!resTotal)
+            {
+                // Purchase failed.
+                error.Visibility = Visibility.Visible;
+                btnClose.Visibility = Visibility.Visible;
+                return;
+            }
+
+            // Buying the order succeeded, now update the inventory and local wallet to reflect the successfull purchase.
+            success.Visibility = Visibility.Visible;
+
+            // Refresh the wallet in the parent CardControl.
+            _ = parent.SetupInventoryAsync();
+            btnClose.Visibility = Visibility.Visible;
         }
     }
 

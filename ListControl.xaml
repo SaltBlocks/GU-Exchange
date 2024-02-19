@@ -22,7 +22,7 @@
                     <fa:ImageAwesome x:Name="success" Icon="CheckCircle" Width="70" Height="70" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" />
                     <fa:ImageAwesome x:Name="error" Icon="TimesCircle" Width="70" Height="70" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" />
                     <TextBlock x:Name="tbStatus" Text="Waiting for wallet..." Margin="10" FontWeight="Bold" TextWrapping="Wrap" />
-                    <Button x:Name="btnClose" Content="Close" Width="75" Height="25" Visibility="Collapsed" />
+                    <Button x:Name="btnClose" Content="Close" Width="75" Height="25" Visibility="Collapsed" Click="Button_Click_1" />
                 </StackPanel>
                 <StackPanel x:Name="userChoicePanel" Grid.Column="0" Margin="10" VerticalAlignment="Center" HorizontalAlignment="Center" Visibility="Visible">
                     <!-- #region Information text. -->
@@ -66,8 +66,8 @@
                     <!-- #endregion -->
                     <!-- #region Buttons. -->
                     <StackPanel HorizontalAlignment="Center">
-                        <Button x:Name="btnList" Content="List" Width="75" Height="25" Margin="0,10" IsEnabled="False" />
-                        <Button Content="Cancel" Width="75" Height="25" Margin="0,5" Click="Button_Click_1" />
+                        <Button x:Name="btnList" Content="List" Width="75" Height="25" Margin="0,10" IsEnabled="False" Click="btnList_Click" />
+                        <Button Content="Close" Width="75" Height="25" Margin="0,5" Click="Button_Click_1" />
                     </StackPanel>
                     <!-- #endregion -->
                 </StackPanel>
