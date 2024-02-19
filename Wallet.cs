@@ -845,7 +845,7 @@ namespace GU_Exchange
 
         /// <summary>
         /// Request the user to List one or multiple .
-        /// This will purchase immediately if the private key for the <see cref="Wallet"/> is unlocked and available.
+        /// This will submit the listings immediately if the private key for the <see cref="Wallet"/> is unlocked and available.
         /// </summary>
         /// <param name="parent"></param>
         /// <param name="order"></param>
@@ -934,14 +934,104 @@ namespace GU_Exchange
 
             return results.ToDictionary(x => x.card, x => x.res);
         }
+
+        /// <summary>
+        /// Request the user to cancel one or multiple active orders.
+        /// This will cancel the orders immediately if the private key for the <see cref="Wallet"/> is unlocked and available.
+        /// </summary>
+        /// <param name="parent"></param>
+        /// <param name="order"></param>
+        /// <param name="tbStatus"></param>
+        /// <returns></returns>
+        virtual public async Task<Dictionary<string, bool>> RequestCancelOrders(Window parent, (string orderID, TextBlock? tbStatusCancellation)[] orders, TextBlock tbStatus)
+        {
+            foreach ((string orderID, TextBlock? tbStatusCancellation) order in orders)
+            {
+                if (order.tbStatusCancellation != null) order.tbStatusCancellation.Text = "Waiting for wallet to be unlocked...";
+            }
+            tbStatus.Text = "Waiting for wallet to be unlocked...";
+            bool reLock = false;
+            if (IsLocked())
+            {
+                UnlockWalletWindow unlockWindow = new UnlockWalletWindow(this);
+                unlockWindow.Owner = parent;
+                unlockWindow.ShowDialog();
+                if (unlockWindow.Result == UnlockWalletWindow.UnlockResult.Cancel)
+                {
+                    foreach ((string orderID, TextBlock? tbStatusCancellation) order in orders)
+                    {
+                        if (order.tbStatusCancellation != null)
+                        {
+                            order.tbStatusCancellation.Text = "User cancelled action.";
+                        }
+                        tbStatus.Text = "Listing(s) cancelled.";
+                    }
+                    return orders.ToDictionary(x => x.orderID, x => false);
+                }
+                reLock = unlockWindow.Result == UnlockWalletWindow.UnlockResult.Relock;
+            }
+
+            tbStatus.Text = $"Cancelling listing{(orders.Count() > 1 ? "s" : "")} on IMX...";
+            List<Task<(string orderID, bool result)>> cancelTasks = new();
+            foreach ((string orderID, TextBlock? tbStatusCancellation) order in orders)
+            {
+                Task<(string orderID, bool result)> cancelListing = Task.Run(() =>
+                {
+                    int bufferSize = 1024;
+                    IntPtr resultBuffer = Marshal.AllocHGlobal(bufferSize);
+                    string? result = IntPtrToString(imx_cancel_order(order.orderID, GetPrivateKey(), resultBuffer, bufferSize));
+                    Marshal.FreeHGlobal(resultBuffer);
+
+                    // Handle the result
+                    if (result == null)
+                    {
+                        if (order.tbStatusCancellation != null) order.tbStatusCancellation.Text = "An unknown error occurred";
+                        return (order.orderID, false);
+                    }
+                    if (!result.Contains("order_id"))
+                    {
+                        JObject? jsonResult = (JObject?)JsonConvert.DeserializeObject(result);
+                        string? message = (string?)jsonResult?.SelectToken("message");
+                        if (message == null)
+                        {
+                            if (order.tbStatusCancellation != null) order.tbStatusCancellation.Text = "An unknown error occurred";
+                            return (order.orderID, false);
+                        }
+                        if (order.tbStatusCancellation != null) order.tbStatusCancellation.Text = message;
+                        return (order.orderID, false);
+                    }
+
+                    return (order.orderID, true);
+                });
+                cancelTasks.Add(cancelListing);
+            }
+            (string orderID, bool res)[] results = await Task.WhenAll(cancelTasks);
+            if (reLock)
+                LockWallet();
+
+            if (results.All(x => x.res))
+            {
+                tbStatus.Text = $"Listing{(orders.Count() > 1 ? "s" : "")} cancelled on IMX";
+            }
+            else if (results.All(x => !x.res))
+            {
+                tbStatus.Text = $"Listing{(orders.Count() > 1 ? "s" : "")} cancellation failed";
+            }
+            else
+            {
+                tbStatus.Text = "Not all listings were cancelled.";
+            }
+
+            return results.ToDictionary(x => x.orderID, x => x.res);
+        }
         #endregion
 
-            #region Supporting functions.
-            /// <summary>
-            /// Calculate the address belonging to this wallet.
-            /// </summary>
-            /// <returns></returns>
-            /// <exception cref="NullReferenceException"></exception>
+        #region Supporting functions.
+        /// <summary>
+        /// Calculate the address belonging to this wallet.
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="NullReferenceException"></exception>
         virtual protected string CalculateAddress()
         {
             IntPtr addressBuffer = Marshal.AllocHGlobal(43);

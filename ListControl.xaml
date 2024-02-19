@@ -68,7 +68,7 @@
                     <StackPanel HorizontalAlignment="Center">
                         <StackPanel HorizontalAlignment="Center" Orientation="Horizontal">
                             <Button x:Name="btnList" Content="List" Width="90" Height="25" Margin="5" IsEnabled="False" Click="btnList_Click" />
-                            <Button x:Name="btnCancel" Content="List" Width="90" Height="25" Margin="5" IsEnabled="False" Click="btnList_Click" Visibility="Collapsed" />
+                            <Button x:Name="btnCancel" Content="Cancel Listings" Width="90" Height="25" Margin="5" Click="btnCancel_Click" Visibility="Collapsed" />
                         </StackPanel>
                         <Button Content="Close" Width="90" Height="25" Margin="0,5" Click="Button_Click_1" />
                     </StackPanel>

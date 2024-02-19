@@ -63,6 +63,14 @@ namespace GU_Exchange
         [DllImport("IMXlib.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern IntPtr imx_finish_sell_or_offer_nft(string nonce_str, string imx_seed_sig_str, string imx_transaction_sig_str, IntPtr result_buffer, int buffer_size);
         #endregion
+        #region Cancel Order.
+        [DllImport("IMXlib.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr imx_cancel_order(string order_id_str, string eth_priv_str, IntPtr result_buffer, int buffer_size);
+        [DllImport("IMXlib.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr imx_request_cancel_order(string order_id_str, IntPtr result_buffer, int buffer_size);
+        [DllImport("IMXlib.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr imx_finish_cancel_order(string order_id_str, string eth_address_str, string imx_seed_sig_str, string imx_transaction_sig_str, IntPtr result_buffer, int buffer_size);
+        #endregion
         public static string? IntPtrToString(IntPtr ptr)
         {
             return Marshal.PtrToStringAnsi(ptr);

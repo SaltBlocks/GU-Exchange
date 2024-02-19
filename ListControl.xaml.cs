@@ -31,6 +31,7 @@ namespace GU_Exchange
     {
         private readonly CardControl _parent;
         private readonly Dictionary<string, Task<Order?>> _cheapestOrders;
+        private readonly List<string> _allTokens;
         private readonly List<string> _listableTokens;
         private readonly List<string> _activeOrders;
 
@@ -43,6 +44,7 @@ namespace GU_Exchange
             cbCurrency.SelectedIndex = 0;
             DataContext = new ListCardViewModel(parent.tbCardName.Text, (string)parent.cbQuality.SelectedItem, image);
             _cheapestOrders = new();
+            _allTokens = new();
             _listableTokens = new();
             _activeOrders = new();
             FetchCheapestOrders();
@@ -77,16 +79,21 @@ namespace GU_Exchange
 
             int num_owned = 0;
             int num_listed = 0;
+            _activeOrders.Clear();
+            _allTokens.Clear();
+            _listableTokens.Clear();
             foreach (JToken card in result)
             {
                 string? quality = card["metadata"]?["quality"]?.Value<string>();
                 if (quality == ((ListCardViewModel)DataContext).CardQuality)
                 {
                     num_owned++;
+                    string? tokenID = card["token_id"]?.Value<string>();
+                    if (tokenID != null) _allTokens.Add(tokenID);
+                    Console.WriteLine(card);
                     if (card["orders"] != null)
                     {
                         num_listed++;
-                        Console.WriteLine(card);
                         JToken?[]? orders = (card["orders"]?["sell_orders"]?.Any() ?? false) ? card["orders"]?["sell_orders"]?.ToArray<JToken?>() : null;
                         if (orders != null)
                         {
@@ -98,19 +105,19 @@ namespace GU_Exchange
                                 if (orderID != null)
                                 {
                                     _activeOrders.Add(orderID);
-                                    Console.WriteLine(order["order_id"]);
                                 }
                             }
                         }
                     }
                     else
                     {
-                        string? tokenID = card["token_id"]?.Value<string>();
                         if (tokenID != null) _listableTokens.Add(tokenID);
                     }    
                 }
             }
-            this.tbNumber.Text = $"/ {num_owned} ({num_listed} listed)";
+            if (num_listed > 0) btnCancel.Visibility = Visibility.Visible;
+            else   btnCancel.Visibility = Visibility.Collapsed;
+            tbNumber.Text = $"/ {num_owned} ({num_listed} listed)";
             cbNumber.Items.Clear();
             for (int i = 0; i < num_owned - num_listed; i++)
             {
@@ -326,6 +333,55 @@ namespace GU_Exchange
             // Refresh the wallet in the parent CardControl.
             _ = _parent.SetupInventoryAsync();
             btnClose.Visibility = Visibility.Visible;
+        }
+
+        private async void btnCancel_Click(object sender, RoutedEventArgs e)
+        {
+            userChoicePanel.Visibility = Visibility.Collapsed;
+            loadingPanel.Visibility = Visibility.Visible;
+
+            // Get the connected wallet.
+            Wallet? wallet = Wallet.GetConnectedWallet();
+            if (wallet == null)
+            {
+                // No wallet connected, cannot continue.
+                spinner.Visibility = Visibility.Collapsed;
+                error.Visibility = Visibility.Visible;
+                btnClose.Visibility = Visibility.Visible;
+                tbStatus.Text = "No wallet connected";
+                return;
+            }
+
+            // Cancel the order(s) and allow the wallet to update the status message.
+            List<(string orderID, TextBlock? tbListing)> listings = _activeOrders.Select(orderID => (orderID, (TextBlock?)null)).ToList();
+            Dictionary<string, bool> result = await wallet.RequestCancelOrders(Application.Current.MainWindow, listings.ToArray(), tbStatus);
+            bool resTotal = result.All(x => x.Value);
+            if (!resTotal)
+            {
+                // Cancellation failed.
+                spinner.Visibility = Visibility.Collapsed;
+                error.Visibility = Visibility.Visible;
+                btnClose.Visibility = Visibility.Visible;
+                return;
+            }
+
+            // Cancelling the order(s) succeeded.
+            _activeOrders.Clear();
+            cbNumber.Items.Clear();
+            _listableTokens.Clear();
+            _listableTokens.AddRange(_allTokens);
+            for (int i = 0; i < _listableTokens.Count(); i++)
+            {
+                cbNumber.Items.Add((i + 1).ToString());
+            }
+            if (_listableTokens.Count() > 0)
+            {
+                cbNumber.SelectedIndex = 0;
+                btnList.IsEnabled = true;
+            }
+            loadingPanel.Visibility = Visibility.Collapsed;
+            userChoicePanel.Visibility = Visibility.Visible;
+            
         }
     }
 
