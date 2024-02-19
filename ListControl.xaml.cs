@@ -29,20 +29,22 @@ namespace GU_Exchange
     /// </summary>
     public partial class ListControl : UserControl
     {
-        private readonly CardControl parent;
-        private readonly Dictionary<string, Task<Order?>> cheapestOrders;
-        private List<string> listableTokens;
+        private readonly CardControl _parent;
+        private readonly Dictionary<string, Task<Order?>> _cheapestOrders;
+        private readonly List<string> _listableTokens;
+        private readonly List<string> _activeOrders;
 
         public ListControl(CardControl parent, ImageSource image)
         {
             InitializeComponent();
-            this.parent = parent;
+            this._parent = parent;
             List<string> items = new List<string> { "ETH", "GODS", "IMX" };
             cbCurrency.ItemsSource = items;
             cbCurrency.SelectedIndex = 0;
             DataContext = new ListCardViewModel(parent.tbCardName.Text, (string)parent.cbQuality.SelectedItem, image);
-            cheapestOrders = new();
-            listableTokens = new();
+            _cheapestOrders = new();
+            _listableTokens = new();
+            _activeOrders = new();
             FetchCheapestOrders();
             setup();
         }
@@ -54,11 +56,11 @@ namespace GU_Exchange
             if (wallet == null)
             {
                 // No wallet connected, close this window.
-                _ = parent.ReloadOrderbookAsync();
+                _ = _parent.ReloadOrderbookAsync();
                 this.Visibility = Visibility.Collapsed;
                 return;
             }
-            string cardData = HttpUtility.UrlEncode("{\"proto\":[\"" + parent.CardID + "\"]}");
+            string cardData = HttpUtility.UrlEncode("{\"proto\":[\"" + _parent.CardID + "\"]}");
             string urlInventory = $"https://api.x.immutable.com/v1/assets?page_size=10&user={wallet.Address}&metadata={cardData}&sell_orders=true";
             string cardString;
             try 
@@ -82,13 +84,30 @@ namespace GU_Exchange
                 {
                     num_owned++;
                     if (card["orders"] != null)
+                    {
                         num_listed++;
+                        Console.WriteLine(card);
+                        JToken?[]? orders = (card["orders"]?["sell_orders"]?.Any() ?? false) ? card["orders"]?["sell_orders"]?.ToArray<JToken?>() : null;
+                        if (orders != null)
+                        {
+                            foreach (JToken? order in orders)
+                            {
+                                if (order == null || order["order_id"] == null)
+                                    continue;
+                                string? orderID = order["order_id"]?.Value<string?>();
+                                if (orderID != null)
+                                {
+                                    _activeOrders.Add(orderID);
+                                    Console.WriteLine(order["order_id"]);
+                                }
+                            }
+                        }
+                    }
                     else
                     {
                         string? tokenID = card["token_id"]?.Value<string>();
-                        if (tokenID != null) listableTokens.Add(tokenID);
-                    }
-                        
+                        if (tokenID != null) _listableTokens.Add(tokenID);
+                    }    
                 }
             }
             this.tbNumber.Text = $"/ {num_owned} ({num_listed} listed)";
@@ -104,7 +123,7 @@ namespace GU_Exchange
             }
             string? tokenName = cbCurrency.SelectedItem.ToString();
             if (tokenName == null) return;
-            Order? cheapestOrder = await cheapestOrders[tokenName];
+            Order? cheapestOrder = await _cheapestOrders[tokenName];
             if (cheapestOrder == null) return;
             decimal listPrice = cheapestOrder.PriceTotal() - new decimal(0.00000001);
             tbListprice.Text = listPrice.ToString("0.##########");
@@ -127,7 +146,7 @@ namespace GU_Exchange
             Dictionary<string, Token> currency = await Wallet.FetchTokens();
             foreach (Token token in currency.Values)
             {
-                cheapestOrders[token.Name] = FetchCheapestOrder(token.Address);
+                _cheapestOrders[token.Name] = FetchCheapestOrder(token.Address);
             }
         }
 
@@ -136,7 +155,7 @@ namespace GU_Exchange
             string token_str = tokenAddress;
             if (token_str.Equals("ETH"))
                 token_str = "&buy_token_type=ETH";
-            string cardData = HttpUtility.UrlEncode("{\"proto\":[\"" + parent.CardID + "\"],\"quality\":[\"" + ((ListCardViewModel)DataContext).CardQuality + "\"]}");
+            string cardData = HttpUtility.UrlEncode("{\"proto\":[\"" + _parent.CardID + "\"],\"quality\":[\"" + ((ListCardViewModel)DataContext).CardQuality + "\"]}");
             string urlOrderBook = $"https://api.x.immutable.com/v3/orders?buy_token_address={token_str}&direction=asc&include_fees=true&order_by=buy_quantity&page_size=1&sell_metadata={cardData}&sell_token_address=0xacb3c6a43d15b907e8433077b6d38ae40936fe2c&status=active";
             try
             {
@@ -146,7 +165,7 @@ namespace GU_Exchange
                 JObject? jsonOrders = (JObject?)JsonConvert.DeserializeObject(strOrderBook);
                 if (jsonOrders == null)
                     return null;
-                JToken? order = jsonOrders["result"]?[0]?.Value<JToken?>();
+                JToken? order = (jsonOrders["result"]?.Any() ?? false) ? jsonOrders["result"]?[0]?.Value<JToken?>() : null;
                 if (order == null)
                     return null;
                 return new Order(order, tokenAddress);
@@ -180,7 +199,7 @@ namespace GU_Exchange
                 return;
             }
             // Click occurred outside buyGrid, you can call your function here
-            _ = parent.ReloadOrderbookAsync();
+            _ = _parent.ReloadOrderbookAsync();
             this.Visibility = Visibility.Collapsed;
         }
 
@@ -219,9 +238,9 @@ namespace GU_Exchange
         {
             string? tokenName = cbCurrency.SelectedItem.ToString();
             if (tokenName == null) return;
-            if (cheapestOrders == null) return;
-            if (!cheapestOrders.ContainsKey(tokenName)) return;
-            Order? cheapestOrder = await cheapestOrders[tokenName];
+            if (_cheapestOrders == null) return;
+            if (!_cheapestOrders.ContainsKey(tokenName)) return;
+            Order? cheapestOrder = await _cheapestOrders[tokenName];
             if (cheapestOrder == null) return;
             decimal listPrice = cheapestOrder.PriceTotal() - new decimal(0.00000001);
             tbListprice.Text = listPrice.ToString("0.##########");
@@ -243,7 +262,7 @@ namespace GU_Exchange
 
         private void Button_Click_1(object sender, RoutedEventArgs e)
         {
-            _ = parent.ReloadOrderbookAsync();
+            _ = _parent.ReloadOrderbookAsync();
             this.Visibility = Visibility.Collapsed;
         }
 
@@ -273,7 +292,7 @@ namespace GU_Exchange
                     NFT card = new NFT()
                     {
                         token_address = "0xacb3c6a43d15b907e8433077b6d38ae40936fe2c",
-                        token_id = ulong.Parse(listableTokens[i])
+                        token_id = ulong.Parse(_listableTokens[i])
                     };
                     Dictionary<string, Token> tokens = await Wallet.FetchTokens();
                     Token token = tokens[(string)cbCurrency.SelectedItem];
@@ -305,7 +324,7 @@ namespace GU_Exchange
             success.Visibility = Visibility.Visible;
 
             // Refresh the wallet in the parent CardControl.
-            _ = parent.SetupInventoryAsync();
+            _ = _parent.SetupInventoryAsync();
             btnClose.Visibility = Visibility.Visible;
         }
     }
