@@ -887,12 +887,11 @@ namespace GU_Exchange
                 {
                     int bufferSize = 1024;
                     IntPtr resultBuffer = Marshal.AllocHGlobal(bufferSize);
-                    Console.WriteLine(listing.tokenID);
-                    Console.WriteLine(listing.price);
                     string? result = IntPtrToString(imx_sell_nft(listing.card.token_address, listing.card.token_id.ToString(), listing.tokenID, listing.price, new Fee[0], 0, GetPrivateKey(), resultBuffer, bufferSize));
                     Marshal.FreeHGlobal(resultBuffer);
                     
                     // Handle the result
+                    Console.WriteLine(result ?? "No result");
                     if (result == null)
                     {
                         if (listing.tbStatusListing != null) listing.tbStatusListing.Text = "An unknown error occurred";
@@ -1103,7 +1102,6 @@ namespace GU_Exchange
             }
             catch (OperationCanceledException)
             {
-                Console.WriteLine("Cancelled");
                 return false;
             }
         }

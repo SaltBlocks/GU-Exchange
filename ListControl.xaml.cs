@@ -31,9 +31,9 @@ namespace GU_Exchange
     {
         private readonly CardControl _parent;
         private readonly Dictionary<string, Task<Order?>> _cheapestOrders;
-        private readonly List<string> _allTokens;
-        private readonly List<string> _listableTokens;
-        private readonly List<string> _activeOrders;
+        private readonly HashSet<string> _allTokens;
+        private readonly HashSet<string> _listableTokens;
+        private readonly HashSet<string> _activeOrders;
 
         public ListControl(CardControl parent, ImageSource image)
         {
@@ -53,6 +53,10 @@ namespace GU_Exchange
 
         public async void setup()
         {
+            _activeOrders.Clear();
+            _allTokens.Clear();
+            _listableTokens.Clear();
+
             // Fetch cards in the connected wallet.
             Wallet? wallet = Wallet.GetConnectedWallet();
             if (wallet == null)
@@ -62,59 +66,57 @@ namespace GU_Exchange
                 this.Visibility = Visibility.Collapsed;
                 return;
             }
-            string cardData = HttpUtility.UrlEncode("{\"proto\":[\"" + _parent.CardID + "\"]}");
-            string urlInventory = $"https://api.x.immutable.com/v1/assets?page_size=10&user={wallet.Address}&metadata={cardData}&sell_orders=true";
+            string cardData = HttpUtility.UrlEncode("{\"proto\":[\"" + _parent.CardID + "\"],\"quality\":[\"" + (string)_parent.cbQuality.SelectedItem + "\"]}");
+            string urlListed = $"https://api.x.immutable.com/v3/orders?sell_metadata={cardData}&sell_token_address=0xacb3c6a43d15b907e8433077b6d38ae40936fe2c&status=active&user={wallet.Address}";
+            string urlInventory = $"https://api.x.immutable.com/v1/assets?user={wallet.Address}&metadata={cardData}&sell_orders=true";
             string cardString;
+            string listingString;
             try 
             {
-                cardString = await ResourceManager.Client.GetStringAsync(urlInventory);
+                Task<string> fetchInventory = ResourceManager.Client.GetStringAsync(urlInventory);
+                listingString = await ResourceManager.Client.GetStringAsync(urlListed);
+                cardString = await fetchInventory;
             }
             catch (Exception ex) when (ex is OperationCanceledException || ex is HttpRequestException)
             { 
                 return; 
-            }    
+            }
+
+            // Deserialize the JSON into a JObject
+            JObject jsonObj = JObject.Parse(listingString);
+
+            JArray? resultArray = jsonObj["result"] as JArray;
+            HashSet<string?> listedTokens = new();
+            if (resultArray != null)
+            {
+                foreach (JToken token in resultArray)
+                {
+                    string? orderId = token["order_id"]?.ToObject<string?>();
+                    string? tokenId = (string?)token.SelectToken("sell.data.token_id");
+                    if (orderId != null)
+                    {
+                        _activeOrders.Add(orderId);
+                    }
+                    if (tokenId != null)
+                    {
+                        listedTokens.Add(tokenId);
+                    }
+                }
+            }
+
             JObject? jsonData = JsonConvert.DeserializeObject<JObject?>(cardString);
             if (jsonData?["result"] is not JToken result)
                 return;
-
-            int num_owned = 0;
-            int num_listed = 0;
-            _activeOrders.Clear();
-            _allTokens.Clear();
-            _listableTokens.Clear();
             foreach (JToken card in result)
             {
-                string? quality = card["metadata"]?["quality"]?.Value<string>();
-                if (quality == ((ListCardViewModel)DataContext).CardQuality)
-                {
-                    num_owned++;
-                    string? tokenID = card["token_id"]?.Value<string>();
-                    if (tokenID != null) _allTokens.Add(tokenID);
-                    Console.WriteLine(card);
-                    if (card["orders"] != null)
-                    {
-                        num_listed++;
-                        JToken?[]? orders = (card["orders"]?["sell_orders"]?.Any() ?? false) ? card["orders"]?["sell_orders"]?.ToArray<JToken?>() : null;
-                        if (orders != null)
-                        {
-                            foreach (JToken? order in orders)
-                            {
-                                if (order == null || order["order_id"] == null)
-                                    continue;
-                                string? orderID = order["order_id"]?.Value<string?>();
-                                if (orderID != null)
-                                {
-                                    _activeOrders.Add(orderID);
-                                }
-                            }
-                        }
-                    }
-                    else
-                    {
-                        if (tokenID != null) _listableTokens.Add(tokenID);
-                    }    
-                }
+                string? tokenID = card["token_id"]?.Value<string>();
+                if (tokenID == null) continue;
+                _allTokens.Add(tokenID);
+                if (!listedTokens.Contains(tokenID)) _listableTokens.Add(tokenID);
             }
+            int num_owned = _allTokens.Count();
+            int num_listed = listedTokens.Count();
+
             if (num_listed > 0) btnCancel.Visibility = Visibility.Visible;
             else   btnCancel.Visibility = Visibility.Collapsed;
             tbNumber.Text = $"/ {num_owned} ({num_listed} listed)";
@@ -123,9 +125,10 @@ namespace GU_Exchange
             {
                 cbNumber.Items.Add((i + 1).ToString());
             }
+            if (num_owned - num_listed == 0) cbNumber.Items.Add("None available");
+            cbNumber.SelectedIndex = 0;
             if (num_owned - num_listed > 0)
             {
-                cbNumber.SelectedIndex = 0;
                 btnList.IsEnabled = true;
             }
             string? tokenName = cbCurrency.SelectedItem.ToString();
@@ -306,7 +309,6 @@ namespace GU_Exchange
                             return;
                         }
                     }
-                    Console.WriteLine(listPrice / bestPrice);
                 }
                 catch (FormatException) { }
             }
@@ -324,14 +326,15 @@ namespace GU_Exchange
 
             // Submit the order and allow the wallet to update the status message.
             List<(NFT card, string tokenID, double price, TextBlock? tbListing)> listings = new();
-            for (int i = 0; i < int.Parse((string)cbNumber.SelectedItem); i++)
+            IEnumerable<string> tokensToList = _listableTokens.Take(int.Parse((string)cbNumber.SelectedItem));
+            foreach (string tokenIDStr in tokensToList)
             {
                 try
                 {
                     NFT card = new NFT()
                     {
                         token_address = "0xacb3c6a43d15b907e8433077b6d38ae40936fe2c",
-                        token_id = ulong.Parse(_listableTokens[i])
+                        token_id = ulong.Parse(tokenIDStr)
                     };
                     Dictionary<string, Token> tokens = await Wallet.FetchTokens();
                     Token token = tokens[(string)cbCurrency.SelectedItem];
@@ -401,14 +404,15 @@ namespace GU_Exchange
             _activeOrders.Clear();
             cbNumber.Items.Clear();
             _listableTokens.Clear();
-            _listableTokens.AddRange(_allTokens);
+            _listableTokens.UnionWith(_allTokens);
             for (int i = 0; i < _listableTokens.Count(); i++)
             {
                 cbNumber.Items.Add((i + 1).ToString());
             }
+            if (_listableTokens.Count() == 0) cbNumber.Items.Add("None available");
+            cbNumber.SelectedIndex = 0;
             if (_listableTokens.Count() > 0)
             {
-                cbNumber.SelectedIndex = 0;
                 btnList.IsEnabled = true;
             }
             tbNumber.Text = $"/ {_listableTokens.Count()} (0 listed)";
