@@ -26,19 +26,27 @@ namespace GU_Exchange
         public UseWebWalletWindow(Task task)
         {
             InitializeComponent();
-            tbLink.Text = $"http://localhost:{SignatureRequestServer.ClientPort}/";
-            Tasks = new()
-            {
-                task
-            };
-            TrackTasks();
+            Tasks = new List<Task> { task };
+            InitializeTasks();
         }
 
         public UseWebWalletWindow(List<Task> tasks)
         {
             InitializeComponent();
-            tbLink.Text = $"http://localhost:{SignatureRequestServer.ClientPort}/";
             Tasks = tasks;
+            InitializeTasks();
+        }
+
+        public UseWebWalletWindow(IEnumerable<Task> tasks)
+        {
+            InitializeComponent();
+            Tasks = tasks.ToList();
+            InitializeTasks();
+        }
+
+        private void InitializeTasks()
+        {
+            tbLink.Text = $"http://localhost:{SignatureRequestServer.ClientPort}/";
             TrackTasks();
         }
 

@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.NetworkInformation;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Soap;
@@ -1196,6 +1197,122 @@ namespace GU_Exchange
             }
             tbStatus.Text = "Purchase complete";
             return true;
+        }
+
+        /// <summary>
+        /// Request the user to List one or multiple .
+        /// This will submit the listings immediately if the private key for the <see cref="Wallet"/> is unlocked and available.
+        /// </summary>
+        /// <param name="parent"></param>
+        /// <param name="order"></param>
+        /// <param name="tbStatus"></param>
+        /// <returns></returns>
+        public override async Task<Dictionary<NFT, bool>> RequestCreateOrders(Window parent, (NFT card, string tokenID, double price, TextBlock? tbStatusListing)[] listings, TextBlock tbStatus)
+        {
+            foreach ((NFT card, string tokenID, double price, TextBlock? tbStatusListing) listing in listings)
+            {
+                if (listing.tbStatusListing != null) listing.tbStatusListing.Text = "Waiting for wallet...";
+            }
+            tbStatus.Text = "Waiting for wallet...";
+            if (this.IsLocked())
+                await this.UnlockWallet();
+
+            tbStatus.Text = "Preparing orders to create...";
+            List<(Task<string?>, NFT card, TextBlock?)> prepareTasks = new();
+            foreach ((NFT card, string tokenID, double price, TextBlock? tbStatusListing) listing in listings)
+            {
+                Task<string?> createListing = Task.Run(() =>
+                {
+                    int bufferSize = 1024;
+                    IntPtr resultBuffer = Marshal.AllocHGlobal(bufferSize);
+                    string? result = IntPtrToUtf8String(imx_request_sell_nft(listing.card.token_address, listing.card.token_id.ToString(), listing.tokenID, listing.price, new Fee[0], 0, Address, resultBuffer, bufferSize));
+                    Marshal.FreeHGlobal(resultBuffer);
+                    return result;
+                });
+                prepareTasks.Add((createListing, listing.card, listing.tbStatusListing));
+            }
+            await Task.WhenAll(prepareTasks.Select(x => x.Item1));
+            tbStatus.Text = "Waiting for user signature(s)...";
+
+            List<(Task<bool>, NFT card, TextBlock? tbStatusListing)> listTasks = new();
+            foreach ((Task<string?> prep, NFT card, TextBlock? tbStatusListing) prepareTask in prepareTasks)
+            {
+                // Check if the data is valid.
+                string? data = await prepareTask.prep;
+                if (data == null)
+                {
+                    if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Text = "Order creation failed (No data)";
+                    continue;
+                }
+                JObject? jsonData = (JObject?)JsonConvert.DeserializeObject(data);
+                if (jsonData == null)
+                {
+                    if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Text = "Order creation failed (Invalid JSON)";
+                    continue;
+                }
+
+                string? nonce = (string?)jsonData?.SelectToken("nonce");
+                string? signableMessage = (string?)jsonData?.SelectToken("signable_message");
+                if (nonce == null || signableMessage == null)
+                {
+                    string? message = (string?)jsonData?.SelectToken("message");
+                    if (message == null)
+                    {
+                        if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Text = "Order creation failed (Invalid JSON)";
+                        continue;
+                    }
+                    if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Text = message;
+                    continue;
+                }
+                
+                Task<bool> createListing = Task.Run(async () =>
+                {
+                    SignatureData signature = await SignatureRequestServer.RequestSignatureAsync(signableMessage);
+
+                    int bufferSize = 1024;
+                    IntPtr resultBuffer = Marshal.AllocHGlobal(bufferSize);
+                    string? result = IntPtrToUtf8String(imx_finish_sell_or_offer_nft(nonce, GetPrivateKey(), signature.Signature, resultBuffer, bufferSize));
+                    Marshal.FreeHGlobal(resultBuffer);
+                    Console.WriteLine(result ?? "No result");
+                    if (result == null)
+                    {
+                        if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Text = "An unknown error occurred";
+                        return false;
+                    }
+                    if (!result.Contains("order_id"))
+                    {
+                        JObject? jsonResult = (JObject?)JsonConvert.DeserializeObject(result);
+                        string? message = (string?)jsonResult?.SelectToken("message");
+                        if (message == null)
+                        {
+                            if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Text = "An unknown error occurred";
+                            return false;
+                        }
+                        if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Text = message;
+                        return false;
+                    }
+                    return true;
+                });
+                listTasks.Add((createListing, prepareTask.card, prepareTask.tbStatusListing));
+            }
+            UseWebWalletWindow useWalletWindow = new(listTasks.Select(x => x.Item1));
+            useWalletWindow.Owner = parent;
+            useWalletWindow.ShowDialog();
+            
+            Dictionary<NFT, bool> results = (await Task.WhenAll(listTasks.Select(async x => (x.card, await x.Item1)))).ToDictionary(x => x.card, x => x.Item2);
+            if (results.All(x => x.Value))
+            {
+                tbStatus.Text = "Listing(s) submitted to IMX";
+            }
+            else if (results.All(x => !x.Value))
+            {
+                tbStatus.Text = "Listing(s) submission failed";
+            }
+            else
+            {
+                tbStatus.Text = "Not all listings were submitted.";
+            }
+            return results;
         }
         #endregion
 
