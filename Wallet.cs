@@ -791,6 +791,7 @@ namespace GU_Exchange
         /// <returns></returns>
         virtual public async Task<bool> RequestBuyOrder(Window parent, Order order, TextBlock tbStatus)
         {
+            // Unlock user wallet.
             tbStatus.Text = "Waiting for wallet to be unlocked...";
             bool reLock = false;
             if (IsLocked())
@@ -807,6 +808,7 @@ namespace GU_Exchange
                     reLock = true;
             }
 
+            // Prompt IMXlib to purchase the order.
             tbStatus.Text = "Submitting order to IMX...";
             Task<string?> purchaseOrder = Task.Run(() =>
             {
@@ -818,10 +820,11 @@ namespace GU_Exchange
             });
             string? result = await purchaseOrder;
 
+            // Relock the wallet if requested by the user.
             if (reLock)
                 LockWallet();
 
-            // Handle the result
+            // Handle the server response.
             if (result == null)
             {
                 tbStatus.Text = "An unknown error occurred";
@@ -845,7 +848,7 @@ namespace GU_Exchange
         }
 
         /// <summary>
-        /// Request the user to List one or multiple .
+        /// Request the user to List one or multiple cards.
         /// This will submit the listings immediately if the private key for the <see cref="Wallet"/> is unlocked and available.
         /// </summary>
         /// <param name="parent"></param>
@@ -854,6 +857,7 @@ namespace GU_Exchange
         /// <returns></returns>
         virtual public async Task<Dictionary<NFT, bool>> RequestCreateOrders(Window parent, (NFT card, string tokenID, double price, TextBlock? tbStatusListing)[] listings, TextBlock tbStatus)
         {
+            // Unlock user wallet.
             foreach ((NFT card, string tokenID, double price, TextBlock? tbStatusListing) listing in listings)
             {
                 if (listing.tbStatusListing != null) listing.tbStatusListing.Text = "Waiting for wallet to be unlocked...";
@@ -880,18 +884,21 @@ namespace GU_Exchange
                 reLock = unlockWindow.Result == UnlockWalletWindow.UnlockResult.Relock;
             }
 
+            // Prompt IMXlib to submit the listings.
             tbStatus.Text = "Submitting listing(s) to IMX...";
             List<Task<(NFT card, bool result)>> listTasks = new();
             foreach ((NFT card, string tokenID, double price, TextBlock? tbStatusListing) listing in listings)
             {
+                // Create a task for each listing so they can run asynchronously.
                 Task<(NFT card, bool result)> createListing = Task.Run(() =>
                 {
+                    // Submit the listing.
                     int bufferSize = 1024;
                     IntPtr resultBuffer = Marshal.AllocHGlobal(bufferSize);
                     string? result = IntPtrToString(imx_sell_nft(listing.card.token_address, listing.card.token_id.ToString(), listing.tokenID, listing.price, new Fee[0], 0, GetPrivateKey(), resultBuffer, bufferSize));
                     Marshal.FreeHGlobal(resultBuffer);
                     
-                    // Handle the result
+                    // Handle the server response
                     Console.WriteLine(result ?? "No result");
                     if (result == null)
                     {
@@ -910,22 +917,26 @@ namespace GU_Exchange
                         if (listing.tbStatusListing != null) listing.tbStatusListing.Text = message;
                         return (listing.card, false);
                     }
-
                     return (listing.card, true);
                 });
+                // Add the task to a list of tasks so we can track when they finish.
                 listTasks.Add(createListing);
             }
+            // Wait for list tasks to finish.
             (NFT card, bool res)[] results = await Task.WhenAll(listTasks);
+
+            // Relock the wallet if requested by the user.
             if (reLock)
                 LockWallet();
 
+            // Inform the user about the combined result of all listings.
             if (results.All(x => x.res))
             {
-                tbStatus.Text = "Listing(s) submitted to IMX";
+                tbStatus.Text = $"Listing{(listings.Count() > 1 ? "s" : "")} submitted to IMX";
             }
             else if (results.All(x => !x.res))
             {
-                tbStatus.Text = "Listing(s) submission failed";
+                tbStatus.Text = $"Listing{(listings.Count() > 1 ? "s" : "")} submission failed";
             }
             else
             {
@@ -945,6 +956,7 @@ namespace GU_Exchange
         /// <returns></returns>
         virtual public async Task<Dictionary<string, bool>> RequestCancelOrders(Window parent, (string orderID, TextBlock? tbStatusCancellation)[] orders, TextBlock tbStatus)
         {
+            // Unlock user wallet.
             foreach ((string orderID, TextBlock? tbStatusCancellation) order in orders)
             {
                 if (order.tbStatusCancellation != null) order.tbStatusCancellation.Text = "Waiting for wallet to be unlocked...";
@@ -971,18 +983,21 @@ namespace GU_Exchange
                 reLock = unlockWindow.Result == UnlockWalletWindow.UnlockResult.Relock;
             }
 
+            // Prompt IMXlib to cancel orders.
             tbStatus.Text = $"Cancelling listing{(orders.Count() > 1 ? "s" : "")} on IMX...";
             List<Task<(string orderID, bool result)>> cancelTasks = new();
             foreach ((string orderID, TextBlock? tbStatusCancellation) order in orders)
             {
+                // Create a task for each cancellation so they can run asynchronously.
                 Task<(string orderID, bool result)> cancelListing = Task.Run(() =>
                 {
+                    // Cancel the order.
                     int bufferSize = 1024;
                     IntPtr resultBuffer = Marshal.AllocHGlobal(bufferSize);
                     string? result = IntPtrToString(imx_cancel_order(order.orderID, GetPrivateKey(), resultBuffer, bufferSize));
                     Marshal.FreeHGlobal(resultBuffer);
 
-                    // Handle the result
+                    // Handle the server response.
                     if (result == null)
                     {
                         if (order.tbStatusCancellation != null) order.tbStatusCancellation.Text = "An unknown error occurred";
@@ -1000,15 +1015,16 @@ namespace GU_Exchange
                         if (order.tbStatusCancellation != null) order.tbStatusCancellation.Text = message;
                         return (order.orderID, false);
                     }
-
                     return (order.orderID, true);
                 });
                 cancelTasks.Add(cancelListing);
             }
+            // Wait for all cancellation tasks to finish.
             (string orderID, bool res)[] results = await Task.WhenAll(cancelTasks);
             if (reLock)
                 LockWallet();
 
+            // Inform the user about the combined result of all cancellations.
             if (results.All(x => x.res))
             {
                 tbStatus.Text = $"Listing{(orders.Count() > 1 ? "s" : "")} cancelled on IMX";
@@ -1118,9 +1134,12 @@ namespace GU_Exchange
         /// <returns></returns>
         public override async Task<bool> RequestBuyOrder(Window parent, Order order, TextBlock tbStatus)
         {
+            // Unlock wallet (using default password).
             tbStatus.Text = "Waiting for wallet...";
             if (this.IsLocked())
                 await this.UnlockWallet();
+            
+            // Fetch data for signature request.
             tbStatus.Text = "Requesting order to purchase...";
             Task<string?> requestBuy = Task.Run(() =>
             {
@@ -1130,6 +1149,8 @@ namespace GU_Exchange
                 Marshal.FreeHGlobal(resultBuffer);
                 return result;
             });
+
+            // Handle server response.
             string? signableRequest = await requestBuy;
             if (signableRequest == null)
             {
@@ -1150,6 +1171,8 @@ namespace GU_Exchange
                 tbStatus.Text = message;
                 return false;
             }
+            
+            // Request the users signature.
             tbStatus.Text = "Waiting for user signature...";
             Task<SignatureData> fetchSignature = SignatureRequestServer.RequestSignatureAsync(signableMessage);
             UseWebWalletWindow useWalletWindow = new(fetchSignature);
@@ -1165,6 +1188,8 @@ namespace GU_Exchange
                 tbStatus.Text = "Purchase cancelled";
                 return false;
             }
+
+            // Prompt IMXlib to buy the order.
             tbStatus.Text = "Submitting order to IMX...";
             Task<string?> purchaseOrder = Task.Run(() =>
             {
@@ -1176,7 +1201,7 @@ namespace GU_Exchange
             });
             string? result = await purchaseOrder;
 
-            // Handle the result
+            // Handle the server response.
             if (result == null)
             {
                 tbStatus.Text = "An unknown error occurred";
@@ -1209,6 +1234,7 @@ namespace GU_Exchange
         /// <returns></returns>
         public override async Task<Dictionary<NFT, bool>> RequestCreateOrders(Window parent, (NFT card, string tokenID, double price, TextBlock? tbStatusListing)[] listings, TextBlock tbStatus)
         {
+            // Unlock wallet (using default password).
             foreach ((NFT card, string tokenID, double price, TextBlock? tbStatusListing) listing in listings)
             {
                 if (listing.tbStatusListing != null) listing.tbStatusListing.Text = "Waiting for wallet...";
@@ -1217,6 +1243,7 @@ namespace GU_Exchange
             if (this.IsLocked())
                 await this.UnlockWallet();
 
+            // Fetch data for signature requests.
             tbStatus.Text = "Preparing orders to create...";
             List<(Task<string?>, NFT card, TextBlock?)> prepareTasks = new();
             foreach ((NFT card, string tokenID, double price, TextBlock? tbStatusListing) listing in listings)
@@ -1232,8 +1259,10 @@ namespace GU_Exchange
                 prepareTasks.Add((createListing, listing.card, listing.tbStatusListing));
             }
             await Task.WhenAll(prepareTasks.Select(x => x.Item1));
-            tbStatus.Text = "Waiting for user signature(s)...";
-
+            
+            // Request user signatures.
+            tbStatus.Text = $"Waiting for user signature{(listings.Count() > 1 ? "s" : "")}...";
+            List<Task<SignatureData>> sigTasks = new();
             List<(Task<bool>, NFT card, TextBlock? tbStatusListing)> listTasks = new();
             foreach ((Task<string?> prep, NFT card, TextBlock? tbStatusListing) prepareTask in prepareTasks)
             {
@@ -1264,10 +1293,23 @@ namespace GU_Exchange
                     if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Text = message;
                     continue;
                 }
+
+                // Request signature.
+                Task<SignatureData> getSignature = SignatureRequestServer.RequestSignatureAsync(signableMessage);
                 
+                // Submit listing to IMX.
                 Task<bool> createListing = Task.Run(async () =>
                 {
-                    SignatureData signature = await SignatureRequestServer.RequestSignatureAsync(signableMessage);
+                    SignatureData signature;
+                    try 
+                    {
+                        signature = await getSignature;
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Text = "Order creation failed (Cancelled by user)";
+                        return false;
+                    }
 
                     int bufferSize = 1024;
                     IntPtr resultBuffer = Marshal.AllocHGlobal(bufferSize);
@@ -1293,24 +1335,151 @@ namespace GU_Exchange
                     }
                     return true;
                 });
+
+                sigTasks.Add(getSignature);
                 listTasks.Add((createListing, prepareTask.card, prepareTask.tbStatusListing));
             }
-            UseWebWalletWindow useWalletWindow = new(listTasks.Select(x => x.Item1));
+            
+            // Show signature request window.
+            UseWebWalletWindow useWalletWindow = new(sigTasks);
             useWalletWindow.Owner = parent;
             useWalletWindow.ShowDialog();
             
+            // Wait for listings to finish.
             Dictionary<NFT, bool> results = (await Task.WhenAll(listTasks.Select(async x => (x.card, await x.Item1)))).ToDictionary(x => x.card, x => x.Item2);
+            
+            // Inform the user of the listing result.
             if (results.All(x => x.Value))
             {
-                tbStatus.Text = "Listing(s) submitted to IMX";
+                tbStatus.Text = $"Listing{(listings.Count() > 1 ? "s" : "")} submitted to IMX";
             }
             else if (results.All(x => !x.Value))
             {
-                tbStatus.Text = "Listing(s) submission failed";
+                tbStatus.Text = $"Listing submission{(listings.Count() > 1 ? "s" : "")} failed";
             }
             else
             {
                 tbStatus.Text = "Not all listings were submitted.";
+            }
+            return results;
+        }
+
+        /// <summary>
+        /// Request the user to cancel one or multiple active orders.
+        /// </summary>
+        /// <param name="parent"></param>
+        /// <param name="order"></param>
+        /// <param name="tbStatus"></param>
+        /// <returns></returns>
+        public override async Task<Dictionary<string, bool>> RequestCancelOrders(Window parent, (string orderID, TextBlock? tbStatusCancellation)[] orders, TextBlock tbStatus)
+        {
+            // Unlock user wallet.
+            foreach ((string orderID, TextBlock? tbStatusCancellation) order in orders)
+            {
+                if (order.tbStatusCancellation != null) order.tbStatusCancellation.Text = "Waiting for wallet to be unlocked...";
+            }
+            tbStatus.Text = "Waiting for wallet...";
+            if (this.IsLocked())
+                await this.UnlockWallet();
+
+            // Fetch data for signature requests.
+            tbStatus.Text = "Preparing orders to cancel...";
+            List<(Task<string?>, string orderID, TextBlock?)> prepareTasks = new();
+            foreach ((string orderID, TextBlock? tbStatusCancellation) order in orders)
+            {
+                Task<string?> cancelListing = Task.Run(() =>
+                {
+                    int bufferSize = 1024;
+                    IntPtr resultBuffer = Marshal.AllocHGlobal(bufferSize);
+                    string? result = IntPtrToUtf8String(imx_request_cancel_order(order.orderID, resultBuffer, bufferSize));
+                    Marshal.FreeHGlobal(resultBuffer);
+                    return result;
+                });
+                prepareTasks.Add((cancelListing, order.orderID, order.tbStatusCancellation));
+            }
+            await Task.WhenAll(prepareTasks.Select(x => x.Item1));
+
+            // Request user signatures.
+            tbStatus.Text = $"Waiting for user signature{(orders.Count() > 1 ? "s" : "")}...";
+            List<Task<SignatureData>> sigTasks = new();
+            List<(Task<bool>, string orderID, TextBlock? tbStatusListing)> cancelTasks = new();
+            foreach ((Task<string?> prep, string orderID, TextBlock? tbStatusListing) prepareTask in prepareTasks)
+            {
+                // Check if the data is valid.
+                string? signableMessage = await prepareTask.prep;
+                if (signableMessage == null)
+                {
+                    if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Text = "Order cancellation failed (No data)";
+                    continue;
+                }
+
+                // Request signature.
+                Task<SignatureData> getSignature = SignatureRequestServer.RequestSignatureAsync(signableMessage);
+
+                // Submit cancellation to IMX.
+                Task<bool> cancelListing = Task.Run(async () =>
+                {
+                    SignatureData signature;
+                    try
+                    {
+                        signature = await getSignature;
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Text = "Order cancellation failed (Cancelled by user)";
+                        return false;
+                    }
+
+                    int bufferSize = 1024;
+                    IntPtr resultBuffer = Marshal.AllocHGlobal(bufferSize);
+                    string? result = IntPtrToUtf8String(imx_finish_cancel_order(prepareTask.orderID, Address, GetPrivateKey(), signature.Signature, resultBuffer, bufferSize));
+                    Marshal.FreeHGlobal(resultBuffer);
+                    Console.WriteLine(result ?? "No result");
+                    if (result == null)
+                    {
+                        if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Text = "An unknown error occurred";
+                        return false;
+                    }
+                    if (!result.Contains("order_id"))
+                    {
+                        JObject? jsonResult = (JObject?)JsonConvert.DeserializeObject(result);
+                        string? message = (string?)jsonResult?.SelectToken("message");
+                        if (message == null)
+                        {
+                            if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Text = "An unknown error occurred";
+                            return false;
+                        }
+                        if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Text = message;
+                        return false;
+                    }
+                    return true;
+                });
+
+                sigTasks.Add(getSignature);
+                cancelTasks.Add((cancelListing, prepareTask.orderID, prepareTask.tbStatusListing));
+            }
+
+            // Show signature request window.
+            UseWebWalletWindow useWalletWindow = new(sigTasks);
+            useWalletWindow.Owner = parent;
+            useWalletWindow.ShowDialog();
+
+
+            // Wait for all cancellation tasks to finish.
+            Dictionary<string, bool> results = (await Task.WhenAll(cancelTasks.Select(async x => (x.orderID, await x.Item1)))).ToDictionary(x => x.orderID, x => x.Item2);
+
+            // Inform the user about the combined result of all cancellations.
+            if (results.All(x => x.Value))
+            {
+                tbStatus.Text = $"Listing{(orders.Count() > 1 ? "s" : "")} cancelled on IMX";
+            }
+            else if (results.All(x => !x.Value))
+            {
+                tbStatus.Text = $"Listing cancellation{(orders.Count() > 1 ? "s" : "")} failed";
+            }
+            else
+            {
+                tbStatus.Text = "Not all listings were cancelled.";
             }
             return results;
         }

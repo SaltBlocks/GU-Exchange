@@ -4,23 +4,14 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Web;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
-using ImageProcessor.Processors;
-using System.Diagnostics;
 using System.Net.Http;
 using static GU_Exchange.IMXlib;
-using System.Runtime.InteropServices;
 
 namespace GU_Exchange
 {
@@ -29,12 +20,20 @@ namespace GU_Exchange
     /// </summary>
     public partial class ListControl : UserControl
     {
+        #region Class Properties.
         private readonly CardControl _parent;
         private readonly Dictionary<string, Task<Order?>> _cheapestOrders;
         private readonly HashSet<string> _allTokens;
         private readonly HashSet<string> _listableTokens;
         private readonly HashSet<string> _activeOrders;
+        #endregion
 
+        #region Default Constructor.
+        /// <summary>
+        /// Constructor for a control allowing the user to list a specific GU card on the IMX orderbook.
+        /// </summary>
+        /// <param name="parent">The <see cref="CardControl"/> this usercontrol is placed on top off.</param>
+        /// <param name="image">The card image to show in the listcontrol.</param>
         public ListControl(CardControl parent, ImageSource image)
         {
             InitializeComponent();
@@ -50,7 +49,12 @@ namespace GU_Exchange
             FetchCheapestOrders();
             setup();
         }
+        #endregion
 
+        #region UserControl Setup.
+        /// <summary>
+        /// Fetch user wallet data to show in the window and update the windows content.
+        /// </summary>
         public async void setup()
         {
             _activeOrders.Clear();
@@ -160,6 +164,11 @@ namespace GU_Exchange
             }
         }
 
+        /// <summary>
+        /// Fetch cheapest order for a specific currency for the card that will be listed.
+        /// </summary>
+        /// <param name="tokenAddress"></param>
+        /// <returns></returns>
         private async Task<Order?> FetchCheapestOrder(string tokenAddress)
         {
             string token_str = tokenAddress;
@@ -185,7 +194,14 @@ namespace GU_Exchange
                 return null;
             }
         }
+        #endregion
 
+        #region Event Handlers.
+        /// <summary>
+        /// Update the currency text and suggested price when the user changes the selected sale currency.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private async void cbCurrency_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             tbCurrency.Text = cbCurrency.SelectedItem.ToString();
@@ -213,7 +229,12 @@ namespace GU_Exchange
             this.Visibility = Visibility.Collapsed;
         }
 
-        private void tbListprice_TextChanged(object sender, TextChangedEventArgs e)
+        /// <summary>
+        /// Update the receive amount when the user modifies the list price.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void tbListPrice_TextChanged(object sender, TextChangedEventArgs e)
         {
             if (!tbListPrice.IsKeyboardFocusWithin) // Prevent a loop by not updating anything when this method is called due to another event modifying the value.
                 return;
@@ -228,6 +249,11 @@ namespace GU_Exchange
             }
         }
 
+        /// <summary>
+        /// Update the list price when the user modifies the receive amount.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void tbReceiveAmount_TextChanged(object sender, TextChangedEventArgs e)
         {
             if (!tbReceiveAmount.IsKeyboardFocusWithin) // Prevent a loop by not updating anything when this method is called due to another event modifying the value.
@@ -243,46 +269,33 @@ namespace GU_Exchange
                 tbListPrice.Text = "";
             }
         }
-
-        private async Task<decimal?> GetCheapestPrice()
-        {
-            string? tokenName = cbCurrency.SelectedItem.ToString();
-            if (tokenName == null) return null;
-            if (_cheapestOrders == null) return null;
-            if (!_cheapestOrders.ContainsKey(tokenName)) return null;
-            Order? cheapestOrder = await _cheapestOrders[tokenName];
-            if (cheapestOrder == null) return null;
-            return cheapestOrder.PriceTotal();
-        }
-
-        private async Task AutoAdjustPrice()
-        {
-            decimal? cheapestPrice = await GetCheapestPrice();
-            if (cheapestPrice == null) return;
-            decimal listPrice = (decimal)cheapestPrice - new decimal(0.00000001);
-            tbListPrice.Text = listPrice.ToString("0.##########");
-            try
-            {
-                decimal receiveAmount = listPrice / new decimal(1.08) * new decimal(0.99);
-                tbReceiveAmount.Text = receiveAmount.ToString("0.##########");
-            }
-            catch (FormatException)
-            {
-                tbReceiveAmount.Text = "";
-            }
-        }
-
-        private async void Button_Click(object sender, RoutedEventArgs e)
+        
+        /// <summary>
+        /// Adjust the price to the suggested amount.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private async void btnLowestPrice_Click(object sender, RoutedEventArgs e)
         {
             await AutoAdjustPrice();
         }
 
-        private void Button_Click_1(object sender, RoutedEventArgs e)
+        /// <summary>
+        /// Close the ListControl.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void btnClose_Click(object sender, RoutedEventArgs e)
         {
             _ = _parent.ReloadOrderbookAsync();
             this.Visibility = Visibility.Collapsed;
         }
 
+        /// <summary>
+        /// List the card using the data provided by the user.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private async void btnList_Click(object sender, RoutedEventArgs e)
         {
             userChoicePanel.Visibility = Visibility.Collapsed;
@@ -370,6 +383,11 @@ namespace GU_Exchange
             btnClose.Visibility = Visibility.Visible;
         }
 
+        /// <summary>
+        /// Cancel all existing orders for this card posted by the user.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private async void btnCancel_Click(object sender, RoutedEventArgs e)
         {
             userChoicePanel.Visibility = Visibility.Collapsed;
@@ -419,6 +437,45 @@ namespace GU_Exchange
             loadingPanel.Visibility = Visibility.Collapsed;
             userChoicePanel.Visibility = Visibility.Visible;
         }
+        #endregion
+
+        #region Supporting Methods.
+        /// <summary>
+        /// Adjust the price in the window to a suggested price based on existing listings.
+        /// </summary>
+        /// <returns></returns>
+        private async Task AutoAdjustPrice()
+        {
+            decimal? cheapestPrice = await GetCheapestPrice();
+            if (cheapestPrice == null) return;
+            decimal listPrice = (decimal)cheapestPrice - new decimal(0.00000001);
+            tbListPrice.Text = listPrice.ToString("0.##########");
+            try
+            {
+                decimal receiveAmount = listPrice / new decimal(1.08) * new decimal(0.99);
+                tbReceiveAmount.Text = receiveAmount.ToString("0.##########");
+            }
+            catch (FormatException)
+            {
+                tbReceiveAmount.Text = "";
+            }
+        }
+
+        /// <summary>
+        /// Get the sale price for the cheapest listed order of the card with the selected currency.
+        /// </summary>
+        /// <returns></returns>
+        private async Task<decimal?> GetCheapestPrice()
+        {
+            string? tokenName = cbCurrency.SelectedItem.ToString();
+            if (tokenName == null) return null;
+            if (_cheapestOrders == null) return null;
+            if (!_cheapestOrders.ContainsKey(tokenName)) return null;
+            Order? cheapestOrder = await _cheapestOrders[tokenName];
+            if (cheapestOrder == null) return null;
+            return cheapestOrder.PriceTotal();
+        }
+        #endregion
     }
 
     /// <summary>
