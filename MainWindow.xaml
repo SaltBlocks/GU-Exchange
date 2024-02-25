@@ -37,12 +37,11 @@
 
         <!-- #region Menubar. -->
         <Menu DockPanel.Dock="Top" VerticalContentAlignment="Top" Grid.Row="0" VerticalAlignment="Top">
-            <MenuItem Header="Menu">
-                <MenuItem Header="Link Account / Wallet" Click="MenuItem_Click" />
-                <MenuItem x:Name="miLock" Header="Unlock Wallet" Click="miLock_Click" />
-                <MenuItem x:Name="miExport" Header="Export Wallet" />
+            <MenuItem Header="Menu" SubmenuOpened="MenuItem_SubmenuOpened">
+                <MenuItem Header="Link Account / Wallet" Click="miLink_Click" />
+                <MenuItem x:Name="miLock" Header="Lock Wallet" Click="miLock_Click" />
                 <Separator />
-                <MenuItem Header="Exit" />
+                <MenuItem Header="Exit" Click="miExit_Click" />
             </MenuItem>
         </Menu>
         <!-- #endregion -->

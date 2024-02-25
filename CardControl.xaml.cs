@@ -518,10 +518,23 @@ namespace GU_Exchange
 
         public void OpenOrder(Order order)
         {
-            BuyControl _buyControl = new BuyControl(this, order, imgCard.Source);
-            _buyControl.Margin = new Thickness(0, 0, 0, 0);
-            Grid.SetColumnSpan(_buyControl, 2);
-            controlGrid.Children.Add(_buyControl);
+            Wallet? wlt = Wallet.GetConnectedWallet();
+            if (wlt == null)
+                return;
+            if (wlt.Address == order.Seller)
+            {
+                UpdateListingControl _updateControl = new UpdateListingControl(this, order, imgCard.Source);
+                _updateControl.Margin = new Thickness(0, 0, 0, 0);
+                Grid.SetColumnSpan(_updateControl, 2);
+                controlGrid.Children.Add(_updateControl);
+            }
+            else
+            {
+                BuyControl _buyControl = new BuyControl(this, order, imgCard.Source);
+                _buyControl.Margin = new Thickness(0, 0, 0, 0);
+                Grid.SetColumnSpan(_buyControl, 2);
+                controlGrid.Children.Add(_buyControl);
+            }
         }
 
         /// <summary>

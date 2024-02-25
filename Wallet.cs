@@ -1346,7 +1346,16 @@ namespace GU_Exchange
             useWalletWindow.ShowDialog();
             
             // Wait for listings to finish.
-            Dictionary<NFT, bool> results = (await Task.WhenAll(listTasks.Select(async x => (x.card, await x.Item1)))).ToDictionary(x => x.card, x => x.Item2);
+            Dictionary<NFT, bool> results = (await Task.WhenAll(listTasks.Select(async x => {
+                try
+                {
+                    return (x.card, await x.Item1);
+                }
+                catch (Exception)
+                {
+                    return (x.card, false);
+                }
+            }))).ToDictionary(x => x.card, x => x.Item2);
             
             // Inform the user of the listing result.
             if (results.All(x => x.Value))
@@ -1466,7 +1475,18 @@ namespace GU_Exchange
 
 
             // Wait for all cancellation tasks to finish.
-            Dictionary<string, bool> results = (await Task.WhenAll(cancelTasks.Select(async x => (x.orderID, await x.Item1)))).ToDictionary(x => x.orderID, x => x.Item2);
+            Dictionary<string, bool> results = (await Task.WhenAll(cancelTasks.Select(async x =>
+            {
+                try
+                {
+                    return (x.orderID, await x.Item1);
+                }
+                catch (Exception)
+                {
+                    return (x.orderID, false);
+                }
+            }))).ToDictionary(x => x.orderID, x => x.Item2);
+            //Dictionary<string, bool> results = (await Task.WhenAll(cancelTasks.Select(async x => (x.orderID, await x.Item1)))).ToDictionary(x => x.orderID, x => x.Item2);
 
             // Inform the user about the combined result of all cancellations.
             if (results.All(x => x.Value))

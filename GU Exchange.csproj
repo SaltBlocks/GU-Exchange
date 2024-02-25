@@ -24,6 +24,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Update="UpdateListingControl.xaml.cs">
+      <SubType>Code</SubType>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
     <None Update="stark_curve">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>

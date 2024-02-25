@@ -1,0 +1,75 @@
+﻿<UserControl x:Class="GU_Exchange.UpdateListingControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:GU_Exchange"
+             xmlns:fa="http://schemas.fontawesome.io/icons/"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="600" Background="#7FE4E4E4" MouseDown="UserControl_MouseDown">
+    <Grid x:Name="buyGrid" Width="580" Height="330" Background="#FFE4E4E4">
+        <Border BorderBrush="Black" BorderThickness="1">
+            <Grid>
+                <!-- #region Grid Layout. -->
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <!-- #endregion -->
+                <!-- #region Purchase details. -->
+                <StackPanel x:Name="loadingPanel" VerticalAlignment="Center" HorizontalAlignment="Center" Visibility="Collapsed">
+                    <fa:ImageAwesome x:Name="spinner" Icon="CircleOutlineNotch" Spin="True" SpinDuration="4" Width="70" Height="70" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Visible" />
+                    <fa:ImageAwesome x:Name="success" Icon="CheckCircle" Width="70" Height="70" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" />
+                    <fa:ImageAwesome x:Name="error" Icon="TimesCircle" Width="70" Height="70" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" />
+                    <TextBlock x:Name="tbStatus" Text="Waiting for wallet..." Margin="10" FontWeight="Bold" TextWrapping="Wrap" />
+                    <Button x:Name="btnClose" Content="Close" Width="75" Height="25" Visibility="Collapsed" Click="btnClose_Click" />
+                </StackPanel>
+                <StackPanel x:Name="userChoicePanel" Grid.Column="0" Margin="10" VerticalAlignment="Center" HorizontalAlignment="Center" Visibility="Visible">
+                    <!-- #region Information text. -->
+                    <TextBlock Text="Card Name:" FontWeight="Bold" />
+                    <TextBox Text="{Binding CardName}" MinWidth="200" Height="20" Margin="0,0,0,10" IsReadOnly="True" />
+
+                    <TextBlock Text="Quality:" FontWeight="Bold" />
+                    <TextBox Text="{Binding CardQuality}" Height="20" Margin="0,0,0,10" IsReadOnly="True" />
+
+                    <TextBlock Text="List price:" FontWeight="Bold" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBox x:Name="tbListPrice" Height="20" Grid.Column="0" Margin="0,0,0,10" TextChanged="tbListPrice_TextChanged" />
+                        <TextBlock x:Name="tbCurrencyList" Grid.Column="1" Height="20" Margin="5,0,5,5" Text="ETH"/>
+                        <Button Content="Lowest" Height="20" Margin="0,0,0,10" Grid.Column="2" FontSize="10" Click="btnLowestPrice_Click" />
+                    </Grid>
+
+                    <TextBlock Text="On sale, you receive:" FontWeight="Bold" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <TextBox x:Name="tbReceiveAmount" Grid.Column="0" Height="20" Margin="0,0,5,10" HorizontalAlignment="Stretch" TextChanged="tbReceiveAmount_TextChanged" />
+                        <TextBlock x:Name="tbCurrencyReceive" Grid.Column="1" Text="ETH"/>
+                    </Grid>
+                    <!-- #endregion -->
+                    <!-- #region Buttons. -->
+                    <StackPanel HorizontalAlignment="Center">
+                        <StackPanel HorizontalAlignment="Center" Orientation="Horizontal">
+                            <Button x:Name="btnList" Content="Update Listing" Width="90" Height="25" Margin="5" Click="btnList_Click" />
+                            <Button x:Name="btnCancel" Content="Cancel Listing" Width="90" Height="25" Margin="5" Click="btnCancel_Click" />
+                        </StackPanel>
+                        <Button Content="Close" Width="90" Height="25" Margin="0,5" Click="btnClose_Click" />
+                    </StackPanel>
+                    <!-- #endregion -->
+                </StackPanel>
+                <!-- #endregion -->
+                <!-- #region Card Image. -->
+                <Image Grid.Column="1" Width="235" Height="300" Margin="10" Source="{Binding CardImageSource}" />
+                <!-- #endregion -->
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

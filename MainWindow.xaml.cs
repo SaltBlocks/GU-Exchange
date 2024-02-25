@@ -371,37 +371,6 @@ namespace GU_Exchange
         #region Event Handlers.
 
         /// <summary>
-        /// Updates the size and placement of objects when the main window is resized.
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void Window_SizeChanged(object sender, SizeChangedEventArgs e)
-        {
-            /*this.cardPanel.MaxWidth = e.NewSize.Width;
-            this.searchBar.Width = e.NewSize.Width - 35;
-            this.rectNoWallet.Width = e.NewSize.Width - 95;
-            this.tbNoWallet.Width = e.NewSize.Width - 95;
-            ComboBox[] searchBoxes = { cbSet, cbGod, cbRarity, cbTribe, cbCost, cbSort };
-            Label[] searchLabels = { lblSet, lblGod, lblRarity, lblTribe, lblCost, lblSort };
-            for (int i = 0; i < searchBoxes.Length; i++)
-            {
-                searchBoxes[i].Width = searchBar.Width / 6;
-                searchBoxes[i].Margin = new Thickness(i * this.searchBar.Width / 6 + 10, 80, 0, 0);
-                searchLabels[i].Width = searchBar.Width / 6;
-                searchLabels[i].Margin = new Thickness(i * this.searchBar.Width / 6 + 10, 55, 0, 0);
-            }
-            btnReset.Margin = new Thickness(this.searchBar.Width - 70, 125, 0, 0);
-            this.imgEth.Margin = new Thickness(1 * this.searchBar.Width / 4 - 70, 25, 0, 0);
-            this.txtEth.Margin = new Thickness(1 * this.searchBar.Width / 4 - 35, 25, 0, 0);
-            this.imgGods.Margin = new Thickness(2 * this.searchBar.Width / 4 - 70, 25, 0, 0);
-            this.txtGods.Margin = new Thickness(2 * this.searchBar.Width / 4 - 35, 25, 0, 0);
-            this.imgImx.Margin = new Thickness(3 * this.searchBar.Width / 4 - 70, 25, 0, 0);
-            this.txtImx.Margin = new Thickness(3 * this.searchBar.Width / 4 - 35, 25, 0, 0);
-            this.rectNoWallet.Width = e.NewSize.Width - 35;
-            this.tbNoWallet.Width = e.NewSize.Width - 35;*/
-        }
-
-        /// <summary>
         /// Used to detect when the user scrolls to the bottom of the page.
         /// When this happens, new tiles are loaded and added to the window.
         /// </summary>
@@ -541,6 +510,74 @@ namespace GU_Exchange
             setup.ShowDialog();
         }
 
+        /// <summary>
+        /// Open the window allowing linking of GU accounts and wallets.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void miLink_Click(object sender, RoutedEventArgs e)
+        {
+            SetupWindow setup = new();
+            setup.Owner = this;
+            setup.ShowDialog();
+        }
+
+        /// <summary>
+        /// Relock the active wallet.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void miLock_Click(object sender, RoutedEventArgs e)
+        {
+            Wallet? wlt = Wallet.GetConnectedWallet();
+            if (wlt == null)
+                return;
+            wlt.LockWallet();
+            UnlockWalletWindow unlock = new(wlt);
+            unlock.Owner = this;
+            unlock.ShowDialog();
+        }
+
+        /// <summary>
+        /// Close the application
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void miExit_Click(object sender, RoutedEventArgs e)
+        {
+            Close();
+        }
+
+        /// <summary>
+        /// Update the menu if it is opened.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void MenuItem_SubmenuOpened(object sender, RoutedEventArgs e)
+        {
+            Wallet? wlt = Wallet.GetConnectedWallet();
+            if (wlt == null)
+            {
+                miLock.Header = "No wallet connected";
+                miLock.IsEnabled = false;
+                return;
+            }
+            else if (wlt is WebWallet)
+            {
+                miLock.Header = "Webwallet connected";
+                miLock.IsEnabled = false;
+                return;
+            }
+            else if (wlt.IsLocked() )
+            {
+                miLock.Header = "Wallet Locked";
+                miLock.IsEnabled = false;
+                return;
+            }
+            miLock.Header = "Lock Wallet";
+            miLock.IsEnabled = true;
+            return;
+        }
         #endregion
 
         #region Interact with trading overlay.
@@ -575,24 +612,5 @@ namespace GU_Exchange
         }
 
         #endregion
-
-
-        // Temp trash to delete later.
-        private void MenuItem_Click(object sender, RoutedEventArgs e)
-        {
-            SetupWindow setup = new();
-            setup.Owner = this;
-            setup.ShowDialog();
-        }
-
-        private void miLock_Click(object sender, RoutedEventArgs e)
-        {
-            Wallet? wlt = Wallet.GetConnectedWallet();
-            if (wlt == null)
-                return;
-            UnlockWalletWindow unlock = new(wlt);
-            unlock.Owner = this;
-            unlock.ShowDialog();
-        }
     }
 }
