@@ -1,4 +1,5 @@
-﻿using ImageProcessor.Processors;
+﻿using GU_Exchange.Helpers;
+using ImageProcessor.Processors;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;

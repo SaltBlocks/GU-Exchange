@@ -7,7 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Diagnostics;
 
-namespace GU_Exchange
+namespace GU_Exchange.Helpers
 {
     internal class Inventory
     {
@@ -26,7 +26,7 @@ namespace GU_Exchange
         /// <param name="apolloID"></param>
         public Inventory(int apolloID)
         {
-            this._apolloID = apolloID;
+            _apolloID = apolloID;
             _inventory = new();
         }
 
@@ -119,7 +119,7 @@ namespace GU_Exchange
             _inventory[proto][quality] = amount;
         }
 
-        
+
         /// <summary>
         /// Get the ApolloID for the account linked to this wallet.
         /// </summary>
@@ -136,7 +136,7 @@ namespace GU_Exchange
         /// <returns></returns>
         public async Task SetApolloIDAsync(int apolloID)
         {
-            this._apolloID = apolloID;
+            _apolloID = apolloID;
             await UpdateInventoryAsync();
         }
 

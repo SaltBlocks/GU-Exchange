@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media.Imaging;
 
-namespace GU_Exchange
+namespace GU_Exchange.Helpers
 {
     class ResourceManager
     {
@@ -24,11 +24,11 @@ namespace GU_Exchange
         internal static extern bool DeleteObject(IntPtr value);
 
         /// <summary>
-        /// Converts an <see cref="System.Drawing.Image" /> to a <see cref="System.Windows.Media.Imaging.BitmapSource" />.
+        /// Converts an <see cref="Image" /> to a <see cref="BitmapSource" />.
         /// </summary>
-        /// <param name="myImage">The <see cref="System.Drawing.Image" /> to convert.</param>
-        /// <returns> The provided image as a <see cref="System.Windows.Media.Imaging.BitmapSource" /></returns>
-        private static BitmapSource GetImageStream(System.Drawing.Image myImage)
+        /// <param name="myImage">The <see cref="Image" /> to convert.</param>
+        /// <returns> The provided image as a <see cref="BitmapSource" /></returns>
+        private static BitmapSource GetImageStream(Image myImage)
         {
             var bitmap = new Bitmap(myImage);
             IntPtr bmpPt = bitmap.GetHbitmap();
@@ -54,7 +54,7 @@ namespace GU_Exchange
         /// </summary>
         /// <param name="CardID">The ID of the card to load.</param>
         /// <param name="cancelToken">Token used to cancel the task.</param>
-        /// <returns>The image of the card as a <see cref="System.Windows.Media.Imaging.BitmapSource" />.</returns>
+        /// <returns>The image of the card as a <see cref="BitmapSource" />.</returns>
         public static async Task<BitmapSource?> FetchCardImageAsync(int CardID, int quality, bool save, CancellationToken cancelToken)
         {
             Task<BitmapSource?> imgGet = Task.Run(async () =>
@@ -138,7 +138,7 @@ namespace GU_Exchange
         /// Loads the image of the plain card with the provided ID from the disk.
         /// </summary>
         /// <param name="CardID">The ID of the card to load.</param>
-        /// <returns>The image of the card as a <see cref="System.Windows.Media.Imaging.BitmapSource" /> or null if it doesn't exist on the disk.</returns>
+        /// <returns>The image of the card as a <see cref="BitmapSource" /> or null if it doesn't exist on the disk.</returns>
         public static async Task<BitmapSource?> GetImageFromDiskAsync(int CardID, int quality)
         {
             Task<BitmapSource?> imgGet = Task.Run(() =>
@@ -167,7 +167,7 @@ namespace GU_Exchange
         /// </summary>
         /// <param name="CardID">The ID for the card to load.</param>
         /// <param name="cancelToken">Token used to cancel the task.</param>
-        /// <returns>The image of the card as a <see cref="System.Windows.Media.Imaging.BitmapSource" />.</returns>
+        /// <returns>The image of the card as a <see cref="BitmapSource" />.</returns>
         public static async Task<BitmapSource?> GetCardImageAsync(int CardID, int quality, bool save, CancellationToken cancelToken)
         {
             string cacheKey = CardID.ToString() + '_' + quality.ToString();

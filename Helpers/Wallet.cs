@@ -15,9 +15,9 @@ using System.Security.Cryptography;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using static GU_Exchange.IMXlib;
+using static GU_Exchange.Helpers.IMXlib;
 
-namespace GU_Exchange
+namespace GU_Exchange.Helpers
 {
     /// <summary>
     /// Used to store price and address data of a token that can be traded on IMX.
@@ -39,9 +39,9 @@ namespace GU_Exchange
         /// <param name="value">The current dollar value of this currency.</param>
         public Token(string name, string address, decimal? value)
         {
-            this.Name = name;
-            this.Address = address;
-            this.Value = value;
+            Name = name;
+            Address = address;
+            Value = value;
         }
         #endregion
     }
@@ -56,7 +56,7 @@ namespace GU_Exchange
         public string Quality;
         public string Currency;
         public string Seller;
-        public UInt64 OrderID;
+        public ulong OrderID;
         public string TokenAddress;
         public string TokenID;
         public decimal PriceBase;
@@ -95,7 +95,7 @@ namespace GU_Exchange
                     break;
             }
             string? seller = (string?)json_order["user"];
-            UInt64? orderID = (UInt64?)json_order.SelectToken("order_id");
+            ulong? orderID = (ulong?)json_order.SelectToken("order_id");
             string? tokenAddress = (string?)json_order.SelectToken("sell.data.token_address");
             string? tokenID = (string?)json_order.SelectToken("sell.data.token_id");
             string? quantity = (string?)json_order.SelectToken("buy.data.quantity");
@@ -122,7 +122,7 @@ namespace GU_Exchange
                     throw new NullReferenceException("Not Implemented");
                 if (FeeList.ContainsKey(address))
                 {
-                    FeeList[address] = FeeList[address] + (decimal.Parse(fee_amount) / multDecimals);
+                    FeeList[address] = FeeList[address] + decimal.Parse(fee_amount) / multDecimals;
                 }
                 else
                 {
@@ -135,13 +135,13 @@ namespace GU_Exchange
             quantity_base /= multDecimals;
 
             // Store the gathered order data.
-            this.Name = name;
-            this.Currency = currency;
-            this.Seller = seller;
-            this.OrderID = (UInt64)orderID;
-            this.TokenAddress = tokenAddress;
-            this.TokenID = tokenID;
-            this.PriceBase = quantity_base;
+            Name = name;
+            Currency = currency;
+            Seller = seller;
+            OrderID = (ulong)orderID;
+            TokenAddress = tokenAddress;
+            TokenID = tokenID;
+            PriceBase = quantity_base;
         }
 
         #endregion
@@ -243,7 +243,8 @@ namespace GU_Exchange
                 s_currencyList["ETH"].Value = price_eth;
                 s_currencyList["GODS"].Value = price_gods;
                 s_currencyList["IMX"].Value = price_imx;
-            } catch (HttpRequestException)
+            }
+            catch (HttpRequestException)
             {
                 s_currencyList["ETH"].Value = 0;
                 s_currencyList["GODS"].Value = 0;
@@ -425,7 +426,7 @@ namespace GU_Exchange
                 {
                     try
                     {
-                        Wallet wlt = Wallet.LoadWallet(File.Open(wallet, FileMode.Open));
+                        Wallet wlt = LoadWallet(File.Open(wallet, FileMode.Open));
                         wallets.Add(wlt.Address, wlt);
                     }
                     catch (Exception e)
@@ -442,7 +443,7 @@ namespace GU_Exchange
         #endregion
 
         #region Get/Set connected wallet.
-        
+
         /// <summary>
         /// Load the default <see cref="Wallet"/> as is currently defined in the user settings.
         /// </summary>
@@ -487,7 +488,8 @@ namespace GU_Exchange
                 {
                     SignatureRequestServer.StartServer();
                     SignatureRequestServer.RequestedAddress = wallet.Address;
-                } else
+                }
+                else
                 {
                     SignatureRequestServer.RequestedAddress = "*";
                     SignatureRequestServer.StopServer();
@@ -502,7 +504,8 @@ namespace GU_Exchange
                         window.ShowDialog();
                     }
                 }
-            } else
+            }
+            else
             {
                 SignatureRequestServer.RequestedAddress = "*";
                 SignatureRequestServer.StopServer();
@@ -581,7 +584,7 @@ namespace GU_Exchange
         /// <returns></returns>
         public async Task<bool> CheckPassword(string password)
         {
-            Task<Byte[]> getKey = Task.Run(() =>
+            Task<byte[]> getKey = Task.Run(() =>
             {
                 return Rfc2898DeriveBytes.Pbkdf2(password, _salt, 210000, HashAlgorithmName.SHA512, 32);
             });
@@ -604,18 +607,18 @@ namespace GU_Exchange
         /// <returns></returns>
         public async Task<bool> UnlockWallet(string password = "password")
         {
-            Task<Byte[]> getKey = Task.Run(() =>
+            Task<byte[]> getKey = Task.Run(() =>
             {
                 return Rfc2898DeriveBytes.Pbkdf2(password, _salt, 210000, HashAlgorithmName.SHA512, 32);
             });
-            this._key = await getKey;
+            _key = await getKey;
             try
             {
                 DecryptStringAES256(_lockedKey, _key);
             }
             catch (CryptographicException)
             {
-                this._key = null; // Incorrect password provided.
+                _key = null; // Incorrect password provided.
                 return false;
             }
             return true;
@@ -640,8 +643,9 @@ namespace GU_Exchange
         {
             if (_isLinked != null) return (bool)_isLinked;
             string linkData;
-            try {
-                HttpResponseMessage response = await ResourceManager.Client.GetAsync($"https://api.x.immutable.com/v1/users/{(Address)}");
+            try
+            {
+                HttpResponseMessage response = await ResourceManager.Client.GetAsync($"https://api.x.immutable.com/v1/users/{Address}");
 
                 // Check if the request was successful.
                 if (response.IsSuccessStatusCode)
@@ -814,7 +818,7 @@ namespace GU_Exchange
             {
                 int bufferSize = 1024;
                 IntPtr resultBuffer = Marshal.AllocHGlobal(bufferSize);
-                string? result = IntPtrToString(imx_buy_order(order.OrderID.ToString(), (double)order.PriceTotal(), new Fee[0], 0, this.GetPrivateKey(), resultBuffer, bufferSize));
+                string? result = IntPtrToString(imx_buy_order(order.OrderID.ToString(), (double)order.PriceTotal(), new Fee[0], 0, GetPrivateKey(), resultBuffer, bufferSize));
                 Marshal.FreeHGlobal(resultBuffer);
                 return result;
             });
@@ -835,7 +839,7 @@ namespace GU_Exchange
             {
                 JObject? jsonResult = (JObject?)JsonConvert.DeserializeObject(result);
                 string? message = (string?)jsonResult?.SelectToken("message");
-                if (message == null) 
+                if (message == null)
                 {
                     tbStatus.Text = "An unknown error occurred";
                     return false;
@@ -897,7 +901,7 @@ namespace GU_Exchange
                     IntPtr resultBuffer = Marshal.AllocHGlobal(bufferSize);
                     string? result = IntPtrToString(imx_sell_nft(listing.card.token_address, listing.card.token_id.ToString(), listing.tokenID, listing.price, new Fee[0], 0, GetPrivateKey(), resultBuffer, bufferSize));
                     Marshal.FreeHGlobal(resultBuffer);
-                    
+
                     // Handle the server response
                     Console.WriteLine(result ?? "No result");
                     if (result == null)
@@ -1075,7 +1079,7 @@ namespace GU_Exchange
         /// <param name="password"></param>
         public WebWallet(string imxSeedSignature, string address, string password = "password") : base(imxSeedSignature, password)
         {
-            this.Address = address;
+            Address = address;
         }
         #endregion
 
@@ -1095,15 +1099,15 @@ namespace GU_Exchange
             {
                 return false;
             }
-            Task<SignatureData> fetchSignature = SignatureRequestServer.RequestSignatureAsync(IMXlib.IMX_LINK_MESSAGE);
+            Task<SignatureData> fetchSignature = SignatureRequestServer.RequestSignatureAsync(IMX_LINK_MESSAGE);
             UseWebWalletWindow useWalletWindow = new(fetchSignature);
             useWalletWindow.Owner = parent;
             useWalletWindow.ShowDialog();
             try
             {
                 SignatureData linkSignature = await fetchSignature;
-                if (this.IsLocked())
-                    await this.UnlockWallet();
+                if (IsLocked())
+                    await UnlockWallet();
                 Task<bool> linkWallet = Task.Run(() =>
                 {
                     IntPtr resultBuffer = Marshal.AllocHGlobal(500);
@@ -1136,16 +1140,16 @@ namespace GU_Exchange
         {
             // Unlock wallet (using default password).
             tbStatus.Text = "Waiting for wallet...";
-            if (this.IsLocked())
-                await this.UnlockWallet();
-            
+            if (IsLocked())
+                await UnlockWallet();
+
             // Fetch data for signature request.
             tbStatus.Text = "Requesting order to purchase...";
             Task<string?> requestBuy = Task.Run(() =>
             {
                 int bufferSize = 1024;
                 IntPtr resultBuffer = Marshal.AllocHGlobal(bufferSize);
-                string? result = IntPtrToUtf8String(imx_request_buy_order(order.OrderID.ToString(), this.Address, new Fee[0], 0, resultBuffer, bufferSize));
+                string? result = IntPtrToUtf8String(imx_request_buy_order(order.OrderID.ToString(), Address, new Fee[0], 0, resultBuffer, bufferSize));
                 Marshal.FreeHGlobal(resultBuffer);
                 return result;
             });
@@ -1171,7 +1175,7 @@ namespace GU_Exchange
                 tbStatus.Text = message;
                 return false;
             }
-            
+
             // Request the users signature.
             tbStatus.Text = "Waiting for user signature...";
             Task<SignatureData> fetchSignature = SignatureRequestServer.RequestSignatureAsync(signableMessage);
@@ -1195,7 +1199,7 @@ namespace GU_Exchange
             {
                 int bufferSize = 1024;
                 IntPtr resultBuffer = Marshal.AllocHGlobal(bufferSize);
-                string? result = IntPtrToUtf8String(imx_finish_buy_order(nonce, (double)order.PriceTotal(), this.GetPrivateKey(), buySignature.Signature, resultBuffer, bufferSize));
+                string? result = IntPtrToUtf8String(imx_finish_buy_order(nonce, (double)order.PriceTotal(), GetPrivateKey(), buySignature.Signature, resultBuffer, bufferSize));
                 Marshal.FreeHGlobal(resultBuffer);
                 return result;
             });
@@ -1240,8 +1244,8 @@ namespace GU_Exchange
                 if (listing.tbStatusListing != null) listing.tbStatusListing.Text = "Waiting for wallet...";
             }
             tbStatus.Text = "Waiting for wallet...";
-            if (this.IsLocked())
-                await this.UnlockWallet();
+            if (IsLocked())
+                await UnlockWallet();
 
             // Fetch data for signature requests.
             tbStatus.Text = "Preparing orders to create...";
@@ -1259,7 +1263,7 @@ namespace GU_Exchange
                 prepareTasks.Add((createListing, listing.card, listing.tbStatusListing));
             }
             await Task.WhenAll(prepareTasks.Select(x => x.Item1));
-            
+
             // Request user signatures.
             tbStatus.Text = $"Waiting for user signature{(listings.Count() > 1 ? "s" : "")}...";
             List<Task<SignatureData>> sigTasks = new();
@@ -1296,12 +1300,12 @@ namespace GU_Exchange
 
                 // Request signature.
                 Task<SignatureData> getSignature = SignatureRequestServer.RequestSignatureAsync(signableMessage);
-                
+
                 // Submit listing to IMX.
                 Task<bool> createListing = Task.Run(async () =>
                 {
                     SignatureData signature;
-                    try 
+                    try
                     {
                         signature = await getSignature;
                     }
@@ -1339,14 +1343,15 @@ namespace GU_Exchange
                 sigTasks.Add(getSignature);
                 listTasks.Add((createListing, prepareTask.card, prepareTask.tbStatusListing));
             }
-            
+
             // Show signature request window.
             UseWebWalletWindow useWalletWindow = new(sigTasks);
             useWalletWindow.Owner = parent;
             useWalletWindow.ShowDialog();
-            
+
             // Wait for listings to finish.
-            Dictionary<NFT, bool> results = (await Task.WhenAll(listTasks.Select(async x => {
+            Dictionary<NFT, bool> results = (await Task.WhenAll(listTasks.Select(async x =>
+            {
                 try
                 {
                     return (x.card, await x.Item1);
@@ -1356,7 +1361,7 @@ namespace GU_Exchange
                     return (x.card, false);
                 }
             }))).ToDictionary(x => x.card, x => x.Item2);
-            
+
             // Inform the user of the listing result.
             if (results.All(x => x.Value))
             {
@@ -1388,8 +1393,8 @@ namespace GU_Exchange
                 if (order.tbStatusCancellation != null) order.tbStatusCancellation.Text = "Waiting for wallet to be unlocked...";
             }
             tbStatus.Text = "Waiting for wallet...";
-            if (this.IsLocked())
-                await this.UnlockWallet();
+            if (IsLocked())
+                await UnlockWallet();
 
             // Fetch data for signature requests.
             tbStatus.Text = "Preparing orders to cancel...";

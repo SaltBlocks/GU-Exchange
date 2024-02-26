@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
+using GU_Exchange.Helpers;
 
 namespace GU_Exchange
 {

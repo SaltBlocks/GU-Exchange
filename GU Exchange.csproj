@@ -24,7 +24,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Update="UpdateListingControl.xaml.cs">
+    <Compile Update="Controls\UpdateListingControl.xaml.cs">
       <SubType>Code</SubType>
     </Compile>
   </ItemGroup>

@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace GU_Exchange
+namespace GU_Exchange.Helpers
 {
     public interface IMXlib
     {

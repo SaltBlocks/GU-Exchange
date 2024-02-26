@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 
-namespace GU_Exchange
+namespace GU_Exchange.Helpers
 {
     internal class Settings
     {

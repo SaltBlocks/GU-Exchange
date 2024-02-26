@@ -14,6 +14,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
+using GU_Exchange.Helpers;
 
 namespace GU_Exchange
 {
@@ -97,7 +98,7 @@ namespace GU_Exchange
         private void LinkWallet_Click(object sender, RoutedEventArgs e)
         {
             this.childGrid.Visibility = Visibility.Collapsed;
-            SetupWallet link = new(this)
+            SetupWalletControl link = new(this)
             {
                 Margin = new Thickness(0, 0, 0, 0)
             };

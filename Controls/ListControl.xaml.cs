@@ -11,7 +11,8 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Net.Http;
-using static GU_Exchange.IMXlib;
+using static GU_Exchange.Helpers.IMXlib;
+using GU_Exchange.Helpers;
 
 namespace GU_Exchange
 {

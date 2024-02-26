@@ -12,6 +12,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using GU_Exchange.Helpers;
 
 namespace GU_Exchange
 {
@@ -28,7 +29,7 @@ namespace GU_Exchange
         /// <summary>
         /// Constructor for an orderbar displaying the price and wallet associated with a specific listing.
         /// </summary>
-        /// <param name="order">The <see cref="GU_Exchange.Order"/> to display</param>
+        /// <param name="order">The <see cref="Helpers.Order"/> to display</param>
         public OrderBar(Order order)
         {
             InitializeComponent();

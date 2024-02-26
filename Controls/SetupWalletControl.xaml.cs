@@ -15,19 +15,20 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
-using static GU_Exchange.IMXlib;
+using GU_Exchange.Helpers;
+using static GU_Exchange.Helpers.IMXlib;
 
 namespace GU_Exchange
 {
     /// <summary>
     /// Interaction logic for SetupWallet.xaml
     /// </summary>
-    public partial class SetupWallet : UserControl
+    public partial class SetupWalletControl : UserControl
     {
         private string _privateKey;
         private Window parent;
 
-        public SetupWallet(Window parent)
+        public SetupWalletControl(Window parent)
         {
             InitializeComponent();
             this.parent = parent;

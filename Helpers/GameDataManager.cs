@@ -12,7 +12,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace GU_Exchange
+namespace GU_Exchange.Helpers
 {
     /// <summary>
     /// Class used to define a card in Gods unchained.
@@ -89,18 +89,18 @@ namespace GU_Exchange
         /// <param name="set"></param>
         public CardData(int proto, string name, string effect, string god, string rarity, string tribe, int mana, int attack, int health, string type, string set, string libID)
         {
-            this.ProtoID = proto;
-            this.Name = name;
-            this.Effect = effect;
-            this.God = god;
-            this.Rarity = rarity;
-            this.Tribe = tribe;
-            this.Mana = mana;
-            this.Attack = attack;
-            this.Health = health;
-            this.Type = type;
-            this.Set = set;
-            this.LibID = libID;
+            ProtoID = proto;
+            Name = name;
+            Effect = effect;
+            God = god;
+            Rarity = rarity;
+            Tribe = tribe;
+            Mana = mana;
+            Attack = attack;
+            Health = health;
+            Type = type;
+            Set = set;
+            LibID = libID;
         }
 
         #endregion
@@ -116,10 +116,10 @@ namespace GU_Exchange
         {
             if (other == null) return false;
             if (ReferenceEquals(this, other)) return true;
-            if (this.Name == other.Name && this.Effect == other.Effect && this.God == other.God &&
-                this.Rarity == other.Rarity && this.Tribe == other.Tribe && this.Mana == other.Mana &&
-                this.Attack == other.Attack && this.Health == other.Health && this.Type == other.Type &&
-                this.Set == other.Set) return true;
+            if (Name == other.Name && Effect == other.Effect && God == other.God &&
+                Rarity == other.Rarity && Tribe == other.Tribe && Mana == other.Mana &&
+                Attack == other.Attack && Health == other.Health && Type == other.Type &&
+                Set == other.Set) return true;
             return false;
         }
 
@@ -177,13 +177,13 @@ namespace GU_Exchange
         private static readonly HashSet<string> s_godList = new();
         private static readonly HashSet<string> s_rarityList = new();
         private static readonly HashSet<string> s_tribeList = new();
-        
+
         // Cancellation tokens.
         private static CancellationTokenSource? fetchGamesTokenSource = null;
         #endregion
 
         #region Fetch and query player names
-        
+
         /// <summary>
         /// Fetch a list of all player names for which an apolloID is known.
         /// </summary>
@@ -195,7 +195,7 @@ namespace GU_Exchange
             {
                 result.Add(name);
             }
-            return result.ToList<string>();
+            return result.ToList();
         }
 
         /// <summary>
@@ -431,7 +431,7 @@ namespace GU_Exchange
                     }
                     Debug.WriteLine($"{gameCount} / {gameCount} games fetched.");
                 }
-                catch (System.Net.Http.HttpRequestException)
+                catch (HttpRequestException)
                 {
                     Console.WriteLine("GU api ratelimit hit.");
                 }
@@ -511,13 +511,13 @@ namespace GU_Exchange
                 return -1;
             }
             Token EthToken = await Wallet.GetETHToken();
-            
+
             decimal? ConversionRate = EthToken.Value;
             if (ConversionRate == null)
             {
                 return -1;
             }
-            return priceETH * (decimal) ConversionRate;
+            return priceETH * (decimal)ConversionRate;
         }
 
         /// <summary>
@@ -660,7 +660,8 @@ namespace GU_Exchange
                 await s_setupCardsTask;
                 if (s_loadedCardList.Count != 0)
                     return s_loadedCardList;
-            } else
+            }
+            else
                 s_loadedCardList = CachedCardList;
             return CachedCardList;
         }
@@ -841,7 +842,7 @@ namespace GU_Exchange
         }
 
         private static readonly string base52 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-        
+
         /// <summary>
         /// Decode an encoded card into it's id.
         /// </summary>

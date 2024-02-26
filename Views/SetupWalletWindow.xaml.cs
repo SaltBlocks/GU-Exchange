@@ -18,7 +18,7 @@ namespace GU_Exchange
         public SetupWalletWindow()
         {
             InitializeComponent();
-            setupGrid.Children.Add(new SetupWallet(this));
+            setupGrid.Children.Add(new SetupWalletControl(this));
         }
         #endregion
     }

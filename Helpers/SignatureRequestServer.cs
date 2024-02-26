@@ -7,7 +7,7 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace GU_Exchange
+namespace GU_Exchange.Helpers
 {
     #region SignatureData
     /// <summary>
@@ -180,7 +180,7 @@ namespace GU_Exchange
                     ClientPort++;
                     startAttempts++;
                 }
-                
+
             }
         }
 
@@ -271,7 +271,7 @@ namespace GU_Exchange
                     {
                         buffer = Encoding.UTF8.GetBytes($"{s_signatureRequestTasks.Count} signature(s) pending");
                     }
-                    
+
                 }
             }
 
