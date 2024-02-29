@@ -84,7 +84,7 @@ namespace GU_Exchange
         private void LinkAccount_Click(object sender, RoutedEventArgs e)
         {
             this.childGrid.Visibility = Visibility.Collapsed;
-            LinkAccount link = new LinkAccount(this);
+            LinkAccountControl link = new LinkAccountControl(this);
             link.Margin = new Thickness(0, 0, 0, 0);
             this.setupGrid.Children.Add(link);
         }

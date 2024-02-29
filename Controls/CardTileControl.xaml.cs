@@ -11,7 +11,7 @@ namespace GU_Exchange
     /// <summary>
     /// Interaction logic for CardTile.xaml
     /// </summary>
-    public partial class CardTile : UserControl
+    public partial class CardTileControl : UserControl
     {
         #region Class properties
         
@@ -28,7 +28,7 @@ namespace GU_Exchange
         /// Constructor for a CardTile that opens the trading window for the card with the given CardID when clicked.
         /// </summary>
         /// <param name="CardID">proto id for the card to display.</param>
-        public CardTile(int CardID)
+        public CardTileControl(int CardID)
         {
             InitializeComponent();
             this.CardID = CardID;

@@ -1,4 +1,5 @@
-﻿using GU_Exchange.Helpers;
+﻿using GU_Exchange.Controls;
+using GU_Exchange.Helpers;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
@@ -277,7 +278,7 @@ namespace GU_Exchange
             // Sort the orders by cost from lowest to highest before displaying them in the window.
             foreach (Order order in orders.OrderBy(x => x.PriceTotal()))
             {
-                OrderBar bar = new OrderBar(order);
+                OrderBarControl bar = new OrderBarControl(order);
                 // TODO once user wallets are implemented, change the color of orders posted by the user to make them easy to identify.
                 if (wallet != null && order.Seller.Equals(wallet.Address))
                 {
@@ -425,7 +426,7 @@ namespace GU_Exchange
         {
             for (int i = 0; i < orderPanel.Children.Count; i++)
             {
-                var child = (OrderBar)orderPanel.Children[i];
+                var child = (OrderBarControl)orderPanel.Children[i];
                 child.Width = orderPanel.ActualWidth;
             }
         }
@@ -504,6 +505,14 @@ namespace GU_Exchange
             controlGrid.Children.Add(_sellControl);
         }
 
+        private void btnTransfer_Click(object sender, RoutedEventArgs e)
+        {
+            TransferControl _transferControl = new TransferControl(this, this.CardID, imgCard.Source);
+            _transferControl.Margin = new Thickness(0, 0, 0, 0);
+            Grid.SetColumnSpan(_transferControl, 2);
+            controlGrid.Children.Add(_transferControl);
+        }
+
         #endregion
 
         #region Supporting methods
@@ -514,7 +523,7 @@ namespace GU_Exchange
             {
                 return null;
             }
-            return ((OrderBar)orderPanel.Children[0]).Order;
+            return ((OrderBarControl)orderPanel.Children[0]).Order;
         }
 
         public void OpenOrder(Order order)

@@ -19,7 +19,7 @@ namespace GU_Exchange
     /// <summary>
     /// Interaction logic for OrderBar.xaml
     /// </summary>
-    public partial class OrderBar : UserControl
+    public partial class OrderBarControl : UserControl
     {
         #region Class Properties
         public Order Order;
@@ -30,7 +30,7 @@ namespace GU_Exchange
         /// Constructor for an orderbar displaying the price and wallet associated with a specific listing.
         /// </summary>
         /// <param name="order">The <see cref="Helpers.Order"/> to display</param>
-        public OrderBar(Order order)
+        public OrderBarControl(Order order)
         {
             InitializeComponent();
             this.Order = order;
@@ -110,7 +110,7 @@ namespace GU_Exchange
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void UserControl_MouseUp(object sender, MouseButtonEventArgs e)
+        private void UserControl_MouseDown(object sender, MouseButtonEventArgs e)
         {
             ((MainWindow)Application.Current.MainWindow).OpenOrder(Order);
         }

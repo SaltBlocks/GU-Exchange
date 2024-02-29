@@ -79,7 +79,7 @@ namespace GU_Exchange
     {
         #region Class Properties
         private List<CardData> _cardList;                               // Contains all cards matching the current search conditions.
-        private List<CardTile> _cardTiles;                              // List for the tiles that display cards on the main window.
+        private List<CardTileControl> _cardTiles;                              // List for the tiles that display cards on the main window.
         private int _tileIndex;                                         // Used to track the number of tiles currently displayed.
         private CheckBoxItems _checkBoxes;                              // Checkboxes used for filtering searches by mana cost.
         private CancellationTokenSource? _imgUpdateTokenSource = null;  // Used to keep track of the card tiles being updated.
@@ -97,7 +97,7 @@ namespace GU_Exchange
             InitializeComponent();
             //Console.WriteLine(Directory.GetCurrentDirectory());
             _cardList = new List<CardData>();
-            _cardTiles = new List<CardTile>();
+            _cardTiles = new List<CardTileControl>();
             _checkBoxes = new CheckBoxItems();
             _tileIndex = 0;
             _setupComplete = false;
@@ -130,7 +130,7 @@ namespace GU_Exchange
             _cardList.AddRange(cardData.Values);
             for (int i = 0; i < 30; i++)
             {
-                CardTile tile = new CardTile(1);
+                CardTileControl tile = new CardTileControl(1);
                 if (i >= _cardList.Count)
                 {
                     tile.Visibility = Visibility.Collapsed;
@@ -150,7 +150,7 @@ namespace GU_Exchange
             await inventoryUpdate;
             try
             {
-                foreach (CardTile tile in _cardTiles)
+                foreach (CardTileControl tile in _cardTiles)
                 {
                     _ = tile.SetupTileAsync(token);
                 }
@@ -226,7 +226,7 @@ namespace GU_Exchange
         public async Task RefreshTilesAsync()
         {
             List<Task> tasks = new List<Task>();
-            foreach (CardTile tile in _cardTiles)
+            foreach (CardTileControl tile in _cardTiles)
             {
                 tasks.Add(tile.UpdateTileTextAsync()); // Update the text of all tiles to reflect the newly linked inventory.
             }
@@ -322,7 +322,7 @@ namespace GU_Exchange
             {
                 return;
             }
-            List<CardTile> updatedTiles = new();                    // Create a list tiles that need to be updated.
+            List<CardTileControl> updatedTiles = new();                    // Create a list tiles that need to be updated.
             for (int i = 0; i < _cardTiles.Count; i++)
             {
                 if (token.IsCancellationRequested)
@@ -341,7 +341,7 @@ namespace GU_Exchange
                     updatedTiles.Add(_cardTiles[i]);
                 }
             }
-            foreach (CardTile tile in updatedTiles)                 // Update all changed tiles.
+            foreach (CardTileControl tile in updatedTiles)                 // Update all changed tiles.
             {
                 if (token.IsCancellationRequested)
                 {
@@ -392,10 +392,10 @@ namespace GU_Exchange
             CancellationToken token = _imgUpdateTokenSource.Token;
             for (int i = 0; i < 30; i++)
             {
-                CardTile tile;
+                CardTileControl tile;
                 if (_tileIndex >= _cardTiles.Count)
                 {
-                    tile = new CardTile(-1);
+                    tile = new CardTileControl(-1);
                     _cardTiles.Add(tile);
                     this.cardPanel.Children.Add(tile);
                 }

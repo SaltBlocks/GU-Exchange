@@ -7,9 +7,9 @@ using System.Windows.Controls;
 namespace GU_Exchange
 {
     /// <summary>
-    /// Interaction logic for SuggestionsTextBox.xaml
+    /// Interaction logic for SuggestionsTextBoxControl.xaml
     /// </summary>
-    public partial class SuggestionsTextBox : UserControl
+    public partial class SuggestionsTextBoxControl : UserControl
     {
         #region Class properties. 
 
@@ -21,14 +21,14 @@ namespace GU_Exchange
         /// <summary>
         /// Event handler for when the text of the textbox is changed.
         /// </summary>
-        public event EventHandler TextChanged;
+        public event EventHandler? TextChanged;
 
 
         #endregion
 
         #region Default Constructor
 
-        public SuggestionsTextBox()
+        public SuggestionsTextBoxControl()
         {
             InitializeComponent();
         }

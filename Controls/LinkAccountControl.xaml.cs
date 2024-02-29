@@ -11,7 +11,7 @@ namespace GU_Exchange
     /// <summary>
     /// Interaction logic for LinkAccount.xaml
     /// </summary>
-    public partial class LinkAccount : UserControl
+    public partial class LinkAccountControl : UserControl
     {
         #region Class Properties
         private Window parent;
@@ -23,7 +23,7 @@ namespace GU_Exchange
         /// Initialize window and load player name suggestions.
         /// </summary>
         /// <param name="parent">The window this UserControl is shown on.</param>
-        public LinkAccount(Window parent)
+        public LinkAccountControl(Window parent)
         {
             InitializeComponent();
             this.parent = parent;
