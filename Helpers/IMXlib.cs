@@ -71,6 +71,16 @@ namespace GU_Exchange.Helpers
         [DllImport("IMXlib.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern IntPtr imx_finish_cancel_order(string order_id_str, string eth_address_str, string imx_seed_sig_str, string imx_transaction_sig_str, IntPtr result_buffer, int buffer_size);
         #endregion
+        #region Transfer card(s).
+        [DllImport("IMXlib.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr imx_transfer_nfts(NFT[] nfts, int nft_count, string receiver_address_str, string eth_priv_str, IntPtr result_buffer, int buffer_size);
+        [DllImport("IMXlib.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr imx_request_transfer_nfts(NFT[] nfts, int nft_count, string receiver_address, string sender_address, IntPtr result_buffer, int buffer_size);
+        #endregion
+        #region Finish transfer.
+        [DllImport("IMXlib.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr imx_finish_transfer(string nonce_str, string imx_seed_sig_str, string imx_transaction_sig_str, IntPtr result_buffer, int buffer_size);
+        #endregion
         public static string? IntPtrToString(IntPtr ptr)
         {
             return Marshal.PtrToStringAnsi(ptr);

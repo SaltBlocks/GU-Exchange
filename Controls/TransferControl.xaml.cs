@@ -19,6 +19,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using GU_Exchange.Views;
+using static GU_Exchange.Helpers.IMXlib;
 
 namespace GU_Exchange.Controls
 {
@@ -107,16 +108,135 @@ namespace GU_Exchange.Controls
             this.Visibility = Visibility.Collapsed;
         }
 
-        private void Button_Click(object sender, RoutedEventArgs e)
+        private void btnClose_Click(object sender, RoutedEventArgs e)
         {
             this.Visibility = Visibility.Collapsed;
         }
 
-        private void Button_Click_1(object sender, RoutedEventArgs e)
+        private void btnLookup_Click(object sender, RoutedEventArgs e)
         {
             PlayerLookupWindow window = new PlayerLookupWindow();
             window.Owner = Application.Current.MainWindow;
             window.ShowDialog();
+            if (window.Result == PlayerLookupWindow.LookupResult.Select)
+                tbAddress.Text = window.GetSelectedAddress();
+            Console.WriteLine(window.GetSelectedAddress());
+        }
+
+        private void tbAddress_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            try
+            {
+                if (Wallet.IsValidEthereumAddress(tbAddress.Text))
+                {
+                    btnTransfer.IsEnabled = true;
+                }
+                else
+                {
+                    btnTransfer.IsEnabled = false;
+                }
+                int.Parse((string)cbNumber.SelectedItem);
+            }
+            catch (NullReferenceException)
+            {
+            }
+            catch(FormatException)
+            {
+                btnTransfer.IsEnabled = false;
+            }
+        }
+
+        private async void btnTransfer_Click(object sender, RoutedEventArgs e)
+        {
+            userChoicePanel.Visibility = Visibility.Collapsed;
+            loadingPanel.Visibility = Visibility.Visible;
+
+            // Get the connected wallet.
+            Wallet? wallet = Wallet.GetConnectedWallet();
+            if (wallet == null)
+            {
+                // No wallet connected, cannot continue.
+                spinner.Visibility = Visibility.Collapsed;
+                error.Visibility = Visibility.Visible;
+                btnClose.Visibility = Visibility.Visible;
+                tbStatus.Text = "No wallet connected";
+                return;
+            }
+
+            // Submit the order and allow the wallet to update the status message.
+            List<NFT> cardsToTransfer = new();
+
+            int transferAmount = int.Parse((string)cbNumber.SelectedItem);
+            IEnumerable<string> tokensToList = _cardsOwned.Take(transferAmount);
+            foreach (string tokenIDStr in tokensToList)
+            {
+                try
+                {
+                    NFT card = new NFT()
+                    {
+                        token_address = "0xacb3c6a43d15b907e8433077b6d38ae40936fe2c",
+                        token_id = ulong.Parse(tokenIDStr)
+                    };
+                    cardsToTransfer.Add(card);
+                }
+                catch (FormatException)
+                {
+                    // Transfer failed? Shouldn't happen.
+                    spinner.Visibility = Visibility.Collapsed;
+                    error.Visibility = Visibility.Visible;
+                    btnClose.Visibility = Visibility.Visible;
+                    tbStatus.Text = "Attempted to transfer invalid token.";
+                    return;
+                }
+            }
+            Dictionary<NFT, bool> result = await wallet.RequestTransferCards(Application.Current.MainWindow, cardsToTransfer.ToArray(), this.tbAddress.Text, this.tbStatus);
+            bool resTotal = result.All(x => x.Value);
+            spinner.Visibility = Visibility.Collapsed;
+            if (!resTotal)
+            {
+                // Transfers failed.
+                error.Visibility = Visibility.Visible;
+                btnClose.Visibility = Visibility.Visible;
+                return;
+            }
+            else
+            {
+                int invChange = 0;
+                if (await GameDataManager.IsWalletLinked(Settings.GetApolloID(), wallet.Address))
+                    invChange = -transferAmount;
+                else if (await GameDataManager.IsWalletLinked(Settings.GetApolloID(), this.tbAddress.Text))
+                    invChange = transferAmount;
+                Inventory? inv = (Inventory?)App.Current.Properties["Inventory"];
+                if (inv != null && invChange != 0)
+                {
+                    int quality = 0;
+                    switch ((string)_parent.cbQuality.SelectedItem)
+                    {
+                        case "Meteorite":
+                            quality = 4;
+                            break;
+                        case "Shadow":
+                            quality = 3;
+                            break;
+                        case "Gold":
+                            quality = 2;
+                            break;
+                        case "Diamond":
+                            quality = 1;
+                            break;
+                    }
+                    if (quality != 0)
+                        inv.SetNumberOwned(_parent.CardID, quality, Math.Max(inv.GetNumberOwned(_parent.CardID, quality) + invChange, 0));
+                    await ((MainWindow)Application.Current.MainWindow).RefreshTilesAsync();
+                }
+            }
+
+            // Buying the order succeeded, now update the inventory and local wallet to reflect the successfull purchase.
+            success.Visibility = Visibility.Visible;
+
+            // Refresh the wallet in the parent CardControl.
+            _ = _parent.SetupInventoryAsync();
+            btnClose.Visibility = Visibility.Visible;
         }
     }
 

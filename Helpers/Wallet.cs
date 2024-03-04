@@ -5,6 +5,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Net.NetworkInformation;
 using System.Reflection;
@@ -12,6 +13,7 @@ using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Soap;
 using System.Security.Cryptography;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -442,6 +444,57 @@ namespace GU_Exchange.Helpers
         }
         #endregion
 
+        #region Static supporting functions.
+        /// <summary>
+        /// Check if this <see cref="Wallet"/> is linked to IMX.
+        /// </summary>
+        /// <returns></returns>
+        public static async Task<bool?> IsAddressLinkedAsync(string address)
+        {
+            string linkData;
+            try
+            {
+                HttpResponseMessage response = await ResourceManager.Client.GetAsync($"https://api.x.immutable.com/v1/users/{address}");
+
+                // Check if the request was successful.
+                if (response.IsSuccessStatusCode)
+                {
+                    linkData = await response.Content.ReadAsStringAsync(); // Process successful response
+                }
+                else
+                {
+                    linkData = await response.Content.ReadAsStringAsync(); // Get the response body for more details
+                }
+            }
+            catch (HttpRequestException ex)
+            {
+                Console.WriteLine($"Failed to check wallet link status with exception: {ex.Message}");
+                return null;
+            }
+            if (linkData.Contains("Account not found"))
+            {
+                return false;
+            }
+            return true;
+        }
+
+        public static bool IsValidEthereumAddress(string address)
+        {
+            // Remove the "0x" prefix if present
+            if (address.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+                address = address.Substring(2);
+
+            // Check if the address has exactly 40 characters
+            if (address.Length != 40)
+                return false;
+
+            // Check if the address is a valid hexadecimal string
+            if (!Regex.IsMatch(address, "^[0-9a-fA-F]+$"))
+                return false;
+            return true;
+        }
+        #endregion
+
         #region Get/Set connected wallet.
 
         /// <summary>
@@ -642,33 +695,14 @@ namespace GU_Exchange.Helpers
         public async Task<bool> IsLinkedAsync()
         {
             if (_isLinked != null) return (bool)_isLinked;
-            string linkData;
-            try
+            bool? result = await IsAddressLinkedAsync(Address);
+            if (result == null)
             {
-                HttpResponseMessage response = await ResourceManager.Client.GetAsync($"https://api.x.immutable.com/v1/users/{Address}");
-
-                // Check if the request was successful.
-                if (response.IsSuccessStatusCode)
-                {
-                    linkData = await response.Content.ReadAsStringAsync(); // Process successful response
-                }
-                else
-                {
-                    linkData = await response.Content.ReadAsStringAsync(); // Get the response body for more details
-                }
-            }
-            catch (HttpRequestException ex)
-            {
-                Console.WriteLine($"Failed to check wallet link status with exception: {ex.Message}");
                 return false;
             }
-            if (linkData.Contains("Account not found"))
-            {
-                _isLinked = false;
-                return false;
-            }
-            _isLinked = true;
-            return true;
+            if ((bool)result)
+                _isLinked = true;
+            return (bool)result;
         }
 
         /// <summary>
@@ -1043,6 +1077,85 @@ namespace GU_Exchange.Helpers
             }
 
             return results.ToDictionary(x => x.orderID, x => x.res);
+        }
+
+        /// <summary>
+        /// Request the user to transfer one or multiple cards.
+        /// This will transfer the cards immediately if the private key for the <see cref="Wallet"/> is unlocked and available.
+        /// </summary>
+        /// <param name="parent"></param>
+        /// <param name="order"></param>
+        /// <param name="tbStatus"></param>
+        /// <returns></returns>
+        virtual public async Task<Dictionary<NFT, bool>> RequestTransferCards(Window parent, NFT[] cards, string receiverAddress, TextBlock tbStatus)
+        {
+            // Check if the receiverAddress is valid and registered on IMX.
+            bool? receiverLinked = await IsAddressLinkedAsync(receiverAddress);
+            if (receiverLinked == null)
+            {
+                tbStatus.Text = "Failed to confirm the receiver wallet is linked to IMX.";
+                return cards.ToDictionary(x => x, x => false);
+            }
+            if (!(bool)receiverLinked)
+            {
+                tbStatus.Text = "Receiver wallet is not linked to IMX.";
+                return cards.ToDictionary(x => x, x => false);
+            }
+
+            // Unlock user wallet.
+            tbStatus.Text = "Waiting for wallet to be unlocked...";
+            bool reLock = false;
+            if (IsLocked())
+            {
+                UnlockWalletWindow unlockWindow = new UnlockWalletWindow(this);
+                unlockWindow.Owner = parent;
+                unlockWindow.ShowDialog();
+                if (unlockWindow.Result == UnlockWalletWindow.UnlockResult.Cancel)
+                {
+                    return cards.ToDictionary(x => x, x => false);
+                }
+                reLock = unlockWindow.Result == UnlockWalletWindow.UnlockResult.Relock;
+            }
+
+            // Prompt IMXlib to submit the listings.
+            tbStatus.Text = $"Submitting transfer{(cards.Count() > 1 ? "s" : "")} to IMX...";
+
+            // Create a task for each listing so they can run asynchronously.
+            Task<string?> transferCards = Task.Run(() =>
+            {
+                int bufferSize = 1024;
+                IntPtr resultBuffer = Marshal.AllocHGlobal(bufferSize);
+                string? result = IntPtrToString(imx_transfer_nfts(cards, cards.Count(), receiverAddress, GetPrivateKey(), resultBuffer, bufferSize));
+                Marshal.FreeHGlobal(resultBuffer);
+                return result;
+            });
+            string? result = await transferCards;
+
+            // Relock the wallet if requested by the user.
+            if (reLock)
+                LockWallet();
+
+            // Handle the server response
+            Console.WriteLine(result ?? "No result");
+            if (result == null)
+            {
+                tbStatus.Text = "An unknown error occurred";
+                return cards.ToDictionary(x => x, x => false);
+            }
+            if (!result.Contains("transfer_ids"))
+            {
+                JObject? jsonResult = (JObject?)JsonConvert.DeserializeObject(result);
+                string? message = (string?)jsonResult?.SelectToken("message");
+                if (message == null)
+                {
+                    tbStatus.Text = "An unknown error occurred";
+                    return cards.ToDictionary(x => x, x => false);
+                }
+                tbStatus.Text = message;
+                return cards.ToDictionary(x => x, x => false);
+            }
+            tbStatus.Text = $"Transfer{(cards.Count() > 1 ? "s" : "")} submitted to IMX";
+            return cards.ToDictionary(x => x, x => true);
         }
         #endregion
 

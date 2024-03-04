@@ -16,6 +16,7 @@ using System.Windows.Shapes;
 using GU_Exchange.Helpers;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
+using System.Windows.Markup;
 
 namespace GU_Exchange.Views
 {
@@ -57,27 +58,15 @@ namespace GU_Exchange.Views
                 return AccountCache[apolloID];
             byte[] data = await ResourceManager.Client.GetByteArrayAsync($"https://apollo-auth.prod.prod.godsunchained.com/v2/account/{apolloID}", token);
             string result = System.Text.Encoding.UTF8.GetString(data);
-            Console.WriteLine(result);
             AccountCache.Add(apolloID, result);
             return result;
         }
 
-        private async void SearchApolloID()
+        private async Task UpdateAccountData(int apolloID, CancellationToken token)
         {
-            /*var input = this.tbSearchBar.Text;
-            try
-            {
-                int apolloID = int.Parse(input);
-                this.cbApolloID.Items.Clear();
-                this.cbApolloID.Items.Add(apolloID);
-                this.cbApolloID.SelectedIndex = 0;
-
-                if (_nameTokenSource != null)
-                    _nameTokenSource.Cancel();
-                _nameTokenSource = new CancellationTokenSource();
-
-                string data = await FetchAccountData(apolloID, _nameTokenSource.Token);
-                JObject? json = (JObject?)JsonConvert.DeserializeObject(data);
+            try {
+                string accountData = await FetchAccountData(apolloID, token);
+                JObject? json = (JObject?)JsonConvert.DeserializeObject(accountData);
                 if (json == null)
                     return;
 
@@ -94,40 +83,48 @@ namespace GU_Exchange.Views
                     Select(a => (string?)a["address"]).
                     ToList();
 
-                Console.WriteLine("Username: " + username);
-                Console.WriteLine($"Default address: {default_address}");
-                Console.WriteLine("Addresses:");
-                foreach (var address in addressList)
-                {
-                    Console.WriteLine(address);
-                }
-
                 if (username == null)
                     return;
-                this.txtPlayerName.Text = username;
-                this.cbApolloID.Items.Clear();
-                this.cbApolloID.Items.Add(apolloID);
-                this.cbApolloID.SelectedIndex = 0;
 
-
-                this.cbAddresses.Items.Clear();
+                token.ThrowIfCancellationRequested();
+                txtPlayerName.Text = username;
+                cbAddresses.Items.Clear();
                 if (default_address == null)
                     return;
-                this.cbAddresses.Items.Add(default_address);
-                this.cbAddresses.SelectedIndex = 0;
-
+                cbAddresses.Items.Add(default_address);
+                cbAddresses.SelectedIndex = 0;
                 foreach (string? address in addressList)
                 {
                     if (address != null)
                     {
-                        this.cbAddresses.Items.Add(address);
+                        cbAddresses.Items.Add(address);
                     }
                 }
             }
+            catch (Exception ex)
+            {
+                if (ex is OperationCanceledException)
+                {
+                    throw;
+                }
+                else
+                {
+                    cbAddresses.Items.Clear();
+                }
+            }
+        }
+
+        private void SearchApolloID()
+        {
+            var input = tbSearchBar.Text;
+            try
+            {
+                int apolloID = int.Parse(input);
+                cbApolloID.Items.Clear();
+                cbApolloID.Items.Add(apolloID);
+                cbApolloID.SelectedIndex = 0;
+            }
             catch (FormatException) { }
-            catch (OperationCanceledException) { }
-            catch (InvalidOperationException) { }
-            catch (HttpRequestException) { }*/
         }
 
         private void SearchUserName()
@@ -137,16 +134,20 @@ namespace GU_Exchange.Views
             {
                 _playerNameList.FirstOrDefault(x => x.StartsWith(input));
                 string? suggestedName = _playerNameList.FirstOrDefault(x => x.StartsWith(input));
+                Console.WriteLine(suggestedName);
                 if (suggestedName == null)
                 {
                     txtPlayerName.Text = "";
                     cbApolloID.Items.Clear();
                     _currentSuggestion = "";
+                    _currentInput = input;
                 }
                 else if (!suggestedName.Equals(_currentSuggestion))
                 {
+                    txtPlayerName.Text = "";
+                    cbApolloID.Items.Clear();
+                    cbAddresses.Items.Clear();
                     _currentSuggestion = suggestedName;
-                    txtPlayerName.Text = suggestedName;
                     List<int> apolloIDs = GameDataManager.FetchApolloIDs(suggestedName);
                     if (apolloIDs.Count > 0)
                     {
@@ -156,12 +157,14 @@ namespace GU_Exchange.Views
                             cbApolloID.Items.Add(apolloID);
                         }
                         cbApolloID.SelectedIndex = 0;
-
-                        Console.WriteLine("Should fetch");
+                        _currentInput = input;
                     }
                 }
             }
-            _currentInput = input;
+            else
+            {
+                _currentInput = input;
+            }
         }
 
         private void tbSearchBar_TextChanged(object sender, EventArgs e)
@@ -185,6 +188,45 @@ namespace GU_Exchange.Views
             {
                 tbSearchBar.SuggestionList = new List<string>();
             }
+        }
+
+        private async void cbApolloID_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            try
+            {
+                cbAddresses.Items.Clear();
+                int apolloID = (int)cbApolloID.SelectedItem;
+                if (_nameTokenSource != null)
+                    _nameTokenSource.Cancel();
+                _nameTokenSource = new CancellationTokenSource();
+                await UpdateAccountData(apolloID, _nameTokenSource.Token);
+            }
+            catch (Exception ex)
+            {
+                if (!(ex is OperationCanceledException))
+                    cbAddresses.Items.Clear();
+            }
+        }
+
+        private void btnCancel_Click(object sender, RoutedEventArgs e)
+        {
+            Close();
+        }
+
+        private void cbAddresses_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            btnSelect.IsEnabled = cbAddresses.SelectedItem != null;
+        }
+
+        private void btnSelect_Click(object sender, RoutedEventArgs e)
+        {
+            Result = LookupResult.Select;
+            Close();
+        }
+
+        public string? GetSelectedAddress()
+        {
+            return (string?) cbAddresses.SelectedItem;
         }
     }
 }

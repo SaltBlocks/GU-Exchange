@@ -5,8 +5,8 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:GU_Exchange"
         mc:Ignorable="d"
-        Title="PlayerLookupWindow" Height="230" Width="450" Background="#FFE4E4E4">
-    <Grid>
+        Title="PlayerLookupWindow" Height="260" Width="480" Background="#FFE4E4E4" WindowStartupLocation="CenterOwner" ResizeMode="NoResize">
+    <Grid Height="230" Width="450">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="Auto"/>
             <ColumnDefinition Width="*"/>
@@ -35,13 +35,13 @@
                 <TextBlock Text="Apollo ID" Grid.Column="0" Grid.Row="1" Margin="10,5,10,5" VerticalAlignment="Center" />
                 <TextBlock Text="ETH address" Grid.Column="0" Grid.Row="2" Margin="10,5,10,5" VerticalAlignment="Center" />
                 <TextBlock x:Name="txtPlayerName" Text="-" Grid.Column="1" Grid.Row="0" Margin="10,0,10,0" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                <ComboBox x:Name="cbApolloID" Height="20" Grid.Column="1" Grid.Row="1" Margin="10,0,10,0"/>
-                <ComboBox x:Name="cbAddresses" Height="20" Grid.Column="1" Grid.Row="2" Margin="10,0,10,0"/>
+                <ComboBox x:Name="cbApolloID" Height="20" Grid.Column="1" Grid.Row="1" Margin="10,0,10,0" SelectionChanged="cbApolloID_SelectionChanged"/>
+                <ComboBox x:Name="cbAddresses" Height="20" Grid.Column="1" Grid.Row="2" Margin="10,0,10,0" SelectionChanged="cbAddresses_SelectionChanged"/>
             </Grid>
         </Border>
         <StackPanel HorizontalAlignment="Center" Orientation="Horizontal" Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2">
-            <Button x:Name="btnSelect" Content="Select" Width="90" Height="25" Margin="5" IsEnabled="False" />
-            <Button x:Name="btnCancel" Content="Cancel" Width="90" Height="25" Margin="5" />
+            <Button x:Name="btnSelect" Content="Select" Width="90" Height="25" Margin="5" IsEnabled="False" Click="btnSelect_Click" />
+            <Button x:Name="btnCancel" Content="Cancel" Width="90" Height="25" Margin="5" Click="btnCancel_Click" />
         </StackPanel>
     </Grid>
 </Window>
