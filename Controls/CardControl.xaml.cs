@@ -371,7 +371,7 @@ namespace GU_Exchange
         /// <param name="e"></param>
         private void btnClose_Click(object sender, RoutedEventArgs e)
         {
-            ((MainWindow)Application.Current.MainWindow).CloseCardControl();
+            ((MainWindow)Application.Current.MainWindow).CloseOverlay();
         }
 
         /// <summary>
@@ -414,7 +414,7 @@ namespace GU_Exchange
                 return;
             }
             // Click occurred outside controlGrid, you can call your function here
-            ((MainWindow)Application.Current.MainWindow).CloseCardControl();
+            ((MainWindow)Application.Current.MainWindow).CloseOverlay();
         }
 
         /// <summary>
@@ -507,7 +507,7 @@ namespace GU_Exchange
 
         private void btnTransfer_Click(object sender, RoutedEventArgs e)
         {
-            TransferControl _transferControl = new TransferControl(this, this.CardID, imgCard.Source);
+            TransferCardControl _transferControl = new TransferCardControl(this, this.CardID, imgCard.Source);
             _transferControl.Margin = new Thickness(0, 0, 0, 0);
             Grid.SetColumnSpan(_transferControl, 2);
             controlGrid.Children.Add(_transferControl);

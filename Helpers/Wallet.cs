@@ -1087,19 +1087,19 @@ namespace GU_Exchange.Helpers
         /// <param name="order"></param>
         /// <param name="tbStatus"></param>
         /// <returns></returns>
-        virtual public async Task<Dictionary<NFT, bool>> RequestTransferCards(Window parent, NFT[] cards, string receiverAddress, TextBlock tbStatus)
+        virtual public async Task<bool> RequestTransferCards(Window parent, NFT[] cards, string receiverAddress, TextBlock tbStatus)
         {
             // Check if the receiverAddress is valid and registered on IMX.
             bool? receiverLinked = await IsAddressLinkedAsync(receiverAddress);
             if (receiverLinked == null)
             {
                 tbStatus.Text = "Failed to confirm the receiver wallet is linked to IMX.";
-                return cards.ToDictionary(x => x, x => false);
+                return false;
             }
             if (!(bool)receiverLinked)
             {
                 tbStatus.Text = "Receiver wallet is not linked to IMX.";
-                return cards.ToDictionary(x => x, x => false);
+                return false;
             }
 
             // Unlock user wallet.
@@ -1112,7 +1112,7 @@ namespace GU_Exchange.Helpers
                 unlockWindow.ShowDialog();
                 if (unlockWindow.Result == UnlockWalletWindow.UnlockResult.Cancel)
                 {
-                    return cards.ToDictionary(x => x, x => false);
+                    return false;
                 }
                 reLock = unlockWindow.Result == UnlockWalletWindow.UnlockResult.Relock;
             }
@@ -1140,7 +1140,7 @@ namespace GU_Exchange.Helpers
             if (result == null)
             {
                 tbStatus.Text = "An unknown error occurred";
-                return cards.ToDictionary(x => x, x => false);
+                return false;
             }
             if (!result.Contains("transfer_ids"))
             {
@@ -1149,13 +1149,13 @@ namespace GU_Exchange.Helpers
                 if (message == null)
                 {
                     tbStatus.Text = "An unknown error occurred";
-                    return cards.ToDictionary(x => x, x => false);
+                    return false;
                 }
                 tbStatus.Text = message;
-                return cards.ToDictionary(x => x, x => false);
+                return false;
             }
             tbStatus.Text = $"Transfer{(cards.Count() > 1 ? "s" : "")} submitted to IMX";
-            return cards.ToDictionary(x => x, x => true);
+            return true;
         }
         #endregion
 
@@ -1620,6 +1620,120 @@ namespace GU_Exchange.Helpers
                 tbStatus.Text = "Not all listings were cancelled.";
             }
             return results;
+        }
+
+        /// <summary>
+        /// Request the user to buy a specific <see cref="Order"/>.
+        /// </summary>
+        /// <param name="parent"></param>
+        /// <param name="order"></param>
+        /// <param name="tbStatus"></param>
+        /// <returns></returns>
+        public override async Task<bool> RequestTransferCards(Window parent, NFT[] cards, string receiverAddress, TextBlock tbStatus)
+        {
+            // Check if the receiverAddress is valid and registered on IMX.
+            bool? receiverLinked = await IsAddressLinkedAsync(receiverAddress);
+            if (receiverLinked == null)
+            {
+                tbStatus.Text = "Failed to confirm the receiver wallet is linked to IMX.";
+                return false;
+            }
+            if (!(bool)receiverLinked)
+            {
+                tbStatus.Text = "Receiver wallet is not linked to IMX.";
+                return false;
+            }
+
+            // Unlock user wallet.
+            tbStatus.Text = "Waiting for wallet...";
+            if (IsLocked())
+                await UnlockWallet();
+
+            // Prompt IMXlib to request the transfer.
+            tbStatus.Text = $"Preparing to transfer card{(cards.Count() > 1 ? "s" : "")}...";
+
+            // Create a task so this can run asynchronously.
+            Task<string?> requestTransferCards = Task.Run(() =>
+            {
+                int bufferSize = 1024;
+                IntPtr resultBuffer = Marshal.AllocHGlobal(bufferSize);
+                string? result = IntPtrToUtf8String(imx_request_transfer_nfts(cards, cards.Count(), receiverAddress, Address, resultBuffer, bufferSize));
+                Marshal.FreeHGlobal(resultBuffer);
+                return result;
+            });
+
+            // Handle server response.
+            string? signableRequest = await requestTransferCards;
+            if (signableRequest == null)
+            {
+                tbStatus.Text = "An unknown error occurred";
+                return false;
+            }
+            JObject? jsonBuyRequest = (JObject?)JsonConvert.DeserializeObject(signableRequest);
+            string? nonce = (string?)jsonBuyRequest?.SelectToken("nonce");
+            string? signableMessage = (string?)jsonBuyRequest?.SelectToken("signable_message");
+            if (nonce == null || signableMessage == null)
+            {
+                string? message = (string?)jsonBuyRequest?.SelectToken("message");
+                if (message == null)
+                {
+                    tbStatus.Text = "An unknown error occurred";
+                    return false;
+                }
+                tbStatus.Text = message;
+                return false;
+            }
+
+            // Request the users signature.
+            tbStatus.Text = "Waiting for user signature...";
+            Task<SignatureData> fetchSignature = SignatureRequestServer.RequestSignatureAsync(signableMessage);
+            UseWebWalletWindow useWalletWindow = new(fetchSignature);
+            useWalletWindow.Owner = parent;
+            useWalletWindow.ShowDialog();
+            SignatureData buySignature;
+            try
+            {
+                buySignature = await fetchSignature;
+            }
+            catch (OperationCanceledException)
+            {
+                tbStatus.Text = "Purchase cancelled";
+                return false;
+            }
+
+            // Prompt IMXlib to submit the transfer.
+            tbStatus.Text = $"Submitting transfer{(cards.Count() > 1 ? "s" : "")} to IMX...";
+            Task<string?> transferTask = Task.Run(() =>
+            {
+                int bufferSize = 1024;
+                IntPtr resultBuffer = Marshal.AllocHGlobal(bufferSize);
+                string? result = IntPtrToUtf8String(imx_finish_transfer(nonce, GetPrivateKey(), buySignature.Signature, resultBuffer, bufferSize));
+                Marshal.FreeHGlobal(resultBuffer);
+                return result;
+            });
+            string? result = await transferTask;
+
+            // Handle the server response
+            Console.WriteLine(result ?? "No result");
+            if (result == null)
+            {
+                tbStatus.Text = "An unknown error occurred";
+                return false;
+            }
+            if (!result.Contains("transfer_ids"))
+            {
+                JObject? jsonResult = (JObject?)JsonConvert.DeserializeObject(result);
+                string? message = (string?)jsonResult?.SelectToken("message");
+                if (message == null)
+                {
+                    tbStatus.Text = "An unknown error occurred";
+                    return false;
+                }
+                tbStatus.Text = message;
+                return false;
+            }
+            tbStatus.Text = $"Transfer{(cards.Count() > 1 ? "s" : "")} submitted to IMX";
+            return true;
         }
         #endregion
 

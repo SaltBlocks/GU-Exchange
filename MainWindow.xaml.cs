@@ -12,6 +12,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using GU_Exchange.Controls;
 using GU_Exchange.Helpers;
 
 namespace GU_Exchange
@@ -79,11 +80,11 @@ namespace GU_Exchange
     {
         #region Class Properties
         private List<CardData> _cardList;                               // Contains all cards matching the current search conditions.
-        private List<CardTileControl> _cardTiles;                              // List for the tiles that display cards on the main window.
+        private List<CardTileControl> _cardTiles;                       // List for the tiles that display cards on the main window.
         private int _tileIndex;                                         // Used to track the number of tiles currently displayed.
         private CheckBoxItems _checkBoxes;                              // Checkboxes used for filtering searches by mana cost.
         private CancellationTokenSource? _imgUpdateTokenSource = null;  // Used to keep track of the card tiles being updated.
-        private CardControl? _cardControl;                              // Overlay used for trading a selected card.
+        private UserControl? _overlayControl;                           // Overlay used for trading a selected card.
         private bool _setupComplete;                                    // Indicates that search setup has finished.
         #endregion
 
@@ -238,8 +239,8 @@ namespace GU_Exchange
             Wallet? connectedWallet = Wallet.GetConnectedWallet();
 
             Task? updateCardControl = null;
-            if (_cardControl != null)
-                updateCardControl = _cardControl.SetupInventoryAsync();
+            if (_overlayControl != null && _overlayControl is CardControl)
+                updateCardControl = ((CardControl)_overlayControl).SetupInventoryAsync();
             if (connectedWallet == null)
             {
                 rectNoWallet.Visibility = Visibility.Visible;
@@ -254,7 +255,7 @@ namespace GU_Exchange
                 await updateCardControl;
         }
 
-        public async Task RefreshWalletInfoAsync()
+        public async Task RefreshWalletInfoAsync(bool forceUpdate = false)
         {
             Wallet? connectedWallet = Wallet.GetConnectedWallet();
             if (connectedWallet == null)
@@ -262,9 +263,9 @@ namespace GU_Exchange
             try
             {
                 Console.WriteLine($"Fetching wallet content for wallet {connectedWallet.Address}");
-                txtEth.Text = $"{Math.Round(await connectedWallet.GetTokenAmountAsync("ETH"), 6)} ETH";
-                txtGods.Text = $"{Math.Round(await connectedWallet.GetTokenAmountAsync("GODS"), 2)} GODS";
-                txtImx.Text = $"{Math.Round(await connectedWallet.GetTokenAmountAsync("IMX"), 2)} IMX";
+                txtEth.Text = $"{Math.Round(await connectedWallet.GetTokenAmountAsync("ETH", forceUpdate), 6)} ETH";
+                txtGods.Text = $"{Math.Round(await connectedWallet.GetTokenAmountAsync("GODS", forceUpdate), 2)} GODS";
+                txtImx.Text = $"{Math.Round(await connectedWallet.GetTokenAmountAsync("IMX", forceUpdate), 2)} IMX";
             }
             catch (HttpRequestException e)
             {
@@ -540,6 +541,27 @@ namespace GU_Exchange
         }
 
         /// <summary>
+        /// Refresh the inventory display and the wallet currency amounts.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private async void RefreshInventory_Click(object sender, RoutedEventArgs e)
+        {
+            miRefresh.IsEnabled = false;
+            miRefresh.Header = "Fetching inventory...";
+            Task walletRefresh = RefreshWalletInfoAsync(true);
+            Inventory? inv = (Inventory?)App.Current.Properties["Inventory"];
+            if (inv != null)
+            {
+                await inv.UpdateInventoryAsync();
+                await RefreshTilesAsync();
+                await walletRefresh;
+            }
+            miRefresh.IsEnabled = true;
+            miRefresh.Header = "Refresh inventory";
+        }
+
+        /// <summary>
         /// Close the application
         /// </summary>
         /// <param name="sender"></param>
@@ -589,29 +611,40 @@ namespace GU_Exchange
         /// <param name="CardID">CardID for the card to trade.</param>
         public void OpenCardControl(int CardID)
         {
-            _cardControl = new CardControl(CardID);
-            _cardControl.Margin = new Thickness(0, 0, 0, 0);
-            Grid.SetRow(_cardControl, 2);
-            Grid.SetRowSpan(_cardControl, 4);
-            this.MainGrid.Children.Add(_cardControl);
+            CloseOverlay();
+            _overlayControl = new CardControl(CardID);
+            _overlayControl.Margin = new Thickness(0, 0, 0, 0);
+            Grid.SetRow(_overlayControl, 2);
+            Grid.SetRowSpan(_overlayControl, 4);
+            this.MainGrid.Children.Add(_overlayControl);
         }
 
         /// <summary>
         /// Close the currently opened trading overlay.
         /// </summary>
-        public void CloseCardControl()
+        public void CloseOverlay()
         {
-            if (_cardControl != null)
-                this.MainGrid.Children.Remove(_cardControl);
-            _cardControl = null;
+            if (_overlayControl != null)
+                this.MainGrid.Children.Remove(_overlayControl);
+            _overlayControl = null;
         }
 
         public void OpenOrder(Order order)
         {
-            if (_cardControl != null)
-                _cardControl.OpenOrder(order);
+            if (_overlayControl != null && _overlayControl is CardControl)
+                ((CardControl)_overlayControl).OpenOrder(order);
         }
 
         #endregion
+
+        private void TransferCurrency_Click(object sender, RoutedEventArgs e)
+        {
+            CloseOverlay();
+            _overlayControl = new TransferCurrencyControl();
+            _overlayControl.Margin = new Thickness(0, 0, 0, 0);
+            Grid.SetRow(_overlayControl, 2);
+            Grid.SetRowSpan(_overlayControl, 4);
+            this.MainGrid.Children.Add(_overlayControl);
+        }
     }
 }

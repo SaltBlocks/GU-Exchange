@@ -26,14 +26,14 @@ namespace GU_Exchange.Controls
     /// <summary>
     /// Interaction logic for TransferControl.xaml
     /// </summary>
-    public partial class TransferControl : UserControl
+    public partial class TransferCardControl : UserControl
     {
         private CardControl _parent;
         private int _cardID;
         private ImageSource _image;
         private HashSet<string> _cardsOwned;
 
-        public TransferControl(CardControl parent, int cardID, ImageSource image)
+        public TransferCardControl(CardControl parent, int cardID, ImageSource image)
         {
             InitializeComponent();
             _parent = parent;
@@ -95,16 +95,16 @@ namespace GU_Exchange.Controls
         /// <param name="e"></param>
         private void UserControl_MouseDown(object sender, MouseButtonEventArgs e)
         {
-            // Get the position of the mouse click relative to the buyGrid
-            Point clickPoint = e.GetPosition(buyGrid);
+            // Get the position of the mouse click relative to the transferGrid
+            Point clickPoint = e.GetPosition(transferGrid);
 
-            // Check if the click occurred on the buyGrid
-            if (clickPoint.X >= 0 && clickPoint.X < buyGrid.ActualWidth &&
-                clickPoint.Y >= 0 && clickPoint.Y < buyGrid.ActualHeight)
+            // Check if the click occurred on the transferGrid
+            if (clickPoint.X >= 0 && clickPoint.X < transferGrid.ActualWidth &&
+                clickPoint.Y >= 0 && clickPoint.Y < transferGrid.ActualHeight)
             {
                 return;
             }
-            // Click occurred outside buyGrid, you can call your function here
+            // Click occurred outside transferGrid, you can call your function here
             this.Visibility = Visibility.Collapsed;
         }
 
@@ -189,10 +189,9 @@ namespace GU_Exchange.Controls
                     return;
                 }
             }
-            Dictionary<NFT, bool> result = await wallet.RequestTransferCards(Application.Current.MainWindow, cardsToTransfer.ToArray(), this.tbAddress.Text, this.tbStatus);
-            bool resTotal = result.All(x => x.Value);
+            bool result = await wallet.RequestTransferCards(Application.Current.MainWindow, cardsToTransfer.ToArray(), this.tbAddress.Text, this.tbStatus);
             spinner.Visibility = Visibility.Collapsed;
-            if (!resTotal)
+            if (!result)
             {
                 // Transfers failed.
                 error.Visibility = Visibility.Visible;
