@@ -1117,10 +1117,10 @@ namespace GU_Exchange.Helpers
                 reLock = unlockWindow.Result == UnlockWalletWindow.UnlockResult.Relock;
             }
 
-            // Prompt IMXlib to submit the listings.
+            // Prompt IMXlib to submit the transfers.
             tbStatus.Text = $"Submitting transfer{(cards.Count() > 1 ? "s" : "")} to IMX...";
 
-            // Create a task for each listing so they can run asynchronously.
+            // Create a task for the transfers so they can run asynchronously.
             Task<string?> transferCards = Task.Run(() =>
             {
                 int bufferSize = 1024;
@@ -1155,6 +1155,85 @@ namespace GU_Exchange.Helpers
                 return false;
             }
             tbStatus.Text = $"Transfer{(cards.Count() > 1 ? "s" : "")} submitted to IMX";
+            return true;
+        }
+
+        /// <summary>
+        /// Request the user to transfer a specified amount of a currency.
+        /// This will transfer immediately if the private key for the <see cref="Wallet"/> is unlocked and available.
+        /// </summary>
+        /// <param name="parent"></param>
+        /// <param name="order"></param>
+        /// <param name="tbStatus"></param>
+        /// <returns></returns>
+        virtual public async Task<bool> RequestTransferCurrency(Window parent, Token currency, double amount, string receiverAddress, TextBlock tbStatus)
+        {
+            // Check if the receiverAddress is valid and registered on IMX.
+            bool? receiverLinked = await IsAddressLinkedAsync(receiverAddress);
+            if (receiverLinked == null)
+            {
+                tbStatus.Text = "Failed to confirm the receiver wallet is linked to IMX.";
+                return false;
+            }
+            if (!(bool)receiverLinked)
+            {
+                tbStatus.Text = "Receiver wallet is not linked to IMX.";
+                return false;
+            }
+
+            // Unlock user wallet.
+            tbStatus.Text = "Waiting for wallet to be unlocked...";
+            bool reLock = false;
+            if (IsLocked())
+            {
+                UnlockWalletWindow unlockWindow = new UnlockWalletWindow(this);
+                unlockWindow.Owner = parent;
+                unlockWindow.ShowDialog();
+                if (unlockWindow.Result == UnlockWalletWindow.UnlockResult.Cancel)
+                {
+                    return false;
+                }
+                reLock = unlockWindow.Result == UnlockWalletWindow.UnlockResult.Relock;
+            }
+
+            // Prompt IMXlib to submit the transfer.
+            tbStatus.Text = $"Submitting transfer to IMX...";
+
+            // Create a task for the transfer so it can run asynchronously.
+            Task<string?> transferCurrency = Task.Run(() =>
+            {
+                int bufferSize = 1024;
+                IntPtr resultBuffer = Marshal.AllocHGlobal(bufferSize);
+                string? result = IntPtrToString(imx_transfer_token(currency.Address, amount, receiverAddress, GetPrivateKey(), resultBuffer, bufferSize));
+                Marshal.FreeHGlobal(resultBuffer);
+                return result;
+            });
+            string? result = await transferCurrency;
+
+            // Relock the wallet if requested by the user.
+            if (reLock)
+                LockWallet();
+
+            // Handle the server response
+            Console.WriteLine(result ?? "No result");
+            if (result == null)
+            {
+                tbStatus.Text = "An unknown error occurred";
+                return false;
+            }
+            if (!result.Contains("transfer_ids"))
+            {
+                JObject? jsonResult = (JObject?)JsonConvert.DeserializeObject(result);
+                string? message = (string?)jsonResult?.SelectToken("message");
+                if (message == null)
+                {
+                    tbStatus.Text = "An unknown error occurred";
+                    return false;
+                }
+                tbStatus.Text = message;
+                return false;
+            }
+            tbStatus.Text = $"Transfer submitted to IMX";
             return true;
         }
         #endregion
@@ -1623,7 +1702,8 @@ namespace GU_Exchange.Helpers
         }
 
         /// <summary>
-        /// Request the user to buy a specific <see cref="Order"/>.
+        /// Request the user to transfer one or multiple cards.
+        /// This will transfer the cards immediately if the private key for the <see cref="Wallet"/> is unlocked and available.
         /// </summary>
         /// <param name="parent"></param>
         /// <param name="order"></param>
@@ -1690,14 +1770,14 @@ namespace GU_Exchange.Helpers
             UseWebWalletWindow useWalletWindow = new(fetchSignature);
             useWalletWindow.Owner = parent;
             useWalletWindow.ShowDialog();
-            SignatureData buySignature;
+            SignatureData transferSignature;
             try
             {
-                buySignature = await fetchSignature;
+                transferSignature = await fetchSignature;
             }
             catch (OperationCanceledException)
             {
-                tbStatus.Text = "Purchase cancelled";
+                tbStatus.Text = "Transfer cancelled";
                 return false;
             }
 
@@ -1707,7 +1787,7 @@ namespace GU_Exchange.Helpers
             {
                 int bufferSize = 1024;
                 IntPtr resultBuffer = Marshal.AllocHGlobal(bufferSize);
-                string? result = IntPtrToUtf8String(imx_finish_transfer(nonce, GetPrivateKey(), buySignature.Signature, resultBuffer, bufferSize));
+                string? result = IntPtrToUtf8String(imx_finish_transfer(nonce, GetPrivateKey(), transferSignature.Signature, resultBuffer, bufferSize));
                 Marshal.FreeHGlobal(resultBuffer);
                 return result;
             });
@@ -1733,6 +1813,121 @@ namespace GU_Exchange.Helpers
                 return false;
             }
             tbStatus.Text = $"Transfer{(cards.Count() > 1 ? "s" : "")} submitted to IMX";
+            return true;
+        }
+
+        /// <summary>
+        /// Request the user to transfer a specified amount of a currency.
+        /// This will transfer immediately if the private key for the <see cref="Wallet"/> is unlocked and available.
+        /// </summary>
+        /// <param name="parent"></param>
+        /// <param name="order"></param>
+        /// <param name="tbStatus"></param>
+        /// <returns></returns>
+        public override async Task<bool> RequestTransferCurrency(Window parent, Token currency, double amount, string receiverAddress, TextBlock tbStatus)
+        {
+            // Check if the receiverAddress is valid and registered on IMX.
+            bool? receiverLinked = await IsAddressLinkedAsync(receiverAddress);
+            if (receiverLinked == null)
+            {
+                tbStatus.Text = "Failed to confirm the receiver wallet is linked to IMX.";
+                return false;
+            }
+            if (!(bool)receiverLinked)
+            {
+                tbStatus.Text = "Receiver wallet is not linked to IMX.";
+                return false;
+            }
+
+            // Unlock user wallet.
+            tbStatus.Text = "Waiting for wallet...";
+            if (IsLocked())
+                await UnlockWallet();
+
+            // Prompt IMXlib to request the transfer.
+            tbStatus.Text = $"Preparing the transfer...";
+
+            // Create a task so this can run asynchronously.
+            Task<string?> requestTransferCurrency = Task.Run(() =>
+            {
+                int bufferSize = 1024;
+                IntPtr resultBuffer = Marshal.AllocHGlobal(bufferSize);
+                string? result = IntPtrToUtf8String(imx_request_transfer_token(currency.Address, amount, receiverAddress, Address, resultBuffer, bufferSize));
+                Marshal.FreeHGlobal(resultBuffer);
+                return result;
+            });
+
+            // Handle server response.
+            string? signableRequest = await requestTransferCurrency;
+            if (signableRequest == null)
+            {
+                tbStatus.Text = "An unknown error occurred";
+                return false;
+            }
+            JObject? jsonBuyRequest = (JObject?)JsonConvert.DeserializeObject(signableRequest);
+            string? nonce = (string?)jsonBuyRequest?.SelectToken("nonce");
+            string? signableMessage = (string?)jsonBuyRequest?.SelectToken("signable_message");
+            if (nonce == null || signableMessage == null)
+            {
+                string? message = (string?)jsonBuyRequest?.SelectToken("message");
+                if (message == null)
+                {
+                    tbStatus.Text = "An unknown error occurred";
+                    return false;
+                }
+                tbStatus.Text = message;
+                return false;
+            }
+
+            // Request the users signature.
+            tbStatus.Text = "Waiting for user signature...";
+            Task<SignatureData> fetchSignature = SignatureRequestServer.RequestSignatureAsync(signableMessage);
+            UseWebWalletWindow useWalletWindow = new(fetchSignature);
+            useWalletWindow.Owner = parent;
+            useWalletWindow.ShowDialog();
+            SignatureData transferSignature;
+            try
+            {
+                transferSignature = await fetchSignature;
+            }
+            catch (OperationCanceledException)
+            {
+                tbStatus.Text = "Transfer cancelled";
+                return false;
+            }
+
+            // Prompt IMXlib to submit the transfer.
+            tbStatus.Text = $"Submitting transfer to IMX...";
+            Task<string?> transferTask = Task.Run(() =>
+            {
+                int bufferSize = 1024;
+                IntPtr resultBuffer = Marshal.AllocHGlobal(bufferSize);
+                string? result = IntPtrToUtf8String(imx_finish_transfer(nonce, GetPrivateKey(), transferSignature.Signature, resultBuffer, bufferSize));
+                Marshal.FreeHGlobal(resultBuffer);
+                return result;
+            });
+            string? result = await transferTask;
+
+            // Handle the server response
+            Console.WriteLine(result ?? "No result");
+            if (result == null)
+            {
+                tbStatus.Text = "An unknown error occurred";
+                return false;
+            }
+            if (!result.Contains("transfer_ids"))
+            {
+                JObject? jsonResult = (JObject?)JsonConvert.DeserializeObject(result);
+                string? message = (string?)jsonResult?.SelectToken("message");
+                if (message == null)
+                {
+                    tbStatus.Text = "An unknown error occurred";
+                    return false;
+                }
+                tbStatus.Text = message;
+                return false;
+            }
+            tbStatus.Text = $"Transfer submitted to IMX";
             return true;
         }
         #endregion

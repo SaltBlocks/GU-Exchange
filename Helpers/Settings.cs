@@ -113,6 +113,28 @@ namespace GU_Exchange.Helpers
             s_settings["port"] = port.ToString();
         }
 
+        public static decimal GetTransferWarningLimit()
+        {
+            if (!SettingsLoaded)
+            {
+                LoadSettings();
+                SettingsLoaded = true;
+            }
+            try
+            {
+                return decimal.Parse(s_settings["transferlimit"]);
+            }
+            catch (KeyNotFoundException)
+            {
+                return decimal.Parse("100");
+            }
+        }
+
+        public static void SetTransferWarningLimit(decimal limit)
+        {
+            s_settings["transferlimit"] = limit.ToString();
+        }
+
         public static string GetSetting(string setting)
         {
             if (!SettingsLoaded)

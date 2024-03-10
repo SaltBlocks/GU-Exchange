@@ -1,4 +1,5 @@
-﻿using System;
+﻿using GU_Exchange.Helpers;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -29,6 +30,7 @@ namespace GU_Exchange
     {
         #region Class Properties.
         public bool Result { get; private set; }
+        private string _askAgainOptionName;
         #endregion
         #region Default Constructor.
         /// <summary>
@@ -37,11 +39,12 @@ namespace GU_Exchange
         /// <param name="text">The text to display</param>
         /// <param name="title">The window title</param>
         /// <param name="type">The type of message (confirm dialog or information only)</param>
-        public MessageWindow(string text, string title, MessageType type)
+        public MessageWindow(string text, string title, MessageType type, bool askAgainOption = false, string askAgainOptionName = "")
         {
             InitializeComponent();
             tbInfo.Text = text;
             Title = title;
+            _askAgainOptionName =askAgainOptionName;
             Result = false;
             
             if (type == MessageType.CONFIRM)
@@ -51,6 +54,11 @@ namespace GU_Exchange
             {
                 btnYes.Visibility = Visibility.Collapsed;
                 btnNo.Visibility = Visibility.Collapsed;
+            }
+
+            if (askAgainOption && _askAgainOptionName != "")
+            {
+                chckShowAgain.Visibility = Visibility.Visible;
             }
         }
         #endregion
@@ -63,6 +71,12 @@ namespace GU_Exchange
         private void YesButton_Click(object sender, RoutedEventArgs e)
         {
             Result = true;
+            bool? dontAskAgain = chckShowAgain.IsChecked;
+            if (_askAgainOptionName != "" && dontAskAgain != null && dontAskAgain == true)
+            {
+                Settings.SetSetting(_askAgainOptionName, "True");
+                Settings.SaveSettings();
+            }
             Close();
         }
 
@@ -74,6 +88,12 @@ namespace GU_Exchange
         private void NoButton_Click(object sender, RoutedEventArgs e)
         {
             Result = false;
+            bool? dontAskAgain = chckShowAgain.IsChecked;
+            if (_askAgainOptionName != "" && dontAskAgain != null && dontAskAgain == true)
+            {
+                Settings.SetSetting(_askAgainOptionName, "True");
+                Settings.SaveSettings();
+            }
             Close();
         }
         #endregion

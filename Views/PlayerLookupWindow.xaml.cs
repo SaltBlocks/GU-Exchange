@@ -220,6 +220,16 @@ namespace GU_Exchange.Views
 
         private void btnSelect_Click(object sender, RoutedEventArgs e)
         {
+            bool dontWarnMultiUser;
+            if (!bool.TryParse(Settings.GetSetting("dont_warn_multi_user"), out dontWarnMultiUser) || !dontWarnMultiUser)
+            {
+                if (cbApolloID.Items.Count > 1)
+                {
+                    MessageWindow window = new MessageWindow($"Multiple active GU accounts use the playername you entered.\nBefore making a transfer, please make sure to verify that the apolloID {cbApolloID.SelectedItem} belongs to the intended account.", "Multiple valid accounts", MessageType.INFORM, true, "dont_warn_multi_user");
+                    window.Owner = this;
+                    window.ShowDialog();
+                }
+            }
             Result = LookupResult.Select;
             Close();
         }

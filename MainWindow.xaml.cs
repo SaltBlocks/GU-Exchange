@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -535,9 +536,6 @@ namespace GU_Exchange
             if (wlt == null)
                 return;
             wlt.LockWallet();
-            UnlockWalletWindow unlock = new(wlt);
-            unlock.Owner = this;
-            unlock.ShowDialog();
         }
 
         /// <summary>
@@ -583,22 +581,30 @@ namespace GU_Exchange
             {
                 miLock.Header = "No wallet connected";
                 miLock.IsEnabled = false;
+                miCpyAddress.Header = "Copy Address (0x...)";
+                miCpyAddress.IsEnabled = false;
                 return;
             }
             else if (wlt is WebWallet)
             {
                 miLock.Header = "Webwallet connected";
                 miLock.IsEnabled = false;
+                miCpyAddress.Header = $"Copy Address ({wlt.Address.Substring(0, 6)}....{wlt.Address.Substring(wlt.Address.Length - 4, 4)})";
+                miCpyAddress.IsEnabled = true;
                 return;
             }
             else if (wlt.IsLocked() )
             {
                 miLock.Header = "Wallet Locked";
                 miLock.IsEnabled = false;
+                miCpyAddress.Header = $"Copy Address ({wlt.Address.Substring(0, 6)}....{wlt.Address.Substring(wlt.Address.Length - 4, 4)})";
+                miCpyAddress.IsEnabled = true;
                 return;
             }
             miLock.Header = "Lock Wallet";
             miLock.IsEnabled = true;
+            miCpyAddress.Header = $"Copy Address ({wlt.Address.Substring(0, 6)}....{wlt.Address.Substring(wlt.Address.Length - 4, 4)})";
+            miCpyAddress.IsEnabled = true;
             return;
         }
         #endregion
@@ -645,6 +651,17 @@ namespace GU_Exchange
             Grid.SetRow(_overlayControl, 2);
             Grid.SetRowSpan(_overlayControl, 4);
             this.MainGrid.Children.Add(_overlayControl);
+        }
+
+        private void miCpyAddress_Click(object sender, RoutedEventArgs e)
+        {
+            Wallet? wallet = Wallet.GetConnectedWallet();
+            if (wallet == null)
+                return;
+            Clipboard.SetText(wallet.Address);
+            MessageWindow window = new MessageWindow($"Your wallet address was copies to your clipboard, use Ctrl + V to paste it.", "Export wallet address", MessageType.INFORM);
+            window.Owner = this;
+            window.ShowDialog();
         }
     }
 }

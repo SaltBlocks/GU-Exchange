@@ -5,17 +5,19 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:GU_Exchange"
         mc:Ignorable="d"
-        Title="MessageWindow" WindowStartupLocation="CenterOwner" Background="#FFE4E4E4" ResizeMode="NoResize" Height="160" Width="350">
+        Title="MessageWindow" WindowStartupLocation="CenterOwner" Background="#FFE4E4E4" ResizeMode="NoResize" Height="180" Width="400">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="40"/>
         </Grid.RowDefinitions>
         <!-- #region Text message. -->
-        <TextBlock x:Name="tbInfo" Text="Test" TextWrapping="Wrap" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"  Grid.Row="0"/>
+        <TextBlock x:Name="tbInfo" Text="Message" TextWrapping="Wrap" Margin="5,5,5,5" FontSize="14" HorizontalAlignment="Center" VerticalAlignment="Center"  Grid.Row="0"/>
         <!-- #endregion -->
+        <CheckBox x:Name="chckShowAgain" Content="Don't show me this again" HorizontalAlignment="Left" Margin="10,0,0,0" Grid.Row="1" VerticalAlignment="Top" Visibility="Collapsed"/>
         <!-- #region Buttons. -->
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="5" Grid.Row="1">
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="5" Grid.Row="2">
             <Button x:Name="btnYes" Content="Yes" IsDefault="True" Width="80" Margin="5" Click="YesButton_Click"/>
             <Button x:Name="btnNo" Content="No" IsCancel="True" Width="80" Margin="5" Click="NoButton_Click"/>
             <Button x:Name="btnClose" Content="Close" IsCancel="True" Width="80" Margin="5" Click="NoButton_Click"/>

@@ -467,23 +467,27 @@ namespace GU_Exchange.Helpers
         private static async Task<Dictionary<int, decimal>> FetchCardPricesAsync()
         {
             Dictionary<int, decimal> priceList = new();
-            Task<string> taskMarket = ResourceManager.Client.GetStringAsync("https://marketplace-api.immutable.com/v1/stacked-assets/0xacb3c6a43d15b907e8433077b6d38ae40936fe2c/search?direction=asc&order_by=buy_quantity_with_fees&page_size=10000&metadata={\"quality\":[\"Meteorite\"]}&token_type=ETH");
-            string marketString = await taskMarket;
-            JObject? marketData = (JObject?)JsonConvert.DeserializeObject(marketString);
-            if (marketData == null)
-                return priceList;
-            JToken? tokens = marketData.SelectToken("result");
-            if (tokens == null)
-                return priceList;
-            foreach (JToken cardToken in tokens.ToArray())
+            try
             {
-                string? price = (string?)cardToken.SelectToken("assets_floor_price.quantity_with_fees");
-                int? proto = (int?)cardToken.SelectToken("asset_stack_properties.proto");
-                if (price != null && proto != null)
+                Task<string> taskMarket = ResourceManager.Client.GetStringAsync("https://marketplace-api.immutable.com/v1/stacked-assets/0xacb3c6a43d15b907e8433077b6d38ae40936fe2c/search?direction=asc&order_by=buy_quantity_with_fees&page_size=10000&metadata={\"quality\":[\"Meteorite\"]}&token_type=ETH");
+                string marketString = await taskMarket;
+                JObject? marketData = (JObject?)JsonConvert.DeserializeObject(marketString);
+                if (marketData == null)
+                    return priceList;
+                JToken? tokens = marketData.SelectToken("result");
+                if (tokens == null)
+                    return priceList;
+                foreach (JToken cardToken in tokens.ToArray())
                 {
-                    priceList.Add((int)proto, decimal.Parse(price) / new decimal(Math.Pow(10, 18)));
+                    string? price = (string?)cardToken.SelectToken("assets_floor_price.quantity_with_fees");
+                    int? proto = (int?)cardToken.SelectToken("asset_stack_properties.proto");
+                    if (price != null && proto != null)
+                    {
+                        priceList.Add((int)proto, decimal.Parse(price) / new decimal(Math.Pow(10, 18)));
+                    }
                 }
             }
+            catch { }
             return priceList;
         }
 

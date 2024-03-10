@@ -77,6 +77,12 @@ namespace GU_Exchange.Helpers
         [DllImport("IMXlib.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern IntPtr imx_request_transfer_nfts(NFT[] nfts, int nft_count, string receiver_address, string sender_address, IntPtr result_buffer, int buffer_size);
         #endregion
+        #region Transfer currency.
+        [DllImport("IMXlib.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr imx_transfer_token(string token_id_str, double amount, string receiver_address_str, string eth_priv_str, IntPtr result_buffer, int buffer_size);
+        [DllImport("IMXlib.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr imx_request_transfer_token(string token_id_str, double amount, string receiver_address_str, string sender_address_str, IntPtr result_buffer, int buffer_size);
+        #endregion
         #region Finish transfer.
         [DllImport("IMXlib.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern IntPtr imx_finish_transfer(string nonce_str, string imx_seed_sig_str, string imx_transaction_sig_str, IntPtr result_buffer, int buffer_size);

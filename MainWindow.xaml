@@ -40,6 +40,7 @@
             <MenuItem Header="Menu" SubmenuOpened="MenuItem_SubmenuOpened">
                 <MenuItem Header="Link Account / Wallet" Click="miLink_Click" />
                 <MenuItem x:Name="miLock" Header="Lock Wallet" Click="miLock_Click" />
+                <MenuItem x:Name="miCpyAddress" Header="Copy Address (0x...)" Click="miCpyAddress_Click" />
                 <MenuItem x:Name="miRefresh" Header="Refresh inventory" Click="RefreshInventory_Click" />
                 <Separator />
                 <MenuItem Header="Exit" Click="miExit_Click" />
