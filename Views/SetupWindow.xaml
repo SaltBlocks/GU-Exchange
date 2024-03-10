@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:GU_Exchange"
         mc:Ignorable="d"
-        Title="SetupWindow" WindowStartupLocation="CenterOwner" Background="#FFE4E4E4" ResizeMode="NoResize" SizeToContent="WidthAndHeight">
+        Title="Setup" WindowStartupLocation="CenterOwner" Background="#FFE4E4E4" ResizeMode="NoResize" SizeToContent="WidthAndHeight">
     <Grid x:Name="setupGrid" Height="200" Width="365">
         <Grid x:Name="childGrid">
             <!-- #region Title label. -->

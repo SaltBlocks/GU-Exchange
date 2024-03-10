@@ -121,7 +121,7 @@ namespace GU_Exchange
                 tbConnectWallet.Text = "No Wallet Connected";
                 return;
             }
-            if (!await connectedWallet.IsLinkedAsync())
+            if (!(await connectedWallet.IsLinkedAsync() ?? false))
             {
                 gridNoWallet.Visibility = Visibility.Visible;
                 gridMeteorite.Visibility = Visibility.Collapsed;
@@ -282,7 +282,7 @@ namespace GU_Exchange
                 // TODO once user wallets are implemented, change the color of orders posted by the user to make them easy to identify.
                 if (wallet != null && order.Seller.Equals(wallet.Address))
                 {
-                    bar.setBackgroundColor("#3F00FF00");
+                    bar.SetBackgroundColor("#3F00FF00");
                 }
                 this.orderPanel.Children.Add(bar);
                 bar.Width = 450f / 800f * this.controlGrid.ActualWidth;
@@ -290,23 +290,25 @@ namespace GU_Exchange
             this.spinner.Visibility = Visibility.Collapsed; // Hide the loading spinner.
         }
 
+        /// <summary>
+        /// Fetch the orders from the IMX orderbook and display the updated orders in the window.
+        /// </summary>
+        /// <returns></returns>
         public async Task ReloadOrderbookAsync()
         {
             s_ordersTokenSource.Cancel();
             s_ordersTokenSource = new CancellationTokenSource();
             await SetupOrderbookAsync((string)this.cbQuality.SelectedItem, s_ordersTokenSource.Token);
         }
-
         #endregion
 
         #region Event Handlers
-
         /// <summary>
         /// Updates the displayed orders when the user changes the selected currency.
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private async void cbToken_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private async void CbToken_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             await ReloadOrderbookAsync();
         }
@@ -316,7 +318,7 @@ namespace GU_Exchange
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private async void cbQuality_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private async void CbQuality_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             string? quality = this.cbQuality.SelectedItem.ToString();
             if (quality == null)
@@ -329,7 +331,7 @@ namespace GU_Exchange
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void tbMeteorite_MouseDown(object sender, MouseButtonEventArgs e)
+        private void TbMeteorite_MouseDown(object sender, MouseButtonEventArgs e)
         {
             this.cbQuality.SelectedIndex = 0;
         }
@@ -339,7 +341,7 @@ namespace GU_Exchange
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void tbShadow_MouseDown(object sender, MouseButtonEventArgs e)
+        private void TbShadow_MouseDown(object sender, MouseButtonEventArgs e)
         {
             this.cbQuality.SelectedIndex = 1;
         }
@@ -349,7 +351,7 @@ namespace GU_Exchange
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void tbGold_MouseDown(object sender, MouseButtonEventArgs e)
+        private void TbGold_MouseDown(object sender, MouseButtonEventArgs e)
         {
             this.cbQuality.SelectedIndex = 2;
         }
@@ -359,7 +361,7 @@ namespace GU_Exchange
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void tbDiamond_MouseDown(object sender, MouseButtonEventArgs e)
+        private void TbDiamond_MouseDown(object sender, MouseButtonEventArgs e)
         {
             this.cbQuality.SelectedIndex = 3;
         }
@@ -369,7 +371,7 @@ namespace GU_Exchange
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void btnClose_Click(object sender, RoutedEventArgs e)
+        private void BtnClose_Click(object sender, RoutedEventArgs e)
         {
             ((MainWindow)Application.Current.MainWindow).CloseOverlay();
         }
@@ -422,7 +424,7 @@ namespace GU_Exchange
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void orderPanel_SizeChanged(object sender, SizeChangedEventArgs e)
+        private void OrderPanel_SizeChanged(object sender, SizeChangedEventArgs e)
         {
             for (int i = 0; i < orderPanel.Children.Count; i++)
             {
@@ -436,7 +438,7 @@ namespace GU_Exchange
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void rectNoWallet_MouseEnter(object sender, MouseEventArgs e)
+        private void RectNoWallet_MouseEnter(object sender, MouseEventArgs e)
         {
             // Change the colors to highlight the rectangle
             rectNoWallet.Fill = new SolidColorBrush(System.Windows.Media.Color.FromArgb(0x7F, 0xAD, 0xD8, 0xE6)); // Change to the color you want
@@ -448,7 +450,7 @@ namespace GU_Exchange
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void rectNoWallet_MouseLeave(object sender, MouseEventArgs e)
+        private void RectNoWallet_MouseLeave(object sender, MouseEventArgs e)
         {
             // Restore the original colors when the mouse leaves
             rectNoWallet.Fill = new SolidColorBrush(System.Windows.Media.Color.FromArgb(0x7F, 0xA5, 0xA4, 0xA4)); // Original fill color
@@ -460,7 +462,7 @@ namespace GU_Exchange
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private async void rectNoWallet_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        private async void RectNoWallet_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             Wallet? connectedWallet = Wallet.GetConnectedWallet();
             if (connectedWallet == null)
@@ -484,7 +486,7 @@ namespace GU_Exchange
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void btnBuy_Click(object sender, RoutedEventArgs e)
+        private void BtnBuy_Click(object sender, RoutedEventArgs e)
         {
             Order? cheapestOrder = GetCheapestOrder();
             if (cheapestOrder == null)
@@ -497,7 +499,7 @@ namespace GU_Exchange
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void btnList_Click(object sender, RoutedEventArgs e)
+        private void BtnList_Click(object sender, RoutedEventArgs e)
         {
             ListControl _sellControl = new ListControl(this, imgCard.Source);
             _sellControl.Margin = new Thickness(0, 0, 0, 0);
@@ -505,18 +507,25 @@ namespace GU_Exchange
             controlGrid.Children.Add(_sellControl);
         }
 
-        private void btnTransfer_Click(object sender, RoutedEventArgs e)
+        /// <summary>
+        /// Prompt the user to transfer the card on display.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void BtnTransfer_Click(object sender, RoutedEventArgs e)
         {
             TransferCardControl _transferControl = new TransferCardControl(this, this.CardID, imgCard.Source);
             _transferControl.Margin = new Thickness(0, 0, 0, 0);
             Grid.SetColumnSpan(_transferControl, 2);
             controlGrid.Children.Add(_transferControl);
         }
-
         #endregion
 
         #region Supporting methods
-
+        /// <summary>
+        /// Return the cheapest <see cref="Order"/> currencly being displayed or null in case no orders are available.
+        /// </summary>
+        /// <returns></returns>
         public Order? GetCheapestOrder()
         {
             if (orderPanel.Children.Count == 0)
@@ -526,6 +535,11 @@ namespace GU_Exchange
             return ((OrderBarControl)orderPanel.Children[0]).Order;
         }
 
+        /// <summary>
+        /// Open the specified <see cref="Order"/> in the main window.
+        /// If it was posted by the user, allow them them to edit it, otherwise show the purchase screen.
+        /// </summary>
+        /// <param name="order"></param>
         public void OpenOrder(Order order)
         {
             Wallet? wlt = Wallet.GetConnectedWallet();
@@ -579,7 +593,7 @@ namespace GU_Exchange
         /// </summary>
         /// <param name="str">The string to capitalize</param>
         /// <returns>The string with the first letter capitalized.</returns>
-        private string Capitalize(string str)
+        private static string Capitalize(string str)
         {
             char[] chars = str.ToCharArray();
             chars[0] = char.ToUpper(chars[0]);
@@ -589,6 +603,9 @@ namespace GU_Exchange
         #endregion
     }
 
+    /// <summary>
+    /// <see cref="IValueConverter"/> used to automatically resize the cards owned display.
+    /// </summary>
     public class HalfValueConverter : IValueConverter
     {
         public object Convert(object value, Type targetType, object parameter, CultureInfo culture)

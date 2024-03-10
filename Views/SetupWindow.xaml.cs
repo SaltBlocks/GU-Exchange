@@ -105,6 +105,11 @@ namespace GU_Exchange
             this.setupGrid.Children.Add(link);
         }
 
+        /// <summary>
+        /// Export the private key of the selected wallet.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void ExportWallet_Click(object sender, RoutedEventArgs e)
         {
             Wallet? wallet = GetWalletFromPartialAddress((string)cbWallets.SelectedValue);
@@ -136,6 +141,11 @@ namespace GU_Exchange
             window.ShowDialog();
         }
 
+        /// <summary>
+        /// Delete the currently selected wallet from the available wallets list and remove the file from disk.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private async void DeleteWallet_Click(object sender, RoutedEventArgs e)
         {
             string selectedWallet = (string)cbWallets.SelectedValue;

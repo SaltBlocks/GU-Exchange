@@ -1,19 +1,10 @@
 ﻿using GU_Exchange.Helpers;
-using ImageProcessor.Processors;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
 
 namespace GU_Exchange
 {
@@ -22,8 +13,11 @@ namespace GU_Exchange
     /// </summary>
     public partial class UseWebWalletWindow : Window
     {
-        private List<Task> Tasks;
+        #region Class Parameters
+        private readonly List<Task> Tasks;
+        #endregion
 
+        #region Constructors
         public UseWebWalletWindow(Task task)
         {
             InitializeComponent();
@@ -44,26 +38,14 @@ namespace GU_Exchange
             Tasks = tasks.ToList();
             InitializeTasks();
         }
+        #endregion
 
-        private void InitializeTasks()
-        {
-            tbLink.Text = $"http://localhost:{SignatureRequestServer.ClientPort}/";
-            TrackTasks();
-        }
-
-        private async void TrackTasks()
-        {
-            lblWebInstructions.Content = $"{Tasks.Count} action{(Tasks.Count == 1 ? "" : "s")} require{(Tasks.Count == 1 ? "s" : "")} your wallet signature.";
-            while (Tasks.Count > 0)
-            {
-                Task completedTask = await Task.WhenAny(Tasks);
-                Tasks.Remove(completedTask);
-                // Update UI with the completed tasks count
-                lblWebInstructions.Content = $"{Tasks.Count} action{(Tasks.Count == 1 ? "" : "s")} require{(Tasks.Count == 1 ? "s" : "")} your wallet signature.";
-            }
-            Close();
-        }
-
+        #region Event Handlers
+        /// <summary>
+        /// Open the signing page in the browser.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void ClientLink_MouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
             try
@@ -83,14 +65,53 @@ namespace GU_Exchange
             }
         }
 
-        private void btnEnd_Click(object sender, RoutedEventArgs e)
+        /// <summary>
+        /// Close the window if the cancel button is clicked.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void BtnEnd_Click(object sender, RoutedEventArgs e)
         {
             Close();
         }
 
+        /// <summary>
+        /// Cancel active requests if the window is closed.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void Window_Closed(object sender, EventArgs e)
         {
             SignatureRequestServer.CancelRequests();
         }
+        #endregion
+
+        #region Supporting functions
+        /// <summary>
+        /// Setup the window text and start tracking tasks.
+        /// </summary>
+        private void InitializeTasks()
+        {
+            tbLink.Text = $"http://localhost:{SignatureRequestServer.ClientPort}/";
+            TrackTasks();
+        }
+
+        /// <summary>
+        /// Keep track of active signing tasks.
+        /// Close this window when all are complete.
+        /// </summary>
+        private async void TrackTasks()
+        {
+            lblWebInstructions.Content = $"{Tasks.Count} action{(Tasks.Count == 1 ? "" : "s")} require{(Tasks.Count == 1 ? "s" : "")} your wallet signature.";
+            while (Tasks.Count > 0)
+            {
+                Task completedTask = await Task.WhenAny(Tasks);
+                Tasks.Remove(completedTask);
+                // Update UI with the completed tasks count
+                lblWebInstructions.Content = $"{Tasks.Count} action{(Tasks.Count == 1 ? "" : "s")} require{(Tasks.Count == 1 ? "s" : "")} your wallet signature.";
+            }
+            Close();
+        }
+        #endregion
     }
 }

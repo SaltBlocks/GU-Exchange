@@ -22,7 +22,7 @@
                     <fa:ImageAwesome x:Name="success" Icon="CheckCircle" Width="70" Height="70" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" />
                     <fa:ImageAwesome x:Name="error" Icon="TimesCircle" Width="70" Height="70" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" />
                     <TextBlock x:Name="tbStatus" Text="Waiting for wallet..." Margin="10" FontWeight="Bold" TextWrapping="Wrap" />
-                    <Button x:Name="btnClose" Content="Close" Width="75" Height="25" Visibility="Collapsed" Click="btnClose_Click" />
+                    <Button x:Name="btnClose" Content="Close" Width="75" Height="25" Visibility="Collapsed" Click="BtnClose_Click" />
                 </StackPanel>
                 <StackPanel x:Name="userChoicePanel" Grid.Column="0" Margin="10" VerticalAlignment="Center" HorizontalAlignment="Center" Visibility="Visible">
                     <!-- #region Information text. -->
@@ -39,9 +39,9 @@
                             <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <TextBox x:Name="tbListPrice" Height="20" Grid.Column="0" Margin="0,0,0,5" TextChanged="tbListPrice_TextChanged" />
+                        <TextBox x:Name="tbListPrice" Height="20" Grid.Column="0" Margin="0,0,0,5" TextChanged="TbListPrice_TextChanged" />
                         <ComboBox x:Name="cbCurrency" Grid.Column="1" Height="20" Margin="0,0,0,5" SelectionChanged="cbCurrency_SelectionChanged"/>
-                        <Button Content="Lowest" Height="20" Margin="0,0,0,5" Grid.Column="2" FontSize="10" Click="btnLowestPrice_Click" />
+                        <Button Content="Lowest" Height="20" Margin="0,0,0,5" Grid.Column="2" FontSize="10" Click="BtnLowestPrice_Click" />
                     </Grid>
 
                     <TextBlock Text="On sale, you receive:" FontWeight="Bold" />
@@ -51,7 +51,7 @@
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
 
-                        <TextBox x:Name="tbReceiveAmount" Grid.Column="0" Height="20" Margin="0,0,5,5" HorizontalAlignment="Stretch" TextChanged="tbReceiveAmount_TextChanged" />
+                        <TextBox x:Name="tbReceiveAmount" Grid.Column="0" Height="20" Margin="0,0,5,5" HorizontalAlignment="Stretch" TextChanged="TbReceiveAmount_TextChanged" />
                         <TextBlock x:Name="tbCurrency" Grid.Column="1" Text="ETH"/>
                     </Grid>
                     <TextBlock Text="Number to list:" FontWeight="Bold" />
@@ -67,10 +67,10 @@
                     <!-- #region Buttons. -->
                     <StackPanel HorizontalAlignment="Center">
                         <StackPanel HorizontalAlignment="Center" Orientation="Horizontal">
-                            <Button x:Name="btnList" Content="List" Width="90" Height="25" Margin="5" IsEnabled="False" Click="btnList_Click" />
-                            <Button x:Name="btnCancel" Content="Cancel Listings" Width="90" Height="25" Margin="5" Click="btnCancel_Click" Visibility="Collapsed" />
+                            <Button x:Name="btnList" Content="List" Width="90" Height="25" Margin="5" IsEnabled="False" Click="BtnList_Click" />
+                            <Button x:Name="btnCancel" Content="Cancel Listings" Width="90" Height="25" Margin="5" Click="BtnCancel_Click" Visibility="Collapsed" />
                         </StackPanel>
-                        <Button Content="Close" Width="90" Height="25" Margin="0,5" Click="btnClose_Click" />
+                        <Button Content="Close" Width="90" Height="25" Margin="0,5" Click="BtnClose_Click" />
                     </StackPanel>
                     <!-- #endregion -->
                 </StackPanel>

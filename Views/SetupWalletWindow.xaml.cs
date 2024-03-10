@@ -1,11 +1,4 @@
-﻿using System;
-using System.Diagnostics;
-using System.IO;
-using System.Net;
-using System.Threading.Tasks;
-using System.Windows;
-using System.Windows.Input;
-using System.Windows.Markup;
+﻿using System.Windows;
 
 namespace GU_Exchange
 {
@@ -15,6 +8,9 @@ namespace GU_Exchange
     public partial class SetupWalletWindow : Window
     {
         #region Default Constructor.
+        /// <summary>
+        /// Constructor for a window displaying a <see cref="SetupWalletControl"/>
+        /// </summary>
         public SetupWalletWindow()
         {
             InitializeComponent();

@@ -235,7 +235,7 @@ namespace GU_Exchange
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void tbListPrice_TextChanged(object sender, TextChangedEventArgs e)
+        private void TbListPrice_TextChanged(object sender, TextChangedEventArgs e)
         {
             if (!tbListPrice.IsKeyboardFocusWithin) // Prevent a loop by not updating anything when this method is called due to another event modifying the value.
                 return;
@@ -255,7 +255,7 @@ namespace GU_Exchange
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void tbReceiveAmount_TextChanged(object sender, TextChangedEventArgs e)
+        private void TbReceiveAmount_TextChanged(object sender, TextChangedEventArgs e)
         {
             if (!tbReceiveAmount.IsKeyboardFocusWithin) // Prevent a loop by not updating anything when this method is called due to another event modifying the value.
                 return;
@@ -276,7 +276,7 @@ namespace GU_Exchange
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private async void btnLowestPrice_Click(object sender, RoutedEventArgs e)
+        private async void BtnLowestPrice_Click(object sender, RoutedEventArgs e)
         {
             await AutoAdjustPrice();
         }
@@ -286,7 +286,7 @@ namespace GU_Exchange
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void btnClose_Click(object sender, RoutedEventArgs e)
+        private void BtnClose_Click(object sender, RoutedEventArgs e)
         {
             _ = _parent.ReloadOrderbookAsync();
             this.Visibility = Visibility.Collapsed;
@@ -297,7 +297,7 @@ namespace GU_Exchange
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private async void btnList_Click(object sender, RoutedEventArgs e)
+        private async void BtnList_Click(object sender, RoutedEventArgs e)
         {
             userChoicePanel.Visibility = Visibility.Collapsed;
             loadingPanel.Visibility = Visibility.Visible;
@@ -389,7 +389,7 @@ namespace GU_Exchange
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private async void btnCancel_Click(object sender, RoutedEventArgs e)
+        private async void BtnCancel_Click(object sender, RoutedEventArgs e)
         {
             userChoicePanel.Visibility = Visibility.Collapsed;
             loadingPanel.Visibility = Visibility.Visible;

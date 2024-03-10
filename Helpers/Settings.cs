@@ -67,6 +67,10 @@ namespace GU_Exchange.Helpers
         #endregion
 
         #region Getters/Setters.
+        /// <summary>
+        /// Get the apolloID linked to GU Exchange.
+        /// </summary>
+        /// <returns></returns>
         public static int GetApolloID()
         {
             if (!SettingsLoaded)
@@ -84,11 +88,19 @@ namespace GU_Exchange.Helpers
             }
         }
 
+        /// <summary>
+        /// Set the apolloID linked to GU Exchange.
+        /// </summary>
+        /// <param name="apolloID"></param>
         public static void SetApolloID(int apolloID)
         {
             s_settings["apolloid"] = apolloID.ToString();
         }
 
+        /// <summary>
+        /// Get the preferred port for running the local webserver for signing messages.
+        /// </summary>
+        /// <returns></returns>
         public static int GetServerPort()
         {
             if (!SettingsLoaded)
@@ -108,11 +120,19 @@ namespace GU_Exchange.Helpers
             }
         }
 
+        /// <summary>
+        /// Set the preferred port for running the local webserver for signing messages.
+        /// </summary>
+        /// <param name="port"></param>
         public static void SetServerPort(int port)
         {
             s_settings["port"] = port.ToString();
         }
 
+        /// <summary>
+        /// Get the limit value above which the user will be warned before a currency transfer.
+        /// </summary>
+        /// <returns></returns>
         public static decimal GetTransferWarningLimit()
         {
             if (!SettingsLoaded)
@@ -130,11 +150,20 @@ namespace GU_Exchange.Helpers
             }
         }
 
+        /// <summary>
+        /// Set the limit value above which the user will be warned before a currency transfer.
+        /// </summary>
+        /// <param name="limit"></param>
         public static void SetTransferWarningLimit(decimal limit)
         {
             s_settings["transferlimit"] = limit.ToString();
         }
 
+        /// <summary>
+        /// Get the current value for a setting.
+        /// </summary>
+        /// <param name="setting"></param>
+        /// <returns></returns>
         public static string GetSetting(string setting)
         {
             if (!SettingsLoaded)
@@ -152,6 +181,11 @@ namespace GU_Exchange.Helpers
             }
         }
 
+        /// <summary>
+        /// Update the specified setting.
+        /// </summary>
+        /// <param name="setting"></param>
+        /// <param name="value"></param>
         public static void SetSetting(string setting, string value)
         {
             s_settings[setting] = value;

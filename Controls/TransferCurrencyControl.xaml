@@ -16,7 +16,7 @@
                     <fa:ImageAwesome x:Name="success" Icon="CheckCircle" Width="70" Height="70" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" />
                     <fa:ImageAwesome x:Name="error" Icon="TimesCircle" Width="70" Height="70" HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" />
                     <TextBlock x:Name="tbStatus" Text="Waiting for wallet..." Margin="10" FontWeight="Bold" TextWrapping="Wrap" />
-                    <Button x:Name="btnClose" Content="Close" Width="75" Height="25" Visibility="Collapsed" Click="Button_Click" />
+                    <Button x:Name="btnClose" Content="Close" Width="75" Height="25" Visibility="Collapsed" Click="BtnClose_Click" />
                 </StackPanel>
                 <StackPanel x:Name="userChoicePanel" Margin="10" VerticalAlignment="Center" HorizontalAlignment="Center" Visibility="Visible">
                     <!-- #region Information text. -->
@@ -28,8 +28,8 @@
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <TextBox x:Name="tbAmount" Text="0" Height="20" Margin="0,0,0,10" TextChanged="tbAmount_TextChanged" />
-                        <Button Content="Max" Margin="0,0,0,10" Grid.Column="1" Click="Button_Click_1" />
+                        <TextBox x:Name="tbAmount" Text="0" Height="20" Margin="0,0,0,10" TextChanged="TbAmount_TextChanged" />
+                        <Button Content="Max" Margin="0,0,0,10" Grid.Column="1" Click="BtnMax_Click" />
                     </Grid>
 
                     <TextBlock Text="Transfer to address:" FontWeight="Bold" />
@@ -38,14 +38,14 @@
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-                        <TextBox x:Name="tbAddress" Text="0x" Height="20" Margin="0,0,0,10" Grid.Column="0" TextChanged="tbAddress_TextChanged"/>
-                        <Button Content="Lookup" Margin="0,0,0,10" Grid.Column="1" Click="Button_Click_2" />
+                        <TextBox x:Name="tbAddress" Text="0x" Height="20" Margin="0,0,0,10" Grid.Column="0" TextChanged="TbAddress_TextChanged"/>
+                        <Button Content="Lookup" Margin="0,0,0,10" Grid.Column="1" Click="btnLookup_Click" />
                     </Grid>
                     <!-- #endregion -->
                     <!-- #region Buttons. -->
                     <StackPanel HorizontalAlignment="Center">
-                        <Button x:Name="btnTransfer" Content="Transfer" Width="90" Height="25" Margin="5" IsEnabled="False" Click="btnTransfer_Click" />
-                        <Button Content="Close" Width="90" Height="25" Margin="0,5" Click="Button_Click" />
+                        <Button x:Name="btnTransfer" Content="Transfer" Width="90" Height="25" Margin="5" IsEnabled="False" Click="BtnTransfer_Click" />
+                        <Button Content="Close" Width="90" Height="25" Margin="0,5" Click="BtnClose_Click" />
                     </StackPanel>
                     <!-- #endregion -->
                 </StackPanel>

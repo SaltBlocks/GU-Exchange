@@ -12,7 +12,6 @@ namespace GU_Exchange
     public partial class SuggestionsTextBoxControl : UserControl
     {
         #region Class properties. 
-
         /// <summary>  
         /// Suggestion list property.  
         /// </summary>  
@@ -22,21 +21,19 @@ namespace GU_Exchange
         /// Event handler for when the text of the textbox is changed.
         /// </summary>
         public event EventHandler? TextChanged;
-
-
         #endregion
 
         #region Default Constructor
-
+        /// <summary>
+        /// Construct a <see cref="UserControl"/> for a textbox with a dropdown box for suggestions.
+        /// </summary>
         public SuggestionsTextBoxControl()
         {
             InitializeComponent();
         }
-
         #endregion
 
         #region Getters and Setters
-
         /// <summary>  
         /// Gets or sets the list of possible suggestions.  
         /// </summary>  
@@ -46,6 +43,9 @@ namespace GU_Exchange
             set { this.suggestionList = value; }
         }
 
+        /// <summary>
+        /// Gets or sets the text being displayed.
+        /// </summary>
         public string Text
         {
             get { return this.textInput.Text; }
@@ -54,11 +54,9 @@ namespace GU_Exchange
                 this.CloseAutoSuggestionBox();
             }
         }
-
         #endregion
 
         #region Methods for opening and closing the suggestions popup.
-
         /// <summary>  
         ///  Open Auto Suggestion box method  
         /// </summary>  
@@ -78,11 +76,9 @@ namespace GU_Exchange
             this.listPopup.IsOpen = false;
             this.lbSuggestions.Visibility = Visibility.Collapsed;
         }
-
         #endregion
 
         #region Event handlers.
-
         /// <summary>  
         ///  Update the suggestions and whether or not the popup is shown. 
         /// </summary>  
@@ -131,13 +127,17 @@ namespace GU_Exchange
             this.lbSuggestions.SelectedIndex = -1;
         }
 
+        /// <summary>
+        /// Update the width of the textbox.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void SuggestionsTextBox_SizeChanged(object sender, SizeChangedEventArgs e)
         {
             this.textInput.Width = this.Width;
             this.textInput.Height = this.Height;
             this.lbSuggestions.Width = this.Width;
         }
-
         #endregion
     }
 }

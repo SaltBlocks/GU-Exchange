@@ -23,7 +23,7 @@
         <!--#region Buttons -->
         <Button x:Name="btnLookup1" Content="Lookup" HorizontalAlignment="Left" Margin="247,95,0,0" VerticalAlignment="Top" Click="Button_ApolloLookup"/>
         <Button x:Name="btnLookup2" Content="Lookup" HorizontalAlignment="Left" Margin="247,121,0,0" VerticalAlignment="Top" Click="Button_UserLookup"/>
-        <Button x:Name="btnLink" Content="Link account" HorizontalAlignment="Center" Margin="-120,170,0,0" VerticalAlignment="Top" Width="80" IsEnabled="False" Click="btnLink_Click"/>
+        <Button x:Name="btnLink" Content="Link account" HorizontalAlignment="Center" Margin="-120,170,0,0" VerticalAlignment="Top" Width="80" IsEnabled="False" Click="BtnLink_Click"/>
         <Button x:Name="btnCancel" Content="Cancel" HorizontalAlignment="Center" Margin="120,170,0,0" VerticalAlignment="Top" Width="80" Click="Button_Close"/>
         <!--#endregion -->
     </Grid>

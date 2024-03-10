@@ -1,17 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 using GU_Exchange.Helpers;
 
 namespace GU_Exchange
@@ -68,7 +60,7 @@ namespace GU_Exchange
         /// Used to set the background color in case the Order displayed was created by the user.
         /// </summary>
         /// <param name="ColorRGB">The color to set the background to</param>
-        public void setBackgroundColor(String ColorRGB)
+        public void SetBackgroundColor(String ColorRGB)
         {
             Color color = (Color)ColorConverter.ConvertFromString(ColorRGB);
             SolidColorBrush newBrush = new SolidColorBrush(color);
@@ -106,7 +98,7 @@ namespace GU_Exchange
         }
 
         /// <summary>
-        /// TODO let the user buy (or modify) an order by clicking it.
+        /// Open the order in the main window when the user clicks it.
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
@@ -122,7 +114,7 @@ namespace GU_Exchange
         /// <param name="e"></param>
         private void UserControl_SizeChanged(object sender, SizeChangedEventArgs e)
         {
-            updateSize();
+            UpdateSize();
         }
         #endregion
 
@@ -130,7 +122,7 @@ namespace GU_Exchange
         /// <summary>
         /// Update the size or the highligting bar.
         /// </summary>
-        public void updateSize()
+        public void UpdateSize()
         {
             rectHighlight.Width = this.ActualWidth;
         }

@@ -1,20 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 using GU_Exchange.Helpers;
 using static GU_Exchange.Helpers.IMXlib;
 
@@ -25,13 +17,21 @@ namespace GU_Exchange
     /// </summary>
     public partial class SetupWalletControl : UserControl
     {
+        #region Class Parameters
         private string _privateKey;
-        private Window parent;
+        private Window _parent;
+        #endregion
 
+        #region Default Constructor
+        /// <summary>
+        /// Initialize <see cref="UserControl"/> for connecting wallets to GU Exchange.
+        /// </summary>
+        /// <param name="parent"></param>
+        /// <exception cref="NullReferenceException"></exception>
         public SetupWalletControl(Window parent)
         {
             InitializeComponent();
-            this.parent = parent;
+            _parent = parent;
             IntPtr keyBuffer = Marshal.AllocHGlobal(67);
             string? result = IntPtrToString(eth_generate_key(keyBuffer, 67));
             Marshal.FreeHGlobal(keyBuffer);
@@ -46,6 +46,7 @@ namespace GU_Exchange
                 throw new NullReferenceException("IMXLib returned a null reference while generating an address.");
             tbAddress.Text = address;
         }
+        #endregion
 
         #region Event Handlers for starting window.
         /// <summary>
@@ -56,7 +57,7 @@ namespace GU_Exchange
         private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
             SignatureRequestServer.CancelRequests();
-            parent.Close();
+            _parent.Close();
         }
 
         /// <summary>
@@ -149,7 +150,7 @@ namespace GU_Exchange
                 Console.WriteLine(e1.StackTrace);
             }
             await ((MainWindow)Application.Current.MainWindow).SetupWalletInfoAsync();
-            parent.Close();
+            _parent.Close();
         }
         #endregion
 
@@ -159,7 +160,7 @@ namespace GU_Exchange
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void pbPrivateKey_PasswordChanged(object sender, RoutedEventArgs e)
+        private void PbPrivateKey_PasswordChanged(object sender, RoutedEventArgs e)
         {
             _privateKey = this.pbPrivateKey.Password;
             if (_privateKey.Length == 0)
@@ -195,7 +196,7 @@ namespace GU_Exchange
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private async void btnImportWallet_Click(object sender, RoutedEventArgs e)
+        private async void BtnImportWallet_Click(object sender, RoutedEventArgs e)
         {
             if (pbPasswordImport.Password.Length < 8)
             {
@@ -205,6 +206,11 @@ namespace GU_Exchange
             if (!pbPasswordRepeatImport.Password.Equals(pbPasswordImport.Password))
             {
                 this.txtErrorImport.Text = "Passwords don't match.";
+                return;
+            }
+            if (Wallet.wallets.Keys.Contains(lblAddressImport.Text))
+            {
+                this.txtErrorImport.Text = "Wallet already imported.";
                 return;
             }
             btnImportWallet.IsEnabled = false;
@@ -228,12 +234,17 @@ namespace GU_Exchange
             {
                 Console.WriteLine(e1.StackTrace);
             }
+            wallet.LockWallet();
             await ((MainWindow)Application.Current.MainWindow).SetupWalletInfoAsync();
-            parent.Close();
+            _parent.Close();
         }
         #endregion
 
         #region Handlers for importing a web wallet.
+        /// <summary>
+        /// Import a wallet using the <see cref="SignatureData"/> provided by the user through the webclient.
+        /// </summary>
+        /// <returns></returns>
         private async Task ImportWebWallet()
         {
             SignatureRequestServer.RequestedAddress = "*";
@@ -241,6 +252,16 @@ namespace GU_Exchange
             try
             {
                 SignatureData data = await SignatureRequestServer.RequestSignatureAsync(IMXlib.IMX_SEED_MESSAGE);
+                if (Wallet.wallets.ContainsKey(data.Address))
+                {
+                    await Wallet.SetConnectedWallet(Wallet.GetConnectedWallet());
+                    lblWebInstructions.Content = $"Wallet already imported.";
+                    btnEnd.Content = "Close";
+                    tbLink.Visibility = Visibility.Collapsed;
+                    spinner.Visibility = Visibility.Collapsed;
+                    error.Visibility = Visibility.Visible;
+                    return;
+                }
                 SignatureRequestServer.RequestedAddress = data.Address;
                 WebWallet wallet = new WebWallet(data.Signature, data.Address);
                 using (FileStream FS = new FileStream($"wallets\\{wallet.Address}.wlt", FileMode.Create))
@@ -276,7 +297,12 @@ namespace GU_Exchange
             }
         }
 
-        private void ClientLink_MouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        /// <summary>
+        /// Open the webbrowser at the address of the webclient.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void ClientLink_MouseDown(object sender, MouseButtonEventArgs e)
         {
             try
             {
@@ -297,7 +323,12 @@ namespace GU_Exchange
         #endregion
 
         #region Supporting functions.
-        private bool IsHexadecimal(string value)
+        /// <summary>
+        /// Verify that the provided string contains a valid hexadecimal number.
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        private static bool IsHexadecimal(string value)
         {
             // Check if the string is a valid hexadecimal number.
             return System.Text.RegularExpressions.Regex.IsMatch(value, @"\A\b[0-9a-fA-F]+\b\Z");

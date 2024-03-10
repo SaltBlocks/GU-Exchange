@@ -18,7 +18,6 @@ namespace GU_Exchange
         #endregion
 
         #region Default Constructor
-
         /// <summary>
         /// Initialize window and load player name suggestions.
         /// </summary>
@@ -29,11 +28,9 @@ namespace GU_Exchange
             this.parent = parent;
             this.stbUsername.SuggestionList = GameDataManager.FetchPlayerNames();
         }
-
         #endregion
 
         #region Lookup Handlers
-        
         /// <summary>
         /// Attempts to look up a user by their apolloID and fills out the form using the players data.
         /// </summary>
@@ -85,17 +82,15 @@ namespace GU_Exchange
                 this.txtError.Text = "Failed to find account.";
             }
         }
-
         #endregion
 
         #region Link user account
-
         /// <summary>
         /// Link the selected user to GU Exchange.
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private async void btnLink_Click(object sender, RoutedEventArgs e)
+        private async void BtnLink_Click(object sender, RoutedEventArgs e)
         {
             Settings.SetApolloID(int.Parse(this.txtApolloID.Text));
             Settings.SaveSettings();
@@ -106,11 +101,9 @@ namespace GU_Exchange
             await ((MainWindow)Application.Current.MainWindow).SetupInventoryAsync();
             parent.Close();
         }
-
         #endregion
 
         #region Other Event Handlers
-
         /// <summary>
         /// Close the parent window.
         /// </summary>
@@ -140,7 +133,6 @@ namespace GU_Exchange
         {
             this.btnLink.IsEnabled = false;
         }
-
         #endregion
     }
 }

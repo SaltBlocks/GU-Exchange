@@ -56,7 +56,7 @@
             <TextBlock HorizontalAlignment="Left" Margin="11,130,0,0" TextWrapping="Wrap" Text="Repeat Password:" VerticalAlignment="Top"/>
             <!-- #endregion -->
             <!-- #region User Input. -->
-            <PasswordBox x:Name="pbPrivateKey" HorizontalAlignment="Left" Margin="119,75,0,0" VerticalAlignment="Top" Width="236" PasswordChanged="pbPrivateKey_PasswordChanged"/>
+            <PasswordBox x:Name="pbPrivateKey" HorizontalAlignment="Left" Margin="119,75,0,0" VerticalAlignment="Top" Width="236" PasswordChanged="PbPrivateKey_PasswordChanged"/>
             <PasswordBox x:Name="pbPasswordImport" HorizontalAlignment="Left" Margin="119,105,0,0" VerticalAlignment="Top" Width="236"/>
             <PasswordBox x:Name="pbPasswordRepeatImport" HorizontalAlignment="Left" Margin="119,132,0,0" VerticalAlignment="Top" Width="236"/>
             <!-- #endregion -->
@@ -65,7 +65,7 @@
             <TextBlock x:Name="txtErrorImport" HorizontalAlignment="Left" Height="16" Margin="122,149,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="232" Foreground="Red" FontSize="10"/>
             <!-- #endregion -->
             <!-- #region Add Wallet / Cancel. -->
-            <Button x:Name="btnImportWallet" Content="Add wallet" HorizontalAlignment="Left" Height="25" VerticalAlignment="Top" Width="90" Margin="170,165,0,0" Click="btnImportWallet_Click"/>
+            <Button x:Name="btnImportWallet" Content="Add wallet" HorizontalAlignment="Left" Height="25" VerticalAlignment="Top" Width="90" Margin="170,165,0,0" Click="BtnImportWallet_Click"/>
             <Button Content="Cancel" HorizontalAlignment="Right" Height="25" Margin="0,165,10,0" VerticalAlignment="Top" Width="90" Click="CloseButton_Click"/>
             <!-- #endregion -->
         </Grid>

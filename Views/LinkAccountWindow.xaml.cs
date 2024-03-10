@@ -21,11 +21,21 @@ namespace GU_Exchange
         #endregion
 
         #region Event Handlers.
+        /// <summary>
+        /// Close the window.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void No_Click(object sender, RoutedEventArgs e)
         {
             this.Close();
         }
 
+        /// <summary>
+        /// Modify the settings so this prompt will not be shown again.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void Never_Click(object sender, RoutedEventArgs e)
         {
             Settings.SetSetting("dont_ask_link", "True");
@@ -33,6 +43,11 @@ namespace GU_Exchange
             this.Close();
         }
 
+        /// <summary>
+        /// Redirect the user to a <see cref="LinkAccountControl"/>
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void Yes_Click(object sender, RoutedEventArgs e)
         {
             this.childGrid.Visibility = Visibility.Collapsed;

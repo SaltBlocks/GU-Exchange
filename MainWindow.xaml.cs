@@ -364,7 +364,7 @@ namespace GU_Exchange
                 {
                     return;
                 }
-                _cardTiles[i].clearTile();
+                _cardTiles[i].ClearTile();
             }
             _tileIndex = 30;
         }

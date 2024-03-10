@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:GU_Exchange"
         xmlns:fa="http://schemas.fontawesome.io/icons/"
         mc:Ignorable="d"
-        Title="UseWebWalletWindow" WindowStartupLocation="CenterOwner" Background="#FFE4E4E4" Height="235" Width="360" ResizeMode="NoResize" Closed="Window_Closed">
+        Title="Signature Request" WindowStartupLocation="CenterOwner" Background="#FFE4E4E4" Height="235" Width="360" ResizeMode="NoResize" Closed="Window_Closed">
     <Grid>
         <!-- #region Header & Instructions. -->
         <Label Content="Signature Requested" HorizontalAlignment="Center" Margin="0,10,0,0" VerticalAlignment="Top" FontSize="20"/>
@@ -24,7 +24,7 @@
         </Label>
         <!-- #endregion -->
         <!-- #region Cancel/Finish Button. -->
-        <Button x:Name="btnEnd" Content="Cancel" HorizontalAlignment="Center" Margin="0,165,0,0" VerticalAlignment="Top" Width="90" Click="btnEnd_Click" />
+        <Button x:Name="btnEnd" Content="Cancel" HorizontalAlignment="Center" Margin="0,165,0,0" VerticalAlignment="Top" Width="90" Click="BtnEnd_Click" />
         <!-- #endregion -->
     </Grid>
 </Window>

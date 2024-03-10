@@ -23,6 +23,7 @@ namespace GU_Exchange.Controls
     /// </summary>
     public partial class TransferCurrencyControl : UserControl
     {
+        #region Default Constructor
         public TransferCurrencyControl()
         {
             InitializeComponent();
@@ -31,7 +32,9 @@ namespace GU_Exchange.Controls
             cbCurrency.ItemsSource = items;
             cbCurrency.SelectedIndex = 0;
         }
+        #endregion
 
+        #region Event Handlers
         /// <summary>
         /// Close the window when the user clicks on the greyed out background.
         /// </summary>
@@ -52,12 +55,22 @@ namespace GU_Exchange.Controls
             ((MainWindow)Application.Current.MainWindow).CloseOverlay();
         }
 
-        private void Button_Click(object sender, RoutedEventArgs e)
+        /// <summary>
+        /// Signal to the main window to close this <see cref="UserControl"/> when the close button is clicked.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void BtnClose_Click(object sender, RoutedEventArgs e)
         {
             ((MainWindow)Application.Current.MainWindow).CloseOverlay();
         }
 
-        private async void Button_Click_1(object sender, RoutedEventArgs e)
+        /// <summary>
+        /// Update the transfer amount to the maximum amount possible.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private async void BtnMax_Click(object sender, RoutedEventArgs e)
         {
             Wallet? wallet = Wallet.GetConnectedWallet();
             if (wallet == null)
@@ -68,7 +81,12 @@ namespace GU_Exchange.Controls
             tbAmount.Text = amount.ToString();
         }
 
-        private void Button_Click_2(object sender, RoutedEventArgs e)
+        /// <summary>
+        /// Allow the user to lookup an address belonging to a specific player.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void btnLookup_Click(object sender, RoutedEventArgs e)
         {
             PlayerLookupWindow window = new PlayerLookupWindow();
             window.Owner = Application.Current.MainWindow;
@@ -78,48 +96,32 @@ namespace GU_Exchange.Controls
             Console.WriteLine(window.GetSelectedAddress());
         }
 
-        private async Task ValidateContent()
-        {
-            try
-            {
-                Wallet? wallet = Wallet.GetConnectedWallet();
-                if (!Wallet.IsValidEthereumAddress(tbAddress.Text) || wallet == null)
-                {
-                    btnTransfer.IsEnabled = false;
-                    return;
-                }
-                decimal amount = decimal.Parse(tbAmount.Text);
-                decimal maxAmount = await wallet.GetTokenAmountAsync((string)cbCurrency.SelectedItem);
-                if (amount <= 0 || amount > maxAmount)
-                {
-                    btnTransfer.IsEnabled = false;
-                    return;
-                }
-                btnTransfer.IsEnabled = true;
-            }
-            catch (System.Net.Http.HttpRequestException)
-            {
-            }
-            catch (NullReferenceException)
-            {
-            }
-            catch (FormatException)
-            {
-                btnTransfer.IsEnabled = false;
-            }
-        }
-
-        private async void tbAmount_TextChanged(object sender, TextChangedEventArgs e)
+        /// <summary>
+        /// Verify if the data entered is valid if the amount is modified.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private async void TbAmount_TextChanged(object sender, TextChangedEventArgs e)
         {
             await ValidateContent();
         }
 
-        private async void tbAddress_TextChanged(object sender, TextChangedEventArgs e)
+        /// <summary>
+        /// Verify if the data entered is valid if the address is modified.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private async void TbAddress_TextChanged(object sender, TextChangedEventArgs e)
         {
             await ValidateContent();
         }
 
-        private async void btnTransfer_Click(object sender, RoutedEventArgs e)
+        /// <summary>
+        /// Execute the currency transfer.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private async void BtnTransfer_Click(object sender, RoutedEventArgs e)
         {
             userChoicePanel.Visibility = Visibility.Collapsed;
             loadingPanel.Visibility = Visibility.Visible;
@@ -210,5 +212,43 @@ namespace GU_Exchange.Controls
                 btnClose.Visibility = Visibility.Visible;
             }
         }
+        #endregion
+
+        #region Supporting Functions
+        /// <summary>
+        /// Verify that the data entered in this <see cref="UserControl"/> is valid.
+        /// </summary>
+        /// <returns></returns>
+        private async Task ValidateContent()
+        {
+            try
+            {
+                Wallet? wallet = Wallet.GetConnectedWallet();
+                if (!Wallet.IsValidEthereumAddress(tbAddress.Text) || wallet == null)
+                {
+                    btnTransfer.IsEnabled = false;
+                    return;
+                }
+                decimal amount = decimal.Parse(tbAmount.Text);
+                decimal maxAmount = await wallet.GetTokenAmountAsync((string)cbCurrency.SelectedItem);
+                if (amount <= 0 || amount > maxAmount)
+                {
+                    btnTransfer.IsEnabled = false;
+                    return;
+                }
+                btnTransfer.IsEnabled = true;
+            }
+            catch (System.Net.Http.HttpRequestException)
+            {
+            }
+            catch (NullReferenceException)
+            {
+            }
+            catch (FormatException)
+            {
+                btnTransfer.IsEnabled = false;
+            }
+        }
+        #endregion
     }
 }

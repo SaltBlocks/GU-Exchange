@@ -1,17 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
 using GU_Exchange.Helpers;
 
 namespace GU_Exchange
@@ -21,13 +11,21 @@ namespace GU_Exchange
     /// </summary>
     public partial class UnlockWalletWindow : Window
     {
+        #region Class Properties
         public enum UnlockResult { Unlock, Relock, Cancel };
         /// <summary>
         /// Used to store the result of this window.
         /// </summary>
         public UnlockResult Result { private set; get; }
         public Wallet Wallet { private set; get; }
+        #endregion
 
+        #region Default Constructor
+        /// <summary>
+        /// Construct a window that prompts the user to unlock their wallet.
+        /// </summary>
+        /// <param name="wallet"></param>
+        /// <param name="relockOption"></param>
         public UnlockWalletWindow(Wallet wallet, bool relockOption = true)
         {
             InitializeComponent();
@@ -41,7 +39,9 @@ namespace GU_Exchange
                 chkRelock.Visibility = Visibility.Collapsed;
             }
         }
+        #endregion
 
+        #region Event Handlers.
         /// <summary>
         /// Handle when the unlock button is pressed.
         /// </summary>
@@ -49,7 +49,7 @@ namespace GU_Exchange
         /// <param name="e"></param>
         private async void Button_Unlock(object sender, RoutedEventArgs e)
         {
-            await attemptUnlock();
+            await AttemptUnlock();
         }
 
         /// <summary>
@@ -62,15 +62,22 @@ namespace GU_Exchange
             Close();
         }
 
+        /// <summary>
+        /// Try to unlock the wallet if enter is pressed.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private async void TxtPassword_KeyUp(object sender, KeyEventArgs e)
         {
             if (e.Key == Key.Enter)
             {
-                await attemptUnlock();
+                await AttemptUnlock();
             }
         }
+        #endregion
 
-        private async Task attemptUnlock()
+        #region Supporting Functions
+        private async Task AttemptUnlock()
         {
             bool result;
             if (Wallet.IsLocked())
@@ -96,5 +103,6 @@ namespace GU_Exchange
                 Result = UnlockResult.Unlock;
             Close();
         }
+        #endregion
     }
 }

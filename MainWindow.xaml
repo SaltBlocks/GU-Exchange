@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:GU_Exchange"
         mc:Ignorable="d"
-        Title="MainWindow" Height="600" Width="950" Background="#FFE4E4E4">
+        Title="GU Exchange" Height="600" Width="950" Background="#FFE4E4E4">
     <Window.Resources>
         <ResourceDictionary>
             <!-- #region Import images for ETH, IMX and GODS logos. -->

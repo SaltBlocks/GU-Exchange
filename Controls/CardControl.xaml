@@ -72,7 +72,7 @@
                     <TextBlock x:Name="tbGod" Text="GOD" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
                 </Viewbox>
                 <Viewbox Grid.Row="2" Grid.Column="1" Margin="5,5,5,5" HorizontalAlignment="Left">
-                    <ComboBox x:Name="cbQuality" SelectionChanged="cbQuality_SelectionChanged"/>
+                    <ComboBox x:Name="cbQuality" SelectionChanged="CbQuality_SelectionChanged"/>
                 </Viewbox>
                 <Viewbox Grid.Row="3" Grid.Column="1" Margin="5,5,5,5" HorizontalAlignment="Left">
                     <TextBlock x:Name="tbRarity" Text="RARITY" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
@@ -91,7 +91,7 @@
                     <TextBlock Text="Offers: " HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
                 </Viewbox>
                 <Viewbox Grid.Column="1" Margin="5,10,5,0" HorizontalAlignment="Left">
-                    <ComboBox x:Name="cbToken" SelectionChanged="cbToken_SelectionChanged"/>
+                    <ComboBox x:Name="cbToken" SelectionChanged="CbToken_SelectionChanged"/>
                 </Viewbox>
             </Grid>
             <!-- #endregion -->
@@ -102,7 +102,7 @@
                 <!--#endregion-->
                 <fa:ImageAwesome x:Name="spinner" Icon="CircleOutlineNotch" Spin="True" SpinDuration="4" Width="50" Height="50" Visibility="Visible" />
                 <ScrollViewer x:Name="svOrders">
-                    <WrapPanel x:Name="orderPanel" Margin="0,0,0,0" ScrollViewer.CanContentScroll="True" ScrollViewer.HorizontalScrollBarVisibility="Visible" SizeChanged="orderPanel_SizeChanged" />
+                    <WrapPanel x:Name="orderPanel" Margin="0,0,0,0" ScrollViewer.CanContentScroll="True" ScrollViewer.HorizontalScrollBarVisibility="Visible" SizeChanged="OrderPanel_SizeChanged" />
                 </ScrollViewer>
             </Grid>
             <!-- #endregion -->
@@ -120,7 +120,7 @@
             <Image x:Name="imgCard" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Grid.Row="0"/>
             <!-- #endregion -->
             <!-- #region Close button. -->
-            <Button x:Name="btnClose" Content="X" HorizontalAlignment="Right" Height="20" Grid.Row="0" Margin="0,0,0,0" VerticalAlignment="Top" Width="20" Click="btnClose_Click"/>
+            <Button x:Name="btnClose" Content="X" HorizontalAlignment="Right" Height="20" Grid.Row="0" Margin="0,0,0,0" VerticalAlignment="Top" Width="20" Click="BtnClose_Click"/>
             <!--#endregion-->
             <!-- #region Wallet info and buttons. -->
             <Grid x:Name="gridWalletInfo" Grid.Row="1">
@@ -140,7 +140,7 @@
                     </Grid.ColumnDefinitions>
                     <!-- #endregion -->
                     <!-- #region No wallet connected bar. -->
-                    <Grid x:Name="gridNoWallet" Grid.ColumnSpan="4" Height="{Binding ActualHeight, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Grid}}, Converter={StaticResource HalfConverter}}" Margin="10,0,10,0" MouseEnter="rectNoWallet_MouseEnter" MouseLeave="rectNoWallet_MouseLeave" MouseLeftButtonDown="rectNoWallet_MouseLeftButtonDown" Visibility="Collapsed">
+                    <Grid x:Name="gridNoWallet" Grid.ColumnSpan="4" Height="{Binding ActualHeight, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Grid}}, Converter={StaticResource HalfConverter}}" Margin="10,0,10,0" MouseEnter="RectNoWallet_MouseEnter" MouseLeave="RectNoWallet_MouseLeave" MouseLeftButtonDown="RectNoWallet_MouseLeftButtonDown" Visibility="Collapsed">
                         <Rectangle x:Name="rectNoWallet" Stroke="Black" Fill="#7FA5A4A4"/>
                         <Viewbox>
                             <TextBlock x:Name="tbConnectWallet" Text="No Wallet Connected" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black" Margin="10,0,10,0"/>
@@ -150,7 +150,7 @@
                     <!-- #region Wallet content display. -->
                     <!-- Meteorite -->
                     <Grid x:Name="gridMeteorite" Grid.Column="0" >
-                        <Grid Width="{Binding ActualWidth, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Grid}}, Converter={StaticResource HalfConverter}}" Height="{Binding ActualWidth, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Grid}}, Converter={StaticResource HalfConverter}}" MouseDown="tbMeteorite_MouseDown">
+                        <Grid Width="{Binding ActualWidth, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Grid}}, Converter={StaticResource HalfConverter}}" Height="{Binding ActualWidth, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Grid}}, Converter={StaticResource HalfConverter}}" MouseDown="TbMeteorite_MouseDown">
                             <Ellipse Stroke="Black" Fill="#FF6E3741" MaxWidth="40" MaxHeight="40"/>
                             <Viewbox MaxWidth="40" MaxHeight="40" Margin="5,5,5,5">
                                 <TextBlock x:Name="tbMeteorite" Text="?" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="White"/>
@@ -160,7 +160,7 @@
 
                     <!-- Shadow -->
                     <Grid x:Name="gridShadow" Grid.Column="1">
-                        <Grid Width="{Binding ActualWidth, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Grid}}, Converter={StaticResource HalfConverter}}" Height="{Binding ActualWidth, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Grid}}, Converter={StaticResource HalfConverter}}" MouseDown="tbShadow_MouseDown">
+                        <Grid Width="{Binding ActualWidth, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Grid}}, Converter={StaticResource HalfConverter}}" Height="{Binding ActualWidth, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Grid}}, Converter={StaticResource HalfConverter}}" MouseDown="TbShadow_MouseDown">
                             <Ellipse Stroke="Black" Fill="#FF3C2850" MaxWidth="40" MaxHeight="40"/>
                             <Viewbox MaxWidth="40" MaxHeight="40" Margin="5,5,5,5">
                                 <TextBlock x:Name="tbShadow" Text="?" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="White"/>
@@ -170,7 +170,7 @@
 
                     <!-- Gold -->
                     <Grid x:Name="gridGold" Grid.Column="2">
-                        <Grid Width="{Binding ActualWidth, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Grid}}, Converter={StaticResource HalfConverter}}" Height="{Binding ActualWidth, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Grid}}, Converter={StaticResource HalfConverter}}" MouseDown="tbGold_MouseDown">
+                        <Grid Width="{Binding ActualWidth, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Grid}}, Converter={StaticResource HalfConverter}}" Height="{Binding ActualWidth, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Grid}}, Converter={StaticResource HalfConverter}}" MouseDown="TbGold_MouseDown">
                             <Ellipse Stroke="Black" Fill="#FFDCA000" MaxWidth="40" MaxHeight="40"/>
                             <Viewbox MaxWidth="40" MaxHeight="40" Margin="5,5,5,5">
                                 <TextBlock x:Name="tbGold" Text="?" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="White"/>
@@ -180,7 +180,7 @@
 
                     <!-- Diamond -->
                     <Grid x:Name="gridDiamond" Grid.Column="3">
-                        <Grid Width="{Binding ActualWidth, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Grid}}, Converter={StaticResource HalfConverter}}" Height="{Binding ActualWidth, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Grid}}, Converter={StaticResource HalfConverter}}" MouseDown="tbDiamond_MouseDown">
+                        <Grid Width="{Binding ActualWidth, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Grid}}, Converter={StaticResource HalfConverter}}" Height="{Binding ActualWidth, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Grid}}, Converter={StaticResource HalfConverter}}" MouseDown="TbDiamond_MouseDown">
                             <Ellipse Stroke="Black" Fill="#FF87AAEB" MaxWidth="40" MaxHeight="40"/>
                             <Viewbox MaxWidth="40" MaxHeight="40" Margin="5,5,5,5">
                                 <TextBlock x:Name="tbDiamond" Text="?" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="White"/>
@@ -198,9 +198,9 @@
                     </Grid.ColumnDefinitions>
                     <!-- #endregion -->
                     <!-- #region Action buttons. -->
-                    <Button x:Name="btnBuy" Content="Buy" Grid.Column="0" Height="25" Margin="5,0,5,0" Click="btnBuy_Click"/>
-                    <Button x:Name="btnOrders" Content="List" Grid.Column="1" Height="25" Margin="5,0,5,0" Click="btnList_Click"/>
-                    <Button x:Name="btnTransfer" Content="Transfer" Grid.Column="2" Height="25" Margin="5,0,5,0" Click="btnTransfer_Click"/>
+                    <Button x:Name="btnBuy" Content="Buy" Grid.Column="0" Height="25" Margin="5,0,5,0" Click="BtnBuy_Click"/>
+                    <Button x:Name="btnOrders" Content="List" Grid.Column="1" Height="25" Margin="5,0,5,0" Click="BtnList_Click"/>
+                    <Button x:Name="btnTransfer" Content="Transfer" Grid.Column="2" Height="25" Margin="5,0,5,0" Click="BtnTransfer_Click"/>
                     <!-- #endregion -->
                 </Grid>
             </Grid>

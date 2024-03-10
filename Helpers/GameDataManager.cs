@@ -68,11 +68,9 @@ namespace GU_Exchange.Helpers
         /// The Library ID of the card.
         /// </summary>
         public string LibID { get; set; }
-
         #endregion
 
         #region Default Constructor
-
         /// <summary>
         /// Constructs a <see cref="CardData"/> object containing all information about a specific card.
         /// </summary>
@@ -102,11 +100,9 @@ namespace GU_Exchange.Helpers
             Set = set;
             LibID = libID;
         }
-
         #endregion
 
         #region Supporting Methods
-
         /// <summary>
         /// Checks if two <see cref="CardData"/> objects are identical.
         /// </summary>
@@ -122,7 +118,6 @@ namespace GU_Exchange.Helpers
                 Set == other.Set) return true;
             return false;
         }
-
         #endregion
     }
 
@@ -134,7 +129,6 @@ namespace GU_Exchange.Helpers
     public class PlayerData
     {
         #region Class properties
-
         [DataMember]
         public Dictionary<string, string> Players { get; set; }
 
@@ -155,7 +149,6 @@ namespace GU_Exchange.Helpers
             Players = players;
             Timestamp = timeStamp;
         }
-
         #endregion
     }
 
@@ -169,7 +162,7 @@ namespace GU_Exchange.Helpers
         private static readonly Task<Dictionary<int, decimal>> s_cardPriceFetchTask = FetchCardPricesAsync();
 
         // Wallets linked to players.
-        private static Dictionary<int, JObject> _playerWalletData = new();
+        private static readonly Dictionary<int, JObject> s_playerWalletData = new();
 
         // Data used for searching cards.
         private static readonly Task s_setupQueries = SetupQueriesAsync();
@@ -347,8 +340,8 @@ namespace GU_Exchange.Helpers
         /// <exception cref="NullReferenceException"></exception>
         private static async Task<JObject> FetchPlayerConnectedWalletData(int apolloID)
         {
-            if (_playerWalletData.ContainsKey(apolloID))
-                return _playerWalletData[apolloID];
+            if (s_playerWalletData.ContainsKey(apolloID))
+                return s_playerWalletData[apolloID];
             byte[] data = await ResourceManager.Client.GetByteArrayAsync($"https://apollo-auth.prod.prod.godsunchained.com/v2/account/{apolloID}");
 
             JObject? json = (JObject?)JsonConvert.DeserializeObject(System.Text.Encoding.UTF8.GetString(data));
@@ -391,7 +384,6 @@ namespace GU_Exchange.Helpers
         #endregion
 
         #region Fetch and process games played
-
         /// <summary>
         /// Fetch GU games played in the past 24 hours and process them for statistics.
         /// </summary>
@@ -455,11 +447,9 @@ namespace GU_Exchange.Helpers
                 // Process the game data.
             }
         }
-
         #endregion
 
         #region Fetch and process Card data
-
         /// <summary>
         /// Fetch a snapshot off the current cheapest prices of all cards on the IMX marketplace priced in ETH.
         /// </summary>
@@ -669,11 +659,9 @@ namespace GU_Exchange.Helpers
                 s_loadedCardList = CachedCardList;
             return CachedCardList;
         }
-
         #endregion
 
         #region Card searching
-
         /// <summary>
         /// Setup the different search types that can be used to filter cards.
         /// </summary>
@@ -811,7 +799,6 @@ namespace GU_Exchange.Helpers
                 throw new OperationCanceledException();
             return await cardsGet;
         }
-
         #endregion
 
         #region Deckstring decoding
@@ -867,7 +854,10 @@ namespace GU_Exchange.Helpers
         #region Comparitor classes for GU cards
 
         private static CardRarityComparer rarityComp = new CardRarityComparer();
-        // Define a custom comparer for the CardData class
+
+        /// <summary>
+        /// Class used for sorting cards based on their rarity.
+        /// </summary>
         public class CardRarityComparer : IComparer<CardData>
         {
             public int Compare(CardData? x, CardData? y)
@@ -891,6 +881,10 @@ namespace GU_Exchange.Helpers
             }
         }
 
+        /// <summary>
+        /// Class used for sorting cards based on their price on the IMX marketplace.
+        /// Will fall back on rarity if no price is available.
+        /// </summary>
         public class CardPriceComparer : IComparer<CardData>
         {
             public int Compare(CardData? x, CardData? y)
@@ -923,7 +917,6 @@ namespace GU_Exchange.Helpers
                 }
             }
         }
-
         #endregion
     }
 }

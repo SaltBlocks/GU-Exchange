@@ -12,14 +12,11 @@ namespace GU_Exchange.Helpers
     internal class Inventory
     {
         #region Class Properties
-
         private int _apolloID;
         private Dictionary<int, Dictionary<int, int>> _inventory;
-
         #endregion
 
         #region Default Constructor
-
         /// <summary>
         /// Constructs an inventory for the given apolloID.
         /// </summary>
@@ -29,11 +26,9 @@ namespace GU_Exchange.Helpers
             _apolloID = apolloID;
             _inventory = new();
         }
-
         #endregion
 
         #region Update Inventory
-
         /// <summary>
         /// Loads the users inventory from the api and updates the local inventory to contain the same cards.
         /// </summary>
@@ -86,11 +81,9 @@ namespace GU_Exchange.Helpers
                 Debug.WriteLine("Failed to load inventory.");
             }
         }
-
         #endregion
 
         #region Getters and Setters
-
         /// <summary>
         /// Get the number of a specific card in this wallet.
         /// </summary>

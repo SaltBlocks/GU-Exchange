@@ -1,20 +1,9 @@
 ﻿using GU_Exchange.Helpers;
-using ImageProcessor.Processors;
-using System;
-using System.Collections.Generic;
 using System.ComponentModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 
 namespace GU_Exchange
 {
@@ -24,13 +13,13 @@ namespace GU_Exchange
     public partial class BuyControl : UserControl
     {
         #region Class Properties
-        private CardControl _parent;
-        private Order _order;
+        private readonly CardControl _parent;
+        private readonly Order _order;
         #endregion
 
         #region Default Constructor
         /// <summary>
-        /// Create a BuyControl that can be used to purchase the provided Order.
+        /// Create a BuyControl that can be used to purchase the provided <see cref="Order"/>.
         /// </summary>
         /// <param name="order">The order that should be purchased.</param>
         /// <param name="image">An image to display to the user.</param>

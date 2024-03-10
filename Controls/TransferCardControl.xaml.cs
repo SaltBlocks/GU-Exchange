@@ -28,11 +28,20 @@ namespace GU_Exchange.Controls
     /// </summary>
     public partial class TransferCardControl : UserControl
     {
-        private CardControl _parent;
-        private int _cardID;
-        private ImageSource _image;
-        private HashSet<string> _cardsOwned;
+        #region Class Properties
+        private readonly CardControl _parent;
+        private readonly int _cardID;
+        private readonly ImageSource _image;
+        private readonly HashSet<string> _cardsOwned;
+        #endregion
 
+        #region Default Constructor
+        /// <summary>
+        /// Constructor for a <see cref="UserControl"/> for transferring cards between wallets.
+        /// </summary>
+        /// <param name="parent"></param>
+        /// <param name="cardID"></param>
+        /// <param name="image"></param>
         public TransferCardControl(CardControl parent, int cardID, ImageSource image)
         {
             InitializeComponent();
@@ -40,10 +49,15 @@ namespace GU_Exchange.Controls
             _cardID = cardID;
             _image = image;
             _cardsOwned = new();
-            setup();
+            Setup();
         }
+        #endregion
 
-        private async void setup()
+        #region Setup
+        /// <summary>
+        /// Fetch the number of cards of this type in the connected wallet and setup the window using this data.
+        /// </summary>
+        private async void Setup()
         {
             // Fetch cards in the connected wallet.
             Wallet? wallet = Wallet.GetConnectedWallet();
@@ -87,7 +101,9 @@ namespace GU_Exchange.Controls
             tbNumber.Text = $"/ {_cardsOwned.Count()}";
             cbNumber.SelectedIndex = 0;
         }
+        #endregion
 
+        #region Event Handlers.
         /// <summary>
         /// Close the usercontrol if the user clicks outside of it.
         /// </summary>
@@ -108,12 +124,22 @@ namespace GU_Exchange.Controls
             this.Visibility = Visibility.Collapsed;
         }
 
-        private void btnClose_Click(object sender, RoutedEventArgs e)
+        /// <summary>
+        /// Close the <see cref="UserControl"/> by collapsing it.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void BtnClose_Click(object sender, RoutedEventArgs e)
         {
             this.Visibility = Visibility.Collapsed;
         }
 
-        private void btnLookup_Click(object sender, RoutedEventArgs e)
+        /// <summary>
+        /// Allow the user to lookup a wallet address belonging to a specific user.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void BtnLookup_Click(object sender, RoutedEventArgs e)
         {
             PlayerLookupWindow window = new PlayerLookupWindow();
             window.Owner = Application.Current.MainWindow;
@@ -123,7 +149,12 @@ namespace GU_Exchange.Controls
             Console.WriteLine(window.GetSelectedAddress());
         }
 
-        private void tbAddress_TextChanged(object sender, TextChangedEventArgs e)
+        /// <summary>
+        /// Check if the address entered is valid and enable/disable the transfer button based on this.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void TbAddress_TextChanged(object sender, TextChangedEventArgs e)
         {
             try
             {
@@ -146,7 +177,12 @@ namespace GU_Exchange.Controls
             }
         }
 
-        private async void btnTransfer_Click(object sender, RoutedEventArgs e)
+        /// <summary>
+        /// Execute the transfer of cards.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private async void BtnTransfer_Click(object sender, RoutedEventArgs e)
         {
             userChoicePanel.Visibility = Visibility.Collapsed;
             loadingPanel.Visibility = Visibility.Visible;
@@ -237,6 +273,7 @@ namespace GU_Exchange.Controls
             _ = _parent.SetupInventoryAsync();
             btnClose.Visibility = Visibility.Visible;
         }
+        #endregion
     }
 
     /// <summary>

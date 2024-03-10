@@ -5,10 +5,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Net.Http;
-using System.Net.NetworkInformation;
-using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Soap;
@@ -222,7 +219,6 @@ namespace GU_Exchange.Helpers
         #endregion
 
         #region Setup token prices.
-
         /// <summary>
         /// Fetch the current prices for ETH, GODS and IMX from coingecko and store them locally for later use.
         /// </summary>
@@ -273,11 +269,9 @@ namespace GU_Exchange.Helpers
             s_fetchTokenTask = FetchTokensWebAsync();
             return await s_fetchTokenTask;
         }
-
         #endregion
 
         #region Get token prices.
-
         /// <summary>
         /// Get the current price of ETH in USD.
         /// </summary>
@@ -307,11 +301,9 @@ namespace GU_Exchange.Helpers
             Dictionary<string, Token> tokens = await FetchTokens();
             return tokens["IMX"];
         }
-
         #endregion
 
         #region Encryption.
-
         /// <summary>
         /// Encrypt the provided string with the AES256 bit key used to secure this wallet.
         /// </summary>
@@ -547,8 +539,21 @@ namespace GU_Exchange.Helpers
                     SignatureRequestServer.RequestedAddress = "*";
                     SignatureRequestServer.StopServer();
                 }
-                bool isLinked = await wallet.IsLinkedAsync();
-                if (!isLinked)
+                int apolloID = Settings.GetApolloID();
+                bool dontCheckGUConnected;
+                try
+                {
+                    if (apolloID != -1 && !await GameDataManager.IsWalletLinked(apolloID, wallet.Address) && (!bool.TryParse(Settings.GetSetting("dont_check_GU_connected"), out dontCheckGUConnected) || !dontCheckGUConnected))
+                    {
+                        MessageWindow window = new MessageWindow($"The inventory shown on the main screen will not reflect cards in this wallet as it is not linked to your GU account.", "GU link missing", MessageType.INFORM, true, "dont_check_GU_connected");
+                        window.Owner = (MainWindow)Application.Current.MainWindow;
+                        window.ShowDialog();
+                    }
+                }
+                catch (HttpRequestException) { }
+
+                bool? isLinked = await wallet.IsLinkedAsync();
+                if (isLinked != null && !(bool)isLinked)
                 {
                     if (await wallet.RequestLinkAsync((MainWindow)Application.Current.MainWindow))
                     {
@@ -692,17 +697,15 @@ namespace GU_Exchange.Helpers
         /// Check if this <see cref="Wallet"/> is linked to IMX.
         /// </summary>
         /// <returns></returns>
-        public async Task<bool> IsLinkedAsync()
+        public async Task<bool?> IsLinkedAsync()
         {
             if (_isLinked != null) return (bool)_isLinked;
             bool? result = await IsAddressLinkedAsync(Address);
-            if (result == null)
+            if (result != null && result == true)
             {
-                return false;
-            }
-            if ((bool)result)
                 _isLinked = true;
-            return (bool)result;
+            }
+            return result;
         }
 
         /// <summary>

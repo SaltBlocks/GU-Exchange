@@ -14,16 +14,13 @@ namespace GU_Exchange
     public partial class CardTileControl : UserControl
     {
         #region Class properties
-        
         /// <summary>
         /// ID of the card being displayed on this tile.
         /// </summary>
         public int CardID { get; set; }
-
         #endregion
 
         #region Default constructor
-
         /// <summary>
         /// Constructor for a CardTile that opens the trading window for the card with the given CardID when clicked.
         /// </summary>
@@ -33,7 +30,6 @@ namespace GU_Exchange
             InitializeComponent();
             this.CardID = CardID;
         }
-
         #endregion
 
         #region Data loading and setup.
@@ -101,15 +97,13 @@ namespace GU_Exchange
         /// <summary>
         /// Removes the image currently on the tile.
         /// </summary>
-        public void clearTile()
+        public void ClearTile()
         {
             this.imgCard.Source = null;
         }
-
         #endregion
 
         #region Event Handlers.
-
         /// <summary>
         /// Shows the highlighting rectangle when the mouse enters the tile.
         /// </summary>
@@ -133,7 +127,6 @@ namespace GU_Exchange
         {
             ((MainWindow)Application.Current.MainWindow).OpenCardControl(CardID);
         }
-
         #endregion
     }
 }

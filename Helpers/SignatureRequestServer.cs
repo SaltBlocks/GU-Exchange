@@ -281,8 +281,9 @@ namespace GU_Exchange.Helpers
         }
         #endregion
 
+        #region Supporting methods
         /// <summary>
-        /// 
+        /// Cancel all currently active signature request.
         /// </summary>
         public static void CancelRequests()
         {
@@ -295,5 +296,6 @@ namespace GU_Exchange.Helpers
                 s_signatureRequestTasks.Clear();
             }
         }
+        #endregion
     }
 }
