@@ -415,7 +415,7 @@ namespace GU_Exchange.Helpers
             Dictionary<string, Wallet> wallets = new();
             try
             {
-                string[] walletFiles = Directory.GetFiles(Directory.GetCurrentDirectory() + "\\wallets", "*.wlt");
+                string[] walletFiles = Directory.GetFiles(Path.Combine(Settings.GetConfigFolder(), "wallets"), "*.wlt");
                 foreach (string wallet in walletFiles)
                 {
                     try

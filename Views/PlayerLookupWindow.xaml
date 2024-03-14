@@ -22,7 +22,7 @@
         <!-- #region Player Search input. -->
         <TextBlock HorizontalAlignment="Left" Height="20" Width="88" Margin="5,5,5,5" TextWrapping="Wrap" Text="Find player with " VerticalAlignment="Top" Grid.Row="0" Grid.Column="0" />
         <ComboBox x:Name="cbSearchType" Grid.Column="1" Height="20" Margin="5,5,5,5" SelectionChanged="CbSearchType_SelectionChanged" />
-        <local:SuggestionsTextBoxControl x:Name="tbSearchBar" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Margin="5,5,5,5" TextChanged="tbSearchBar_TextChanged" />
+        <local:SuggestionsTextBoxControl x:Name="tbSearchBar" Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2" Margin="5,5,5,5" TextChanged="TbSearchBar_TextChanged" />
         <!-- #endregion -->
         <!-- #region Player Search Output -->
         <Border BorderBrush="Black" BorderThickness="1" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" Margin="5,5,5,5">

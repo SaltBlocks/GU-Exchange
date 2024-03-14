@@ -17,6 +17,7 @@ namespace GU_Exchange.Helpers
     {
         public static HttpClient Client = new();
         public static SizedDictionary<string, BitmapSource> imgCache = new(30);
+        private static string _cardFolder = Path.Combine(Settings.GetConfigFolder(), "cards");
 
         #region Supporting Methods.
         [DllImport("gdi32.dll")]
@@ -110,13 +111,13 @@ namespace GU_Exchange.Helpers
 
                 if (save)
                 {
-                    if (!Directory.Exists("cards"))
+                    if (!Directory.Exists(_cardFolder))
                     {
-                        Directory.CreateDirectory("cards");
+                        Directory.CreateDirectory(_cardFolder);
                     }
                     try
                     {
-                        using (var fileStream = File.Create("cards/" + CardID + "q" + quality + ".webp"))
+                        using (var fileStream = File.Create(Path.Combine(_cardFolder, CardID + "q" + quality + ".webp")))
                         {
                             using (MemoryStream stream = new MemoryStream(imgData))
                             {
@@ -143,11 +144,12 @@ namespace GU_Exchange.Helpers
         {
             Task<BitmapSource?> imgGet = Task.Run(() =>
             {
-                if (!File.Exists("cards/" + CardID + "q" + quality + ".webp"))
+                string cardPath = Path.Combine(_cardFolder, CardID + "q" + quality + ".webp");
+                if (!File.Exists(cardPath))
                 {
                     return null;
                 }
-                byte[] imgBytes = File.ReadAllBytes("cards/" + CardID + "q" + quality + ".webp");
+                byte[] imgBytes = File.ReadAllBytes(cardPath);
                 using (ImageFactory fact = new())
                 {
                     using (MemoryStream imgStream = new MemoryStream(imgBytes))
@@ -173,8 +175,9 @@ namespace GU_Exchange.Helpers
             string cacheKey = CardID.ToString() + '_' + quality.ToString();
             if (imgCache.ContainsKey(cacheKey))
                 return imgCache[cacheKey];
+            string cardPath = Path.Combine(_cardFolder, CardID + "q" + quality + ".webp");
             BitmapSource? res;
-            if (!File.Exists("cards/" + CardID + "q" + quality + ".webp"))
+            if (!File.Exists(cardPath))
             {
                 res = await FetchCardImageAsync(CardID, quality, save, cancelToken);
             }

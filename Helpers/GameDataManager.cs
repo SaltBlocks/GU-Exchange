@@ -248,7 +248,8 @@ namespace GU_Exchange.Helpers
         /// </summary>
         public static void SavePlayers()
         {
-            using (FileStream fileStream = new FileStream("players.db", FileMode.Create))
+            string dataPath = Path.Combine(Settings.GetConfigFolder(), "players.db");
+            using (FileStream fileStream = new FileStream(dataPath, FileMode.Create))
             {
                 DataContractJsonSerializer serializer = new DataContractJsonSerializer(typeof(PlayerData));
                 serializer.WriteObject(fileStream, players);
@@ -260,9 +261,10 @@ namespace GU_Exchange.Helpers
         /// </summary>
         public static void LoadPlayers()
         {
-            if (File.Exists("players.db"))
+            string dataPath = Path.Combine(Settings.GetConfigFolder(), "players.db");
+            if (File.Exists(dataPath))
             {
-                using (FileStream fileStream = new FileStream("players.db", FileMode.Open))
+                using (FileStream fileStream = new FileStream(dataPath, FileMode.Open))
                 {
                     DataContractJsonSerializer serializer = new DataContractJsonSerializer(typeof(PlayerData));
                     PlayerData? loadedPlayerData = (PlayerData?)serializer.ReadObject(fileStream);
@@ -562,7 +564,7 @@ namespace GU_Exchange.Helpers
                 CardList[proto] = card;
             }
 
-            using (StreamWriter writer = new StreamWriter("cards.json"))
+            using (StreamWriter writer = new StreamWriter(Path.Combine(Settings.GetConfigFolder(), "cards.json")))
             {
                 writer.Write(CardString);
             }
@@ -575,11 +577,12 @@ namespace GU_Exchange.Helpers
         /// </summary>
         private static async Task<Dictionary<int, CardData>?> GetCachedCardListAsync()
         {
-            if (!File.Exists("cards.json"))
+            string cardDataPath = Path.Combine(Settings.GetConfigFolder(), "cards.json");
+            if (!File.Exists(cardDataPath))
                 return null;
 
             string CachedCards;
-            using (StreamReader reader = new StreamReader("cards.json"))
+            using (StreamReader reader = new StreamReader(cardDataPath))
                 CachedCards = await reader.ReadToEndAsync();
 
             JObject? jsonData = (JObject?)JsonConvert.DeserializeObject(CachedCards);

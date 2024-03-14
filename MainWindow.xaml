@@ -46,16 +46,16 @@
                 <MenuItem Header="Exit" Click="miExit_Click" />
             </MenuItem>
             <MenuItem Header="Buy">
-                <MenuItem Header="Deck" />
-                <MenuItem Header="Set" />
+                <MenuItem Header="Deck" IsEnabled="False" />
+                <MenuItem Header="Set" IsEnabled="False" />
             </MenuItem>
             <MenuItem Header="List">
-                <MenuItem Header="Collection" />
-                <MenuItem Header="Update listings" />
-                <MenuItem Header="Cancel listings" />
+                <MenuItem Header="Collection" IsEnabled="False" />
+                <MenuItem Header="Update listings" IsEnabled="False" />
+                <MenuItem Header="Cancel listings" IsEnabled="False" />
             </MenuItem>
             <MenuItem Header="Transfer">
-                <MenuItem Header="Collection" />
+                <MenuItem Header="Collection" IsEnabled="False" />
                 <MenuItem Header="Currency" Click="TransferCurrency_Click" />
             </MenuItem>
         </Menu>

@@ -2,15 +2,27 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Security.RightsManagement;
 
 namespace GU_Exchange.Helpers
 {
     internal class Settings
     {
         #region Static Fields.
+        private static string folderConfig = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "GU-Exchange");
+
         private static readonly Dictionary<string, string> s_settings = new Dictionary<string, string>();
         private static bool SettingsLoaded = false;
         #endregion
+
+        public static string GetConfigFolder()
+        {
+            if (!Directory.Exists(folderConfig))
+            {
+                Directory.CreateDirectory(folderConfig);
+            }
+            return folderConfig;
+        }
 
         #region Load/Save Settings
         /// <summary>
@@ -20,7 +32,7 @@ namespace GU_Exchange.Helpers
         {
             try
             {
-                StreamReader sr = new StreamReader("settings.txt");
+                StreamReader sr = new StreamReader(Path.Combine(GetConfigFolder(), "settings.txt"));
                 string? line = sr.ReadLine();
                 //Continue to read until you reach end of file
                 while (line != null)
@@ -50,7 +62,7 @@ namespace GU_Exchange.Helpers
         {
             try
             {
-                StreamWriter sw = new StreamWriter("settings.txt");
+                StreamWriter sw = new StreamWriter(Path.Combine(GetConfigFolder(), "settings.txt"));
                 foreach (string key in s_settings.Keys)
                 {
                     sw.WriteLine($"{key}={s_settings[key]}");

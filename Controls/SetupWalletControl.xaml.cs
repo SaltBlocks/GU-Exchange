@@ -129,12 +129,13 @@ namespace GU_Exchange
             }
             txtError.Text = "";
             btnAddWallet.IsEnabled = false;
-            if (!Directory.Exists("wallets"))
+            string walletFolder = Path.Combine(Settings.GetConfigFolder(), "wallets");
+            if (!Directory.Exists(walletFolder))
             {
-                Directory.CreateDirectory("wallets");
+                Directory.CreateDirectory(walletFolder);
             }
             Wallet wallet = new Wallet(_privateKey, pbPassword.Password);
-            using (FileStream FS = new FileStream($"wallets\\{tbAddress.Text}.wlt", FileMode.Create))
+            using (FileStream FS = new FileStream(Path.Combine(walletFolder, $"{tbAddress.Text}.wlt"), FileMode.Create))
             {
                 Wallet.SaveWallet(wallet, FS);
                 Settings.SetSetting("ConnectedWallet", tbAddress.Text);
@@ -214,12 +215,13 @@ namespace GU_Exchange
                 return;
             }
             btnImportWallet.IsEnabled = false;
-            if (!Directory.Exists("wallets"))
+            string walletFolder = Path.Combine(Settings.GetConfigFolder(), "wallets");
+            if (!Directory.Exists(walletFolder))
             {
-                Directory.CreateDirectory("wallets");
+                Directory.CreateDirectory(walletFolder);
             }
             Wallet wallet = new Wallet("0x" + _privateKey, pbPasswordImport.Password);
-            using (FileStream FS = new FileStream($"wallets\\{wallet.Address}.wlt", FileMode.Create))
+            using (FileStream FS = new FileStream(Path.Combine(walletFolder, $"{wallet.Address}.wlt"), FileMode.Create))
             {
                 Wallet.SaveWallet(wallet, FS);
                 Settings.SetSetting("ConnectedWallet", wallet.Address);
@@ -264,7 +266,12 @@ namespace GU_Exchange
                 }
                 SignatureRequestServer.RequestedAddress = data.Address;
                 WebWallet wallet = new WebWallet(data.Signature, data.Address);
-                using (FileStream FS = new FileStream($"wallets\\{wallet.Address}.wlt", FileMode.Create))
+                string walletFolder = Path.Combine(Settings.GetConfigFolder(), "wallets");
+                if (!Directory.Exists(walletFolder))
+                {
+                    Directory.CreateDirectory(walletFolder);
+                }
+                using (FileStream FS = new FileStream(Path.Combine(walletFolder, $"{wallet.Address}.wlt"), FileMode.Create))
                 {
                     Wallet.SaveWallet(wallet, FS);
                     Settings.SetSetting("ConnectedWallet", wallet.Address);

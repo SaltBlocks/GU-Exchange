@@ -177,7 +177,7 @@ namespace GU_Exchange
 
                     try
                     {
-                        string[] walletFiles = Directory.GetFiles(Directory.GetCurrentDirectory() + "\\wallets", "*.wlt");
+                        string[] walletFiles = Directory.GetFiles(System.IO.Path.Combine(Settings.GetConfigFolder(), "wallets", "*.wlt"));
                         foreach (string walletFile in walletFiles)
                         {
                             try
