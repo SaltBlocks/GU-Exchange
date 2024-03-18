@@ -273,9 +273,9 @@ namespace GU_Exchange
                 txtGods.Text = $"{Math.Round(await connectedWallet.GetTokenAmountAsync("GODS", forceUpdate), 2)} GODS";
                 txtImx.Text = $"{Math.Round(await connectedWallet.GetTokenAmountAsync("IMX", forceUpdate), 2)} IMX";
             }
-            catch (HttpRequestException e)
+            catch (HttpRequestException ex)
             {
-                Log.Warning($"Failed to fetch wallet contents: {e.StackTrace}");
+                Log.Warning($"Failed to fetch currency content in wallet. {ex.Message}: {ex.StackTrace}");
             }
         }
 

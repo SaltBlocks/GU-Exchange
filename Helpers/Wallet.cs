@@ -245,6 +245,7 @@ namespace GU_Exchange.Helpers
             }
             catch (HttpRequestException)
             {
+                Log.Warning("Failed to fetch wallet token contends");
                 s_currencyList["ETH"].Value = 0;
                 s_currencyList["GODS"].Value = 0;
                 s_currencyList["IMX"].Value = 0;
@@ -461,7 +462,7 @@ namespace GU_Exchange.Helpers
             }
             catch (HttpRequestException ex)
             {
-                Log.Warning($"Failed to check wallet link status with exception: {ex.Message}");
+                Log.Warning($"Failed to check wallet link status. {ex.Message}: {ex.StackTrace}");
                 return null;
             }
             if (linkData.Contains("Account not found"))
@@ -766,6 +767,7 @@ namespace GU_Exchange.Helpers
         /// <param name="token_name">The name of the token to lookup or fetch</param>
         /// <param name="force_update">If set to true, always fetch the latest account balance from the IMX api. Otherwise, use cached values if available.</param>
         /// <returns>The account balance.</returns>
+        /// <exception cref="HttpRequestException"/>
         public async Task<decimal> GetTokenAmountAsync(string tokenName, bool forceUpdate = false)
         {
             if (forceUpdate || !_tokenAmountOwned.ContainsKey(tokenName))

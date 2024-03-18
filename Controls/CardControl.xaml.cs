@@ -2,6 +2,7 @@
 using GU_Exchange.Helpers;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -145,7 +146,17 @@ namespace GU_Exchange
 
             string cardData = HttpUtility.UrlEncode("{\"proto\":[\"" + CardID + "\"]}");
             string urlInventory = $"https://api.x.immutable.com/v1/assets?page_size=10&user={connectedWallet.Address}&metadata={cardData}&sell_orders=true";
-            string cardString = await ResourceManager.Client.GetStringAsync(urlInventory);
+            Log.Information($"Fetching cards with protoID {CardID} in wallet {connectedWallet.Address}");
+            string cardString;
+            try
+            {
+                cardString = await ResourceManager.Client.GetStringAsync(urlInventory);
+            }
+            catch (HttpRequestException e)
+            {
+                Log.Information($"An exception occurred while Fetching wallet contents: {e.Message}: {e.StackTrace}");
+                return;
+            }
             // Extract cards owned from the return data.
             JObject? jsonData = (JObject?)JsonConvert.DeserializeObject(cardString);
             if (jsonData == null)
@@ -208,7 +219,7 @@ namespace GU_Exchange
             string strInventory = "{\"result\":[],\"cursor\":\"\",\"remaining\":0}";
             try
             {
-                Debug.WriteLine($"Fetching orders for {CardID} of quality {quality}");
+                Log.Information($"Fetching orders for {CardID} of quality {quality}");
                 Task<string> taskGetOrders = ResourceManager.Client.GetStringAsync(urlOrderBook, token);
                 if (wallet != null)
                 {
@@ -220,6 +231,8 @@ namespace GU_Exchange
             }
             catch (Exception ex) when (ex is OperationCanceledException || ex is HttpRequestException)
             {
+                if (ex is HttpRequestException)
+                    Log.Information($"Failed to fetching orders for {CardID} of quality {quality}. {ex.Message}: {ex.StackTrace}");
                 return;
             }
 

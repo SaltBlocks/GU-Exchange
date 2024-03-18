@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Serilog;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -71,7 +72,7 @@ namespace GU_Exchange.Helpers
             }
             catch (Exception e)
             {
-                Debug.WriteLine($"Exception: {e.Message}");
+                Log.Warning($"Failed to save settings. {e.Message}: {e.StackTrace}");
                 return false;
             }
             return true;

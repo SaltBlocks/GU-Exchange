@@ -8,6 +8,7 @@ using System.Windows.Controls;
 using GU_Exchange.Helpers;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
+using System.Net.Http;
 
 namespace GU_Exchange.Views
 {
@@ -152,6 +153,7 @@ namespace GU_Exchange.Views
         /// <param name="apolloID"></param>
         /// <param name="token"></param>
         /// <returns></returns>
+        /// <exception cref="HttpRequestException"/>
         private async Task<string> FetchAccountData(int apolloID, CancellationToken token)
         {
             if (AccountCache.ContainsKey(apolloID))

@@ -199,6 +199,7 @@ namespace GU_Exchange.Helpers
         /// <param name="cancelToken">Canceltoken to stop the request.</param>
         /// <returns>Task returning the players name.</returns>
         /// <exception cref="KeyNotFoundException">Thrown if no user is found with the provided apolloID.</exception>
+        /// <exception cref="HttpRequestException">Thrown if fetching the player data from Gods Unchained failed.</exception>
         public static async Task<string> FetchPlayerNameAsync(int apolloId, CancellationToken cancelToken)
         {
             if (players.Players.ContainsKey(apolloId.ToString()))
@@ -328,7 +329,7 @@ namespace GU_Exchange.Helpers
             }
             catch (HttpRequestException)
             {
-                Debug.WriteLine("Failed to fetch playernames.");
+                Log.Warning("Failed to fetch playernames, falling back on data stored on disk if available.");
             }
         }
 
@@ -341,6 +342,7 @@ namespace GU_Exchange.Helpers
         /// <param name="apolloID">The apolloID to get the connected wallets for.</param>
         /// <returns></returns>
         /// <exception cref="NullReferenceException"></exception>
+        /// <exception cref="HttpRequestException">Thrown if the request to Gods Unchained for the wallet data fails.</exception>
         private static async Task<JObject> FetchPlayerConnectedWalletData(int apolloID)
         {
             if (s_playerWalletData.ContainsKey(apolloID))
@@ -379,8 +381,9 @@ namespace GU_Exchange.Helpers
                     }
                 }
             }
-            catch (NullReferenceException)
+            catch (Exception e) when (e is HttpRequestException || e is NullReferenceException)
             {
+                Log.Warning($"Failed to fetch wallets connected to apolloID {apolloID}");
             }
             return false;
         }
@@ -411,25 +414,26 @@ namespace GU_Exchange.Helpers
                 if (gameCount == null)
                     return;
                 processGames(jsonGames);
-                Debug.WriteLine($"{gameCount} games played in past 24 hours.");
 
                 try
                 {
                     for (int i = 1; i <= gameCount / 1000; i++)
                     {
-                        Debug.WriteLine($"{i * 1000} / {gameCount} games fetched.");
                         strGameData = await ResourceManager.Client.GetStringAsync(url + (i + 1), fetchGamesTokenSource.Token);
                         jsonGames = (JObject?)JsonConvert.DeserializeObject(strGameData);
                         if (jsonGames == null)
                             return;
                         processGames(jsonGames);
                     }
-                    Debug.WriteLine($"{gameCount} / {gameCount} games fetched.");
                 }
                 catch (HttpRequestException)
                 {
                     Log.Warning($"GU api ratelimit hit.");
                 }
+            }
+            catch (HttpRequestException e)
+            {
+                Log.Warning($"Failed to fetch Gods Unchained games played in the past 24 hours. {e.Message}: {e.StackTrace}");
             }
             catch (OperationCanceledException)
             {
@@ -480,6 +484,10 @@ namespace GU_Exchange.Helpers
                     }
                 }
             }
+            catch (HttpRequestException e)
+            {
+                Log.Warning($"Failed to fetch last known prices for Gods Unchained cards. {e.Message}: {e.StackTrace}");
+            }
             catch { }
             return priceList;
         }
@@ -520,25 +528,22 @@ namespace GU_Exchange.Helpers
         /// <summary>
         /// Fetches the complete list of GU cards from the Gods Unchained API.
         /// </summary>
+        /// <exception cref="HttpRequestException"/>
+        /// <exception cref="NullReferenceException"/>
+        /// <exception cref="ArgumentNullException"/>
+        /// <exception cref="KeyNotFoundException"/>
+        /// 
         private static async Task<Dictionary<int, CardData>?> FetchCardListAsync()
         {
-            string CardString;
-            try
-            {
-                Debug.WriteLine("Fetching all GU cards available in game..."); ;
-                CardString = await ResourceManager.Client.GetStringAsync("https://api.godsunchained.com/v0/proto?format=flat");
-            }
-            catch (HttpRequestException)
-            {
-                return null;
-            }
+            Log.Information("Fetching all GU cards available in game.");
+            string CardString = await ResourceManager.Client.GetStringAsync("https://api.godsunchained.com/v0/proto?format=flat");
 
             JObject? jsonData = (JObject?)JsonConvert.DeserializeObject(CardString);
             if (jsonData == null)
-                return null;
+                throw new NullReferenceException("Server returned empty JSON data.");
             Dictionary<string, JObject>? dictObj = jsonData.ToObject<Dictionary<string, JObject>?>();
             if (dictObj == null)
-                return null;
+                throw new NullReferenceException("Failed to parse Card JSON data.");
 
             Dictionary<int, CardData> CardList = new();
             foreach (string key in dictObj.Keys)
@@ -569,7 +574,6 @@ namespace GU_Exchange.Helpers
             {
                 writer.Write(CardString);
             }
-
             return CardList;
         }
 
@@ -628,6 +632,15 @@ namespace GU_Exchange.Helpers
         private static async Task SetupCardListAsync(Dictionary<int, CardData>? CachedCardList)
         {
             Dictionary<int, CardData>? CardList = await FetchCardListAsync();
+            try
+            {
+                CardList = await FetchCardListAsync();
+            }
+            catch (Exception  e)
+            {
+                Log.Warning($"Failed to fetch list of GU cards. {e.Message}: {e.StackTrace}");
+                return;
+            }
             if (CardList == null || CardList.Count == 0)
                 return;
             s_loadedCardList = CardList;

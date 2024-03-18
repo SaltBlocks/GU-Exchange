@@ -13,6 +13,8 @@ using System.Windows.Media;
 using System.Net.Http;
 using static GU_Exchange.Helpers.IMXlib;
 using GU_Exchange.Helpers;
+using ImageProcessor.Processors;
+using Serilog;
 
 namespace GU_Exchange
 {
@@ -83,8 +85,10 @@ namespace GU_Exchange
                 cardString = await fetchInventory;
             }
             catch (Exception ex) when (ex is OperationCanceledException || ex is HttpRequestException)
-            { 
-                return; 
+            {
+                if (ex is HttpRequestException)
+                    Log.Information($"Failed to fetching wallet inventory for {_parent.CardID} of quality {(string)_parent.cbQuality.SelectedItem}. {ex.Message}: {ex.StackTrace}");
+                return;
             }
 
             // Deserialize the JSON into a JObject
@@ -192,6 +196,8 @@ namespace GU_Exchange
             }
             catch (Exception ex) when (ex is OperationCanceledException || ex is HttpRequestException || ex is NullReferenceException)
             {
+                if (ex is HttpRequestException)
+                    Log.Information($"Failed to fetch cheapest order for {_parent.CardID} of quality {(string)_parent.cbQuality.SelectedItem}. {ex.Message}: {ex.StackTrace}");
                 return null;
             }
         }

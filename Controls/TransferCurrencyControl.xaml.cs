@@ -1,8 +1,10 @@
 ﻿using GU_Exchange.Helpers;
 using GU_Exchange.Views;
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
@@ -77,8 +79,15 @@ namespace GU_Exchange.Controls
             {
                 return;
             }
-            decimal amount = await wallet.GetTokenAmountAsync((string)cbCurrency.SelectedItem);
-            tbAmount.Text = amount.ToString();
+            try
+            {
+                decimal amount = await wallet.GetTokenAmountAsync((string)cbCurrency.SelectedItem);
+                tbAmount.Text = amount.ToString();
+            }
+            catch (HttpRequestException ex)
+            {
+                Log.Warning($"Failed to fetch currency content in wallet. {ex.Message}: {ex.StackTrace}");
+            }
         }
 
         /// <summary>
@@ -237,8 +246,9 @@ namespace GU_Exchange.Controls
                 }
                 btnTransfer.IsEnabled = true;
             }
-            catch (System.Net.Http.HttpRequestException)
+            catch (HttpRequestException ex)
             {
+                Log.Warning($"Failed to fetch currency content in wallet. {ex.Message}: {ex.StackTrace}");
             }
             catch (NullReferenceException)
             {

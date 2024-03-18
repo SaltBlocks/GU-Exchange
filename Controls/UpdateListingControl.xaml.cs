@@ -12,6 +12,7 @@ using System.Windows.Media;
 using System.Net.Http;
 using static GU_Exchange.Helpers.IMXlib;
 using GU_Exchange.Helpers;
+using Serilog;
 
 namespace GU_Exchange
 {
@@ -101,6 +102,8 @@ namespace GU_Exchange
             }
             catch (Exception ex) when (ex is OperationCanceledException || ex is HttpRequestException || ex is NullReferenceException)
             {
+                if (ex is HttpRequestException)
+                    Log.Information($"Failed to fetch cheapest offer for {_parent.CardID} of quality {(string)_parent.cbQuality.SelectedItem}. {ex.Message}: {ex.StackTrace}");
                 return null;
             }
         }

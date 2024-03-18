@@ -20,6 +20,7 @@ using System.Windows.Navigation;
 using System.Windows.Shapes;
 using GU_Exchange.Views;
 using static GU_Exchange.Helpers.IMXlib;
+using Serilog;
 
 namespace GU_Exchange.Controls
 {
@@ -78,6 +79,8 @@ namespace GU_Exchange.Controls
             }
             catch (Exception ex) when (ex is OperationCanceledException || ex is HttpRequestException)
             {
+                if (ex is HttpRequestException)
+                    Log.Information($"Failed to fetching wallet inventory for {_parent.CardID} of quality {(string)_parent.cbQuality.SelectedItem}. {ex.Message}: {ex.StackTrace}");
                 return;
             }
 

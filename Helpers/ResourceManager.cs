@@ -1,5 +1,6 @@
 ﻿using ImageProcessor;
 using ImageProcessor.Common.Exceptions;
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -9,13 +10,14 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Media.Animation;
 using System.Windows.Media.Imaging;
 
 namespace GU_Exchange.Helpers
 {
     class ResourceManager
     {
-        public static HttpClient Client = new();
+        public static HttpClient Client = new(handler:new RateLimitHandler(new HttpClientHandler(), 5));
         public static SizedDictionary<string, BitmapSource> imgCache = new(30);
         private static string _cardFolder = Path.Combine(Settings.GetConfigFolder(), "cards");
 
@@ -80,8 +82,9 @@ namespace GU_Exchange.Helpers
                         imgStream = message.Content.ReadAsStream();
                     }
                 }
-                catch (HttpRequestException)
+                catch (HttpRequestException e)
                 {
+                    Log.Warning($"Failed to fetch card image with proto '{CardID}' of quality {quality}. {e.Message} {e.StackTrace}");
                     return null;
                 }
 

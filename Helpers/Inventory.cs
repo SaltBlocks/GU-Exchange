@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using System.Diagnostics;
+using Serilog;
 
 namespace GU_Exchange.Helpers
 {
@@ -37,10 +38,10 @@ namespace GU_Exchange.Helpers
         {
             if (_apolloID == -1)
             {
-                Debug.WriteLine("No inventory linked, skipped loading inventory.");
+                Log.Information("No inventory linked, skipped loading inventory.");
                 return;
             }
-            Debug.WriteLine($"Fetching inventory for user {_apolloID}");
+            Log.Information($"Fetching inventory for user: {_apolloID}");
             Dictionary<int, Dictionary<int, int>> UpdatedInventory = new();
             HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Get,
                         $"https://marketplace-legacy.prod.prod.godsunchained.com/v2/asset?type=card&user_id={_apolloID}");
@@ -76,9 +77,9 @@ namespace GU_Exchange.Helpers
                 }
                 _inventory = UpdatedInventory;
             }
-            catch (HttpRequestException)
+            catch (HttpRequestException e)
             {
-                Debug.WriteLine("Failed to load inventory.");
+                Log.Warning($"Failed to fetch user inventory. {e.Message}: {e.StackTrace}");
             }
         }
         #endregion
