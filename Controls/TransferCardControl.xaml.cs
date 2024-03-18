@@ -81,8 +81,6 @@ namespace GU_Exchange.Controls
                 return;
             }
 
-            Console.WriteLine(cardString);
-
             JObject? jsonData = JsonConvert.DeserializeObject<JObject?>(cardString);
             if (jsonData?["result"] is not JToken result)
                 return;
@@ -146,7 +144,6 @@ namespace GU_Exchange.Controls
             window.ShowDialog();
             if (window.Result == PlayerLookupWindow.LookupResult.Select)
                 tbAddress.Text = window.GetSelectedAddress();
-            Console.WriteLine(window.GetSelectedAddress());
         }
 
         /// <summary>

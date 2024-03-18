@@ -93,7 +93,6 @@ namespace GU_Exchange.Controls
             window.ShowDialog();
             if (window.Result == PlayerLookupWindow.LookupResult.Select)
                 tbAddress.Text = window.GetSelectedAddress();
-            Console.WriteLine(window.GetSelectedAddress());
         }
 
         /// <summary>

@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Serilog;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -425,7 +426,7 @@ namespace GU_Exchange.Helpers
                     }
                     catch (Exception e)
                     {
-                        Console.WriteLine(e.StackTrace);
+                        Log.Warning($"Failed to load wallet from disk: {e.StackTrace}");
                         continue;
                     }
                 }
@@ -460,7 +461,7 @@ namespace GU_Exchange.Helpers
             }
             catch (HttpRequestException ex)
             {
-                Console.WriteLine($"Failed to check wallet link status with exception: {ex.Message}");
+                Log.Warning($"Failed to check wallet link status with exception: {ex.Message}");
                 return null;
             }
             if (linkData.Contains("Account not found"))
@@ -940,7 +941,7 @@ namespace GU_Exchange.Helpers
                     Marshal.FreeHGlobal(resultBuffer);
 
                     // Handle the server response
-                    Console.WriteLine(result ?? "No result");
+                    Log.Information($"Order creation finished with result: {result ?? "None"}");
                     if (result == null)
                     {
                         if (listing.tbStatusListing != null) listing.tbStatusListing.Text = "An unknown error occurred";
@@ -1039,6 +1040,7 @@ namespace GU_Exchange.Helpers
                     Marshal.FreeHGlobal(resultBuffer);
 
                     // Handle the server response.
+                    Log.Information($"Order cancellation finished with result: {result ?? "None"}");
                     if (result == null)
                     {
                         if (order.tbStatusCancellation != null) order.tbStatusCancellation.Text = "An unknown error occurred";
@@ -1139,7 +1141,7 @@ namespace GU_Exchange.Helpers
                 LockWallet();
 
             // Handle the server response
-            Console.WriteLine(result ?? "No result");
+            Log.Information($"Transfer finished with result: {result ?? "No result"}");
             if (result == null)
             {
                 tbStatus.Text = "An unknown error occurred";
@@ -1218,7 +1220,7 @@ namespace GU_Exchange.Helpers
                 LockWallet();
 
             // Handle the server response
-            Console.WriteLine(result ?? "No result");
+            Log.Information($"Currency transfer finished with result: {result ?? "No result"}");
             if (result == null)
             {
                 tbStatus.Text = "An unknown error occurred";
@@ -1514,7 +1516,7 @@ namespace GU_Exchange.Helpers
                     IntPtr resultBuffer = Marshal.AllocHGlobal(bufferSize);
                     string? result = IntPtrToUtf8String(imx_finish_sell_or_offer_nft(nonce, GetPrivateKey(), signature.Signature, resultBuffer, bufferSize));
                     Marshal.FreeHGlobal(resultBuffer);
-                    Console.WriteLine(result ?? "No result");
+                    Log.Information($"Order creation finished with result: {result ?? "None"}");
                     if (result == null)
                     {
                         if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Text = "An unknown error occurred";
@@ -1643,7 +1645,7 @@ namespace GU_Exchange.Helpers
                     IntPtr resultBuffer = Marshal.AllocHGlobal(bufferSize);
                     string? result = IntPtrToUtf8String(imx_finish_cancel_order(prepareTask.orderID, Address, GetPrivateKey(), signature.Signature, resultBuffer, bufferSize));
                     Marshal.FreeHGlobal(resultBuffer);
-                    Console.WriteLine(result ?? "No result");
+                    Log.Information($"Order cancellation finished with result: {result ?? "None"}");
                     if (result == null)
                     {
                         if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Text = "An unknown error occurred";
@@ -1797,7 +1799,7 @@ namespace GU_Exchange.Helpers
             string? result = await transferTask;
 
             // Handle the server response
-            Console.WriteLine(result ?? "No result");
+            Log.Information($"Transfer finished with result: {result ?? "No result"}");
             if (result == null)
             {
                 tbStatus.Text = "An unknown error occurred";
@@ -1912,7 +1914,7 @@ namespace GU_Exchange.Helpers
             string? result = await transferTask;
 
             // Handle the server response
-            Console.WriteLine(result ?? "No result");
+            Log.Information($"Currency transfer finished with result: {result ?? "No result"}");
             if (result == null)
             {
                 tbStatus.Text = "An unknown error occurred";

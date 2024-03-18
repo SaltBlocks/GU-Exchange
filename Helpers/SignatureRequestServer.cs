@@ -1,4 +1,6 @@
-﻿using Newtonsoft.Json;
+﻿using Microsoft.VisualBasic;
+using Newtonsoft.Json;
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -109,7 +111,7 @@ namespace GU_Exchange.Helpers
                         s_listener.Prefixes.Add($"http://localhost:{ClientPort}/");
                         s_listener.Start();
                         startAttempts = 10;
-                        Console.WriteLine($"Web server started. Listening on http://localhost:{ClientPort}/");
+                        Log.Information($"Web server started. Listening on http://localhost:{ClientPort}/");
 
                         while (s_listener.IsListening)
                         {
@@ -170,13 +172,13 @@ namespace GU_Exchange.Helpers
                                 response.Close();
                             }
                         }
-                        Console.WriteLine("Server stopped");
+                        Log.Information("Server stopped");
                     }
                 }
                 catch (Exception ex)
                 {
                     // Handle other exceptions that may occur during server setup
-                    Console.WriteLine($"Error: {ex.Message}");
+                    Log.Warning($"An error occurred while running the signing server. {ex.Message}: {ex.StackTrace}");
                     ClientPort++;
                     startAttempts++;
                 }

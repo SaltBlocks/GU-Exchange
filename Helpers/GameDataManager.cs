@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -276,7 +277,7 @@ namespace GU_Exchange.Helpers
             }
             else
             {
-                Console.WriteLine($"File not found: players.db");
+                Log.Information($"File not found: {dataPath}");
             }
         }
 
@@ -427,7 +428,7 @@ namespace GU_Exchange.Helpers
                 }
                 catch (HttpRequestException)
                 {
-                    Console.WriteLine("GU api ratelimit hit.");
+                    Log.Warning($"GU api ratelimit hit.");
                 }
             }
             catch (OperationCanceledException)

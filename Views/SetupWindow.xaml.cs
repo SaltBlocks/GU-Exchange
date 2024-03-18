@@ -15,6 +15,8 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
 using GU_Exchange.Helpers;
+using Microsoft.VisualBasic;
+using Serilog;
 
 namespace GU_Exchange
 {
@@ -186,12 +188,13 @@ namespace GU_Exchange
                                 if (wlt.Address.Equals(wallet))
                                 {
                                     File.Delete(walletFile);
+                                    Log.Information($"Wallet {wlt.Address} was removed from disk.");
                                     break;
                                 }
                             }
                             catch (Exception e1)
                             {
-                                Console.WriteLine(e1.StackTrace);
+                                Log.Warning($"Failed to load and remove wallet: {e1.StackTrace}");
                                 continue;
                             }
                         }

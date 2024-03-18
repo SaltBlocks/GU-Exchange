@@ -5,8 +5,9 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Net;
+using Serilog;
 using System.Net.Http;
+using System.Printing;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -15,6 +16,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using GU_Exchange.Controls;
 using GU_Exchange.Helpers;
+using Serilog.Core;
 
 namespace GU_Exchange
 {
@@ -97,7 +99,6 @@ namespace GU_Exchange
         {
             Stopwatch loadTime = Stopwatch.StartNew();
             InitializeComponent();
-            //Console.WriteLine(Directory.GetCurrentDirectory());
             _cardList = new List<CardData>();
             _cardTiles = new List<CardTileControl>();
             _checkBoxes = new CheckBoxItems();
@@ -106,8 +107,13 @@ namespace GU_Exchange
             SetupSearchAsync();
             SetupAsync();
             _ = SetupWalletInfoAsync();
+            Log.Logger = new LoggerConfiguration()
+                .WriteTo.Console()
+                .WriteTo.File(Path.Combine(Settings.GetConfigFolder(), "logs-.log"), rollingInterval:RollingInterval.Day)
+                .MinimumLevel.Debug()
+                .CreateLogger();
             loadTime.Stop();
-            Console.WriteLine($"{loadTime.ElapsedMilliseconds}ms to load main window.");
+            Log.Information($"{loadTime.ElapsedMilliseconds}ms to load main window.");
         }
         #endregion
 
@@ -169,7 +175,6 @@ namespace GU_Exchange
                 setup.Owner = this;
                 setup.ShowDialog();
             }
-            Console.WriteLine(Wallet.GetConnectedWallet() == null);
         }
 
         /// <summary>
@@ -263,14 +268,14 @@ namespace GU_Exchange
                 return;
             try
             {
-                Console.WriteLine($"Fetching wallet content for wallet {connectedWallet.Address}");
+                Log.Information($"Fetching wallet content for wallet {connectedWallet.Address}");
                 txtEth.Text = $"{Math.Round(await connectedWallet.GetTokenAmountAsync("ETH", forceUpdate), 6)} ETH";
                 txtGods.Text = $"{Math.Round(await connectedWallet.GetTokenAmountAsync("GODS", forceUpdate), 2)} GODS";
                 txtImx.Text = $"{Math.Round(await connectedWallet.GetTokenAmountAsync("IMX", forceUpdate), 2)} IMX";
             }
             catch (HttpRequestException e)
             {
-                Console.WriteLine($"Failed to fetch wallet contents: {e.StackTrace}");
+                Log.Warning($"Failed to fetch wallet contents: {e.StackTrace}");
             }
         }
 

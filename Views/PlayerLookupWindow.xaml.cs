@@ -247,7 +247,6 @@ namespace GU_Exchange.Views
             {
                 _playerNameList.FirstOrDefault(x => x.StartsWith(input));
                 string? suggestedName = _playerNameList.FirstOrDefault(x => x.StartsWith(input));
-                Console.WriteLine(suggestedName);
                 if (suggestedName == null)
                 {
                     txtPlayerName.Text = "";

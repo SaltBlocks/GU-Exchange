@@ -1,4 +1,5 @@
 ﻿using GU_Exchange.Helpers;
+using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -61,7 +62,7 @@ namespace GU_Exchange
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error: {ex.Message}");
+                Log.Warning($"Failed to open Siging page in browser: {ex.StackTrace}");
             }
         }
 

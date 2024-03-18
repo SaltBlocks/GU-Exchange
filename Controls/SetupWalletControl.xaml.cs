@@ -8,6 +8,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using GU_Exchange.Helpers;
+using Serilog;
 using static GU_Exchange.Helpers.IMXlib;
 
 namespace GU_Exchange
@@ -148,7 +149,7 @@ namespace GU_Exchange
             }
             catch (Exception e1)
             {
-                Console.WriteLine(e1.StackTrace);
+                Log.Warning($"Failed to add wallet to internal wallet list: {e1.StackTrace}");
             }
             await ((MainWindow)Application.Current.MainWindow).SetupWalletInfoAsync();
             _parent.Close();
@@ -234,7 +235,7 @@ namespace GU_Exchange
             }
             catch (Exception e1)
             {
-                Console.WriteLine(e1.StackTrace);
+                Log.Warning($"Failed to add wallet to internal wallet list: {e1.StackTrace}");
             }
             wallet.LockWallet();
             await ((MainWindow)Application.Current.MainWindow).SetupWalletInfoAsync();
@@ -284,7 +285,7 @@ namespace GU_Exchange
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine(e.StackTrace);
+                    Log.Warning($"Failed to add wallet to internal wallet list: {e.StackTrace}");
                 }
                 await ((MainWindow)Application.Current.MainWindow).SetupWalletInfoAsync();
                 lblWebInstructions.Content = $"Wallet '{data.Address.Substring(0, 6)}...{data.Address.Substring(data.Address.Length - 4, 4)}' imported.";
@@ -324,7 +325,7 @@ namespace GU_Exchange
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error: {ex.Message}");
+                Log.Warning($"Failed to open signing page in browser: {ex.StackTrace}");
             }
         }
         #endregion
