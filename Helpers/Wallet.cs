@@ -6,6 +6,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Net.Http;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
@@ -563,6 +564,12 @@ namespace GU_Exchange.Helpers
                         window.Owner = (MainWindow)Application.Current.MainWindow;
                         window.ShowDialog();
                     }
+                    else
+                    {
+                        MessageWindow window = new MessageWindow($"Wallet not linked to IMX.", "Link wallet", MessageType.INFORM);
+                        window.Owner = (MainWindow)Application.Current.MainWindow;
+                        window.ShowDialog();
+                    }
                 }
             }
             else
@@ -740,8 +747,9 @@ namespace GU_Exchange.Helpers
                     reLock = true;
             }
 
-            Task<bool> linkWallet = Task.Run(() =>
+            Task<bool> linkWallet = Task.Run(async () =>
             {
+                await ResourceManager.RateLimiter.ReserveRequests(1);
                 IntPtr resultBuffer = Marshal.AllocHGlobal(500);
                 string? result = IntPtrToUtf8String(imx_register_address(GetPrivateKey(), resultBuffer, 500));
                 Marshal.FreeHGlobal(resultBuffer);
@@ -756,7 +764,15 @@ namespace GU_Exchange.Helpers
                 _isLinked = true;
                 return true;
             });
-            return await linkWallet;
+            try {
+                return await linkWallet;
+            }
+            catch (OperationCanceledException)
+            {
+                if (reLock)
+                    LockWallet();
+                return false;
+            }
         }
         #endregion
 
@@ -854,15 +870,21 @@ namespace GU_Exchange.Helpers
 
             // Prompt IMXlib to purchase the order.
             tbStatus.Text = "Submitting order to IMX...";
-            Task<string?> purchaseOrder = Task.Run(() =>
+            Task<string?> purchaseOrder = Task.Run(async () =>
             {
+                await ResourceManager.RateLimiter.ReserveRequests(2);
                 int bufferSize = 1024;
                 IntPtr resultBuffer = Marshal.AllocHGlobal(bufferSize);
                 string? result = IntPtrToString(imx_buy_order(order.OrderID.ToString(), (double)order.PriceTotal(), new Fee[0], 0, GetPrivateKey(), resultBuffer, bufferSize));
                 Marshal.FreeHGlobal(resultBuffer);
                 return result;
             });
-            string? result = await purchaseOrder;
+            string? result= null;
+            try
+            {
+                result = await purchaseOrder;
+            } catch (OperationCanceledException)
+            { }
 
             // Relock the wallet if requested by the user.
             if (reLock)
@@ -934,9 +956,18 @@ namespace GU_Exchange.Helpers
             foreach ((NFT card, string tokenID, double price, TextBlock? tbStatusListing) listing in listings)
             {
                 // Create a task for each listing so they can run asynchronously.
-                Task<(NFT card, bool result)> createListing = Task.Run(() =>
+                Task<(NFT card, bool result)> createListing = Task.Run(async () =>
                 {
                     // Submit the listing.
+                    try
+                    {
+                        await ResourceManager.RateLimiter.ReserveRequests(2);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        if (listing.tbStatusListing != null) listing.tbStatusListing.Text = "An unknown error occurred";
+                        return (listing.card, false);
+                    }
                     int bufferSize = 1024;
                     IntPtr resultBuffer = Marshal.AllocHGlobal(bufferSize);
                     string? result = IntPtrToString(imx_sell_nft(listing.card.token_address, listing.card.token_id.ToString(), listing.tokenID, listing.price, new Fee[0], 0, GetPrivateKey(), resultBuffer, bufferSize));
@@ -1033,8 +1064,17 @@ namespace GU_Exchange.Helpers
             foreach ((string orderID, TextBlock? tbStatusCancellation) order in orders)
             {
                 // Create a task for each cancellation so they can run asynchronously.
-                Task<(string orderID, bool result)> cancelListing = Task.Run(() =>
+                Task<(string orderID, bool result)> cancelListing = Task.Run(async () =>
                 {
+                    try
+                    {
+                        await ResourceManager.RateLimiter.ReserveRequests(2);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        if (order.tbStatusCancellation != null) order.tbStatusCancellation.Text = "An unknown error occurred";
+                        return (order.orderID, false);
+                    }
                     // Cancel the order.
                     int bufferSize = 1024;
                     IntPtr resultBuffer = Marshal.AllocHGlobal(bufferSize);
@@ -1128,15 +1168,21 @@ namespace GU_Exchange.Helpers
             tbStatus.Text = $"Submitting transfer{(cards.Count() > 1 ? "s" : "")} to IMX...";
 
             // Create a task for the transfers so they can run asynchronously.
-            Task<string?> transferCards = Task.Run(() =>
+            Task<string?> transferCards = Task.Run(async () =>
             {
+                await ResourceManager.RateLimiter.ReserveRequests(2);
                 int bufferSize = 1024;
                 IntPtr resultBuffer = Marshal.AllocHGlobal(bufferSize);
                 string? result = IntPtrToString(imx_transfer_nfts(cards, cards.Count(), receiverAddress, GetPrivateKey(), resultBuffer, bufferSize));
                 Marshal.FreeHGlobal(resultBuffer);
                 return result;
             });
-            string? result = await transferCards;
+            string? result = null;
+            try
+            {
+                result = await transferCards;
+            }
+            catch (OperationCanceledException) { }
 
             // Relock the wallet if requested by the user.
             if (reLock)
@@ -1207,15 +1253,21 @@ namespace GU_Exchange.Helpers
             tbStatus.Text = $"Submitting transfer to IMX...";
 
             // Create a task for the transfer so it can run asynchronously.
-            Task<string?> transferCurrency = Task.Run(() =>
+            Task<string?> transferCurrency = Task.Run(async () =>
             {
+                await ResourceManager.RateLimiter.ReserveRequests(2);
                 int bufferSize = 1024;
                 IntPtr resultBuffer = Marshal.AllocHGlobal(bufferSize);
                 string? result = IntPtrToString(imx_transfer_token(currency.Address, amount, receiverAddress, GetPrivateKey(), resultBuffer, bufferSize));
                 Marshal.FreeHGlobal(resultBuffer);
                 return result;
             });
-            string? result = await transferCurrency;
+            string? result = null;
+            try
+            {
+                result = await transferCurrency;
+            }
+            catch (OperationCanceledException) { }
 
             // Relock the wallet if requested by the user.
             if (reLock)
@@ -1307,8 +1359,9 @@ namespace GU_Exchange.Helpers
                 SignatureData linkSignature = await fetchSignature;
                 if (IsLocked())
                     await UnlockWallet();
-                Task<bool> linkWallet = Task.Run(() =>
+                Task<bool> linkWallet = Task.Run(async () =>
                 {
+                    await ResourceManager.RateLimiter.ReserveRequests(1);
                     IntPtr resultBuffer = Marshal.AllocHGlobal(500);
                     string? result = IntPtrToUtf8String(imx_register_address_presigned(Address, linkSignature.Signature, GetPrivateKey(), resultBuffer, 500));
                     Marshal.FreeHGlobal(resultBuffer);
@@ -1344,8 +1397,9 @@ namespace GU_Exchange.Helpers
 
             // Fetch data for signature request.
             tbStatus.Text = "Requesting order to purchase...";
-            Task<string?> requestBuy = Task.Run(() =>
+            Task<string?> requestBuy = Task.Run(async () =>
             {
+                await ResourceManager.RateLimiter.ReserveRequests(1);
                 int bufferSize = 1024;
                 IntPtr resultBuffer = Marshal.AllocHGlobal(bufferSize);
                 string? result = IntPtrToUtf8String(imx_request_buy_order(order.OrderID.ToString(), Address, new Fee[0], 0, resultBuffer, bufferSize));
@@ -1354,7 +1408,12 @@ namespace GU_Exchange.Helpers
             });
 
             // Handle server response.
-            string? signableRequest = await requestBuy;
+            string? signableRequest = null;
+            try
+            {
+                signableRequest = await requestBuy;
+            }
+            catch (OperationCanceledException) { }
             if (signableRequest == null)
             {
                 tbStatus.Text = "An unknown error occurred";
@@ -1394,15 +1453,21 @@ namespace GU_Exchange.Helpers
 
             // Prompt IMXlib to buy the order.
             tbStatus.Text = "Submitting order to IMX...";
-            Task<string?> purchaseOrder = Task.Run(() =>
+            Task<string?> purchaseOrder = Task.Run(async () =>
             {
+                await ResourceManager.RateLimiter.ReserveRequests(1);
                 int bufferSize = 1024;
                 IntPtr resultBuffer = Marshal.AllocHGlobal(bufferSize);
                 string? result = IntPtrToUtf8String(imx_finish_buy_order(nonce, (double)order.PriceTotal(), GetPrivateKey(), buySignature.Signature, resultBuffer, bufferSize));
                 Marshal.FreeHGlobal(resultBuffer);
                 return result;
             });
-            string? result = await purchaseOrder;
+            string? result = null;
+            try
+            {
+                result = await purchaseOrder;
+            }
+            catch (OperationCanceledException) { }
 
             // Handle the server response.
             if (result == null)
@@ -1451,8 +1516,16 @@ namespace GU_Exchange.Helpers
             List<(Task<string?>, NFT card, TextBlock?)> prepareTasks = new();
             foreach ((NFT card, string tokenID, double price, TextBlock? tbStatusListing) listing in listings)
             {
-                Task<string?> createListing = Task.Run(() =>
+                Task<string?> createListing = Task.Run(async () =>
                 {
+                    try
+                    {
+                        await ResourceManager.RateLimiter.ReserveRequests(1);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        return null;
+                    }
                     int bufferSize = 1024;
                     IntPtr resultBuffer = Marshal.AllocHGlobal(bufferSize);
                     string? result = IntPtrToUtf8String(imx_request_sell_nft(listing.card.token_address, listing.card.token_id.ToString(), listing.tokenID, listing.price, new Fee[0], 0, Address, resultBuffer, bufferSize));
@@ -1513,7 +1586,15 @@ namespace GU_Exchange.Helpers
                         if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Text = "Order creation failed (Cancelled by user)";
                         return false;
                     }
-
+                    try
+                    {
+                        await ResourceManager.RateLimiter.ReserveRequests(1);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Text = "An unknown error occurred";
+                        return false;
+                    }
                     int bufferSize = 1024;
                     IntPtr resultBuffer = Marshal.AllocHGlobal(bufferSize);
                     string? result = IntPtrToUtf8String(imx_finish_sell_or_offer_nft(nonce, GetPrivateKey(), signature.Signature, resultBuffer, bufferSize));
@@ -1600,8 +1681,16 @@ namespace GU_Exchange.Helpers
             List<(Task<string?>, string orderID, TextBlock?)> prepareTasks = new();
             foreach ((string orderID, TextBlock? tbStatusCancellation) order in orders)
             {
-                Task<string?> cancelListing = Task.Run(() =>
+                Task<string?> cancelListing = Task.Run(async () =>
                 {
+                    try
+                    {
+                        await ResourceManager.RateLimiter.ReserveRequests(1);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        return null;
+                    }
                     int bufferSize = 1024;
                     IntPtr resultBuffer = Marshal.AllocHGlobal(bufferSize);
                     string? result = IntPtrToUtf8String(imx_request_cancel_order(order.orderID, resultBuffer, bufferSize));
@@ -1642,7 +1731,15 @@ namespace GU_Exchange.Helpers
                         if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Text = "Order cancellation failed (Cancelled by user)";
                         return false;
                     }
-
+                    try
+                    {
+                        await ResourceManager.RateLimiter.ReserveRequests(1);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Text = "An unknown error occurred";
+                        return false;
+                    }
                     int bufferSize = 1024;
                     IntPtr resultBuffer = Marshal.AllocHGlobal(bufferSize);
                     string? result = IntPtrToUtf8String(imx_finish_cancel_order(prepareTask.orderID, Address, GetPrivateKey(), signature.Signature, resultBuffer, bufferSize));
@@ -1740,8 +1837,9 @@ namespace GU_Exchange.Helpers
             tbStatus.Text = $"Preparing to transfer card{(cards.Count() > 1 ? "s" : "")}...";
 
             // Create a task so this can run asynchronously.
-            Task<string?> requestTransferCards = Task.Run(() =>
+            Task<string?> requestTransferCards = Task.Run(async () =>
             {
+                await ResourceManager.RateLimiter.ReserveRequests(1);
                 int bufferSize = 1024;
                 IntPtr resultBuffer = Marshal.AllocHGlobal(bufferSize);
                 string? result = IntPtrToUtf8String(imx_request_transfer_nfts(cards, cards.Count(), receiverAddress, Address, resultBuffer, bufferSize));
@@ -1750,7 +1848,12 @@ namespace GU_Exchange.Helpers
             });
 
             // Handle server response.
-            string? signableRequest = await requestTransferCards;
+            string? signableRequest = null;
+            try
+            {
+                signableRequest = await requestTransferCards;
+            }
+            catch (OperationCanceledException) { }
             if (signableRequest == null)
             {
                 tbStatus.Text = "An unknown error occurred";
@@ -1855,8 +1958,9 @@ namespace GU_Exchange.Helpers
             tbStatus.Text = $"Preparing the transfer...";
 
             // Create a task so this can run asynchronously.
-            Task<string?> requestTransferCurrency = Task.Run(() =>
+            Task<string?> requestTransferCurrency = Task.Run(async () =>
             {
+                await ResourceManager.RateLimiter.ReserveRequests(1);
                 int bufferSize = 1024;
                 IntPtr resultBuffer = Marshal.AllocHGlobal(bufferSize);
                 string? result = IntPtrToUtf8String(imx_request_transfer_token(currency.Address, amount, receiverAddress, Address, resultBuffer, bufferSize));
@@ -1865,7 +1969,12 @@ namespace GU_Exchange.Helpers
             });
 
             // Handle server response.
-            string? signableRequest = await requestTransferCurrency;
+            string? signableRequest = null;
+            try
+            {
+                signableRequest = await requestTransferCurrency;
+            }
+            catch (OperationCanceledException) { }
             if (signableRequest == null)
             {
                 tbStatus.Text = "An unknown error occurred";

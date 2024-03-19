@@ -491,6 +491,11 @@ namespace GU_Exchange
                 window.Owner = (MainWindow)Application.Current.MainWindow;
                 window.ShowDialog();
                 await SetupInventoryAsync();
+            } else
+            {
+                MessageWindow window = new MessageWindow($"Wallet not linked to IMX.", "Link wallet", MessageType.INFORM);
+                window.Owner = (MainWindow)Application.Current.MainWindow;
+                window.ShowDialog();
             }
         }
 

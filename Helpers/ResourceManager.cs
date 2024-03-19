@@ -17,7 +17,8 @@ namespace GU_Exchange.Helpers
 {
     class ResourceManager
     {
-        public static HttpClient Client = new(handler:new RateLimitHandler(new HttpClientHandler(), 5));
+        public static RateLimitHandler RateLimiter = new RateLimitHandler(new HttpClientHandler(), 5);
+        public static HttpClient Client = new(handler: RateLimiter);
         public static SizedDictionary<string, BitmapSource> imgCache = new(30);
         private static string _cardFolder = Path.Combine(Settings.GetConfigFolder(), "cards");
 
