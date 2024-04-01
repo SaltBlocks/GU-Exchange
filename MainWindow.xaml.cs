@@ -668,5 +668,15 @@ namespace GU_Exchange
             window.Owner = this;
             window.ShowDialog();
         }
+
+        private void miBuyDeck_Click(object sender, RoutedEventArgs e)
+        {
+            CloseOverlay();
+            _overlayControl = new BuyDeckControl();
+            _overlayControl.Margin = new Thickness(0, 0, 0, 0);
+            Grid.SetRow(_overlayControl, 2);
+            Grid.SetRowSpan(_overlayControl, 4);
+            this.MainGrid.Children.Add(_overlayControl);
+        }
     }
 }

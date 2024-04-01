@@ -1,0 +1,57 @@
+﻿<UserControl x:Class="GU_Exchange.Controls.BuyDeckControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:GU_Exchange.Controls"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800" Background="#7FE4E4E4" SizeChanged="UserControl_SizeChanged" MouseDown="UserControl_MouseDown">
+    <Grid x:Name="controlGrid" Background="#FFE4E4E4">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="1*" MaxHeight="60"/>
+            <RowDefinition Height="20"/>
+            <RowDefinition Height="20"/>
+            <RowDefinition Height="4*"/>
+            <RowDefinition Height="30"/>
+            <RowDefinition Height="50"/>
+        </Grid.RowDefinitions>
+        <!-- #region Grid Border. -->
+        <Border BorderBrush="Black" BorderThickness="1" Grid.RowSpan="6"/>
+        <!--#endregion-->
+        <Viewbox Grid.Row="0" Margin="10,10,10,10">
+            <TextBlock Text="Purchase Deck" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
+        </Viewbox>
+        <Grid Grid.Row="1" Margin="5,0,5,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Text="Deck code:" Width="70" Grid.Column="0" Foreground="Black"/>
+            <TextBox x:Name="tbDeck" Text="" Height="20" Grid.Column="1"/>
+            <Button Content="Search" Grid.Column="2" Click="SearchDeck_Click"/>
+        </Grid>
+        <StackPanel Grid.Row="2" Margin="5,0,5,0" Orientation="Horizontal">
+            <TextBlock Text="Deck quality: " HorizontalAlignment="Left" VerticalAlignment="Center" Foreground="Black" Width="70" Margin="0,0,0,0"/>
+            <ComboBox x:Name="cbMinQuality" Width="100"/>
+        </StackPanel>
+        <StackPanel Grid.Row="2" Margin="5,0,5,0" Orientation="Horizontal" HorizontalAlignment="Right">
+            <TextBlock Text="Currency: " HorizontalAlignment="Left" VerticalAlignment="Center" Foreground="Black" Width="70" Margin="0,0,0,0"/>
+            <ComboBox x:Name="cbCurrency" Width="100"/>
+        </StackPanel>
+        <!--  #region Panel to display cards. -->
+        <ScrollViewer x:Name="scrollBar" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Auto" Margin="5,0,5,0" Grid.Row="3">
+            <WrapPanel x:Name="cardPanel" Margin="0,0,0,0" ScrollViewer.CanContentScroll="True" ScrollViewer.HorizontalScrollBarVisibility="Visible" MaxWidth="{Binding ActualWidth, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ScrollViewer}}}" HorizontalAlignment="Center"/>
+        </ScrollViewer>
+        <!-- #endregion -->
+        <Viewbox Grid.Row="4" Margin="0,0,0,0">
+            <TextBlock Text="Total: 00.000 ETH" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
+        </Viewbox>
+        <!-- #region Buttons. -->
+        <StackPanel HorizontalAlignment="Center" Grid.Row="5" Orientation="Horizontal">
+            <Button Content="Buy" Width="75" Height="25" Margin="10,5"/>
+            <Button Content="Cancel" Width="75" Height="25" Margin="10,5" Click="BtnCancel_Click" />
+        </StackPanel>
+        <!-- #endregion -->
+    </Grid>
+</UserControl>

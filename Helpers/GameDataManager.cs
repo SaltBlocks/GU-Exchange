@@ -7,6 +7,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Net.NetworkInformation;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 using System.Text.RegularExpressions;
@@ -847,6 +848,39 @@ namespace GU_Exchange.Helpers
                 }
             }
             return cardsInDeck;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="deckString"></param>
+        /// <returns></returns>
+        /// <exception cref="ArgumentNullException"/>
+        /// <exception cref="InvalidOperationException"/>
+        /// 
+        public static List<int> GetDeckList(string deckString)
+        {
+            List<int> deckList = new();
+            if (!deckString.StartsWith("GU_"))
+            {
+                throw new ArgumentNullException("Invalid deckstring provided.");
+            }
+            string[] parts = deckString.Split("_");
+            if (parts.Length == 4)
+            {
+                string c = parts[3];
+                Regex r = new Regex(".{1,3}");
+                List<string> groups = r.Matches(c).Select(m => m.Value).ToList();
+                foreach (string g in groups)
+                {
+                    long set = Decode(g.Substring(0, 1));
+                    int proto = Decode(g.Substring(1));
+                    string formatted = string.Format("L{0}-{1:D3}", set, proto);
+                    CardData card = s_loadedCardList.Values.Single(x => x.LibID == formatted);
+                    deckList.Add(card.ProtoID);
+                }
+            }
+            return deckList;
         }
 
         private static readonly string base52 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
