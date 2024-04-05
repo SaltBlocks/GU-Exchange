@@ -45,7 +45,7 @@
         </ScrollViewer>
         <!-- #endregion -->
         <Viewbox Grid.Row="4" Margin="0,0,0,0">
-            <TextBlock Text="Total: 00.000 ETH" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
+            <TextBlock x:Name="tbPriceTotal" Text="Fetching Orders..." HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
         </Viewbox>
         <!-- #region Buttons. -->
         <StackPanel HorizontalAlignment="Center" Grid.Row="5" Orientation="Horizontal">

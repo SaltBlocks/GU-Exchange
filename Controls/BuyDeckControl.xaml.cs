@@ -266,26 +266,89 @@ namespace GU_Exchange.Controls
             string deckString = tbDeck.Text;
             try
             {
-                List<int> deck = GameDataManager.GetDeckList(deckString);
+                Inventory? inv = (Inventory?) App.Current.Properties["Inventory"];
+                if (inv == null)
+                    return;
                 Dictionary<int, CardData>? cardList = await GameDataManager.GetCardListAsync();
                 if (cardList == null)
                     return;
+                List<int> deck = GameDataManager.GetDeckList(deckString);
+                Dictionary<int, int> deckCounts = deck.GroupBy(x => x).ToDictionary(g => g.Key, g => g.Count());
                 string? currency_name = (string?)this.cbCurrency.SelectedItem;
                 if (currency_name == null)
                     throw new NullReferenceException("No token selected for purchase.");
                 Token token = (await Wallet.FetchTokens())[currency_name];
                 CancellationTokenSource cts = new();
-                foreach (int i in deck)
+                int minQuality = 5 - cbMinQuality.SelectedIndex;
+                int buyQuality = minQuality < 5 ? minQuality : 4;
+                List<OrderDisplayControl> ownedCards = new();
+                List<Task<bool>> loadOrderTasks = new();
+                foreach (int proto in deckCounts.Keys)
                 {
-                    string cardName = cardList[i].Name;
-                    OrderDisplayControl control = new(cardName, i, 3);
-                    cardPanel.Children.Add(control);
-                    control.SetOrder(await GetOrderForCard(i, 4, token, 0, cts.Token));
+                    string cardName = cardList[proto].Name;
+                    int amount = deckCounts[proto];
+                    for (int quality = 1; quality <= minQuality; quality++)
+                    {
+                        int numOwned = inv.GetNumberOwned(proto, quality);
+                        for (int i = 0; i < numOwned; i++)
+                        {
+                            if (amount == 0)
+                                break;
+                            OrderDisplayControl control = new(cardName, proto, quality);
+                            control.SetOwned(true);
+                            ownedCards.Add(control);
+                            amount--;
+                        }
+                    }
+
+                    
+                    for (int i = 0; i < amount; i++)
+                    {
+                        OrderDisplayControl control = new(cardName, proto, buyQuality);
+                        cardPanel.Children.Add(control);
+                        Task<bool> loadOrderTask = control.SetOrder(GetOrderForCard(proto, buyQuality, token, i, cts.Token));
+                        loadOrderTasks.Add(loadOrderTask);
+                    }
                 }
+                foreach (OrderDisplayControl cardOwned in ownedCards)
+                {
+                    cardPanel.Children.Add(cardOwned);
+                }
+                bool[] results = await Task.WhenAll(loadOrderTasks.ToArray());
+                bool success = results.All(x => x);
+                
+                if (success)
+                {
+                    decimal priceTotal = 0;
+                    foreach (OrderDisplayControl control in cardPanel.Children)
+                    {
+                        Order? order = control.GetOrder();
+                        if (order != null)
+                        {
+                            priceTotal += order.PriceTotal();
+                        }
+                    }
+                    decimal? ConversionRate = token.Value;
+                    if (ConversionRate == null)
+                    {
+                        tbPriceTotal.Text = $"Total: {priceTotal} {currency_name}";
+                    }
+                    else
+                    {
+                        tbPriceTotal.Text = $"Total: {priceTotal} {currency_name} (${(priceTotal * (decimal)ConversionRate).ToString("0.00")})";
+                    }
+                }
+                else
+                {
+                    tbPriceTotal.Text = "Failed to fetch orders.";
+                }
+                
             }
-            catch (Exception)
+            catch (Exception e1)
             {
                 Console.WriteLine("Invalid Deckstring");
+                Console.WriteLine(e1.Message);
+                Console.WriteLine(e1.StackTrace);
             }
         }
 

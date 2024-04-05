@@ -23,6 +23,7 @@ namespace GU_Exchange.Controls
     public partial class OrderDisplayControl : UserControl
     {
         private CancellationTokenSource imgToken;
+        private Order? _order;
         public string CardName { get; private set; }
         public int ProtoID { get; private set; }
         public int Quality { get; private set; }
@@ -43,10 +44,62 @@ namespace GU_Exchange.Controls
             imgCard.Source = await ResourceManager.GetCardImageAsync(ProtoID, Quality, false, imgToken.Token);
         }
 
+        public async Task<bool> SetOrder(Task<Order> task)
+        {
+            try
+            {
+                SetOrder(await task);
+                return true;
+            }
+            catch (Exception)
+            {
+                SetError(true);
+            }
+            return false;
+        }
+
         public void SetOrder(Order order)
         {
+            _order = order;
             tbPrice.Text = $"{Math.Round(order.PriceTotal(), 10)} {order.Currency}";
             spLoading.Visibility = Visibility.Collapsed;
+        }
+
+        public Order? GetOrder()
+        {
+            return _order;
+        }
+
+        public void SetOwned(bool owned)
+        {
+            if (owned)
+            {
+                spLoading.Visibility = Visibility.Collapsed;
+                spOwned.Visibility = Visibility.Visible;
+                spFailed.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                spLoading.Visibility = Visibility.Visible;
+                spOwned.Visibility = Visibility.Collapsed;
+                spFailed.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        public void SetError(bool error)
+        {
+            if (error)
+            {
+                spLoading.Visibility = Visibility.Collapsed;
+                spOwned.Visibility = Visibility.Collapsed;
+                spFailed.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                spLoading.Visibility = Visibility.Visible;
+                spOwned.Visibility = Visibility.Collapsed;
+                spFailed.Visibility = Visibility.Collapsed;
+            }
         }
     }
 }
