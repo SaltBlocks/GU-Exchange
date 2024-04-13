@@ -49,7 +49,7 @@
         </Viewbox>
         <!-- #region Buttons. -->
         <StackPanel HorizontalAlignment="Center" Grid.Row="5" Orientation="Horizontal">
-            <Button x:Name="btnBuy" Content="Buy" Width="75" Height="25" Margin="10,5" IsEnabled="False"/>
+            <Button x:Name="btnBuy" Content="Buy" Width="75" Height="25" Margin="10,5" IsEnabled="False" Click="btnBuy_Click"/>
             <Button Content="Cancel" Width="75" Height="25" Margin="10,5" Click="BtnCancel_Click" />
         </StackPanel>
         <!-- #endregion -->

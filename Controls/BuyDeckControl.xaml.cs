@@ -7,6 +7,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Security.Policy;
 using System.Text;
@@ -304,9 +305,28 @@ namespace GU_Exchange.Controls
             }
         }
 
-        private async void updateOrderDisplay(OrderDisplayControl display)
+        private async void btnBuy_Click(object sender, RoutedEventArgs e)
         {
-
+            List<(Order order, TextBlock? statusText)> orderData = new();
+            foreach (OrderDisplayControl orderDisplay in cardPanel.Children)
+            {
+                Order? order = orderDisplay.GetOrder();
+                if (order != null)
+                {
+                    orderDisplay.SetLoading(true);
+                    orderData.Add((order, orderDisplay.getStatustextBlock()));
+                }
+            }
+            foreach ((Order order, TextBlock? statusText) order in orderData)
+            {
+                Console.WriteLine($"{order.order.Name}");
+            }
+            Wallet? wallet = Wallet.GetConnectedWallet();
+            if (wallet == null)
+            {
+                return;
+            }
+            await wallet.RequestBuyOrders(Application.Current.MainWindow, orderData.ToArray(), tbStatus);
         }
     }
 }

@@ -70,6 +70,22 @@ namespace GU_Exchange.Controls
             return _order;
         }
 
+        public void SetLoading(bool loading)
+        {
+            if (loading)
+            {
+                spLoading.Visibility = Visibility.Visible;
+                spOwned.Visibility = Visibility.Collapsed;
+                spFailed.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                spLoading.Visibility = Visibility.Collapsed;
+                spOwned.Visibility = Visibility.Collapsed;
+                spFailed.Visibility = Visibility.Collapsed;
+            }
+        }
+
         public void SetOwned(bool owned)
         {
             if (owned)
@@ -100,6 +116,11 @@ namespace GU_Exchange.Controls
                 spOwned.Visibility = Visibility.Collapsed;
                 spFailed.Visibility = Visibility.Collapsed;
             }
+        }
+
+        public TextBlock getStatustextBlock()
+        {
+            return tbStatus;
         }
     }
 }
