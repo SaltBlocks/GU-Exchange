@@ -16,8 +16,8 @@
 
             <!-- #region Template for combobox with checkmarks. -->
             <DataTemplate x:Key="CheckBoxTemplate">
-                <StackPanel Orientation="Horizontal" MouseLeftButtonUp="CostFilter_MouseLeftButtonUp">
-                    <CheckBox IsChecked="{Binding IsChecked}" Checked="CheckBox_actionAsync" Unchecked="CheckBox_actionAsync" />
+                <StackPanel Orientation="Horizontal">
+                    <CheckBox IsChecked="{Binding IsChecked}" />
                     <TextBlock Text="{Binding Label}" Margin="5,0,0,0" />
                 </StackPanel>
             </DataTemplate>
@@ -166,7 +166,7 @@
                 <Viewbox Grid.Row="0">
                     <TextBlock x:Name="tbCost" Text="Mana cost"/>
                 </Viewbox>
-                <ComboBox x:Name="cbCost" Width="{Binding ActualWidth, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Grid}}}" ItemTemplate="{StaticResource CheckBoxTemplate}" Grid.Row="1" />
+                <ComboBox x:Name="cbCost" Width="{Binding ActualWidth, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type Grid}}}" ItemTemplate="{StaticResource CheckBoxTemplate}" Grid.Row="1" SelectionChanged="cbCost_SelectionChanged" />
             </Grid>
             <Grid Grid.Column="5">
                 <Grid.RowDefinitions>

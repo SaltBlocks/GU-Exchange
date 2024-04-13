@@ -17,6 +17,7 @@ using System.Windows.Media;
 using GU_Exchange.Controls;
 using GU_Exchange.Helpers;
 using Serilog.Core;
+using Newtonsoft.Json.Bson;
 
 namespace GU_Exchange
 {
@@ -66,11 +67,12 @@ namespace GU_Exchange
         public CheckBoxItems()
         {
             Items = new ObservableCollection<CheckBoxItem>();
+            Items.Add(new CheckBoxItem("Any Cost", true));
             for (int i = 1; i < 9; i++)
             {
-                Items.Add(new CheckBoxItem("Cost " + i, true));
+                Items.Add(new CheckBoxItem("Cost " + i, false));
             }
-            Items.Add(new CheckBoxItem("Cost 9+", true));
+            Items.Add(new CheckBoxItem("Cost 9+", false));
         }
     }
 
@@ -89,6 +91,7 @@ namespace GU_Exchange
         private CancellationTokenSource? _imgUpdateTokenSource = null;  // Used to keep track of the card tiles being updated.
         private UserControl? _overlayControl;                           // Overlay used for trading a selected card.
         private bool _setupComplete;                                    // Indicates that search setup has finished.
+        private bool modifyingManaFilter = false;                       // Used to prevent looping when modifying the mana cost filer.
         #endregion
 
         #region Default Constructor.
@@ -211,6 +214,10 @@ namespace GU_Exchange
             {
                 cbSort.Items.Add(sortType);
             }
+            foreach (CheckBoxItem chck in _checkBoxes.Items)
+            {
+                chck.PropertyChanged += CheckBoxItem_PropertyChanged;
+            }
             cbCost.ItemsSource = _checkBoxes.Items;
             cbSet.SelectedIndex = 0;
             cbGod.SelectedIndex = 0;
@@ -318,9 +325,9 @@ namespace GU_Exchange
                         tribe = "";
                 }
                 List<int> manaCosts = new List<int>();
-                for (int i = 0; i < 9; i++)
-                    if (_checkBoxes.Items[i].IsChecked)
-                        manaCosts.Add(i + 1);
+                for (int i = 1; i < 10; i++)
+                    if (_checkBoxes.Items[i].IsChecked || _checkBoxes.Items[0].IsChecked)
+                        manaCosts.Add(i);
                 if (cbSort.SelectedValue != null)
                     sort = (string)cbSort.SelectedValue;
                 _cardList = await GameDataManager.searchCardsAsync(this.searchBar.Text, token, set, god, rarity, tribe, manaCosts, sort);
@@ -446,20 +453,60 @@ namespace GU_Exchange
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void CostFilter_MouseLeftButtonUp(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        private void cbCost_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            StackPanel panel = (StackPanel)sender;
-            CheckBox cb = (CheckBox)panel.Children[0];
-            cb.IsChecked = !cb.IsChecked;
+            if (!_setupComplete)
+                return;
+            modifyingManaFilter = true;
+            CheckBoxItem item = (CheckBoxItem)cbCost.SelectedItem;
+            foreach (CheckBoxItem it in _checkBoxes.Items)
+            {
+                it.IsChecked = false;
+            }
+            modifyingManaFilter = false;
+            item.IsChecked = true;
         }
 
-        /// <summary>
-        /// Updates the displayed card tiles when the mana cost selection is modified.
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private async void CheckBox_actionAsync(object sender, RoutedEventArgs e)
+        private async void CheckBoxItem_PropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
+            if (sender == null || modifyingManaFilter)
+                return;
+            modifyingManaFilter = true;
+            CheckBoxItem item = (CheckBoxItem)sender;
+            if (item.Label == "Any Cost")
+            {
+                if (item.IsChecked == true)
+                {
+                    for (int i = 1; i < _checkBoxes.Items.Count; i++)
+                    {
+                        _checkBoxes.Items[i].IsChecked = false;
+                    }
+                }
+                else
+                {
+                    item.IsChecked = true;
+                }
+            }
+
+            bool allChecked = _checkBoxes.Items.All(x => x.IsChecked || (x.Label?.Equals("Any Cost") ?? false));
+            bool anyChecked = _checkBoxes.Items.Any(x => x.IsChecked && !(x.Label?.Equals("Any Cost") ?? true));
+            if (allChecked)
+            {
+                _checkBoxes.Items[0].IsChecked = true;
+                cbCost.SelectedIndex = 0;
+                for (int i = 1; i < _checkBoxes.Items.Count; i++)
+                {
+                    _checkBoxes.Items[i].IsChecked = false;
+                }
+            } else if (anyChecked)
+            {
+                _checkBoxes.Items[0].IsChecked = false;
+            } else if (_checkBoxes.Items[0].IsChecked == false)
+            {
+                _checkBoxes.Items[0].IsChecked = true;
+                cbCost.SelectedIndex = 0;
+            }
+            modifyingManaFilter = false;
             await SearchChangedAsync();
         }
 

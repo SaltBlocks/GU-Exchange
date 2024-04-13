@@ -632,7 +632,7 @@ namespace GU_Exchange.Helpers
         /// <returns></returns>
         private static async Task SetupCardListAsync(Dictionary<int, CardData>? CachedCardList)
         {
-            Dictionary<int, CardData>? CardList = await FetchCardListAsync();
+            Dictionary<int, CardData>? CardList;
             try
             {
                 CardList = await FetchCardListAsync();

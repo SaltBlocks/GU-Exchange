@@ -69,66 +69,6 @@ namespace GU_Exchange.Controls
                     qualityStr = "Diamond";
                     break;
             }
-            Wallet? wallet = Wallet.GetConnectedWallet();
-            if (wallet == null)
-            {
-                return;
-            }
-
-            OrderDisplayControl control = new("adsf", CardID, quality);
-            cardPanel.Children.Add(control);
-            string cardData = HttpUtility.UrlEncode("{\"proto\":[\"" + CardID + "\"],\"quality\":[\"" + qualityStr + "\"]}");
-            string? currency_name = "ETH";// (string?)this.cbToken.SelectedItem;
-            if (currency_name == null)
-                return;
-            Token currency = (await Wallet.FetchTokens())[currency_name];
-            string token_str = currency.Address;
-            if (token_str.Equals("ETH"))
-                token_str = "&buy_token_type=ETH";
-            string urlOrderBook = $"https://api.x.immutable.com/v3/orders?buy_token_address={token_str}&direction=asc&include_fees=true&order_by=buy_quantity&page_size=50&sell_metadata={cardData}&sell_token_address=0xacb3c6a43d15b907e8433077b6d38ae40936fe2c&status=active";
-            Console.WriteLine(urlOrderBook);
-            string strOrderBook;
-            try
-            {
-                Log.Information($"Fetching orders for {CardID} of quality {quality}");
-                strOrderBook = await ResourceManager.Client.GetStringAsync(urlOrderBook, cancelToken);
-            }
-            catch (Exception ex) when (ex is OperationCanceledException || ex is HttpRequestException)
-            {
-                if (ex is HttpRequestException)
-                    Log.Information($"Failed to fetching orders for {CardID} of quality {quality}. {ex.Message}: {ex.StackTrace}");
-                return;
-            }
-            List<Order> orders = new();
-
-            // Extract orders from the data returned by the server.
-            JObject? jsonOrders = (JObject?)JsonConvert.DeserializeObject(strOrderBook);
-            if (jsonOrders == null)
-                return;
-            JToken? result = jsonOrders["result"];
-            if (result != null)
-            {
-                foreach (JToken order in result)
-                {
-                    try
-                    {
-                        Order or = new Order(order, currency.Name);
-                        if (or.Seller.ToLower().Equals(wallet.Address))
-                        {
-                            continue;
-                        }
-                        orders.Add(or);
-                    }
-                    catch (NullReferenceException)
-                    {
-                    }
-                }
-            }
-
-            if (orders.Count > 0)
-            {
-                control.SetOrder(orders[0]);
-            }
         }
 
         /// <summary>
@@ -215,15 +155,15 @@ namespace GU_Exchange.Controls
         private void UserControl_SizeChanged(object sender, SizeChangedEventArgs e)
         {
             double maxWidth = 1400;
-            double maxHeight = 700;
+            double maxHeight = 800;
 
             double width = Math.Min(this.ActualWidth, maxWidth);
-            double height = width / 2;
+            double height = width / 1.75;
 
             if (height > this.ActualHeight)
             {
                 height = Math.Min(this.ActualHeight, maxHeight);
-                width = height * 2;
+                width = height * 1.75;
             }
 
             this.controlGrid.Height = height - 10;
@@ -262,21 +202,32 @@ namespace GU_Exchange.Controls
 
         private async void SearchDeck_Click(object sender, RoutedEventArgs e)
         {
+            btnBuy.IsEnabled = false;
+            tbStatus.Text = "Loading orders...";
             cardPanel.Children.Clear();
             string deckString = tbDeck.Text;
             try
             {
                 Inventory? inv = (Inventory?) App.Current.Properties["Inventory"];
                 if (inv == null)
+                {
+                    tbStatus.Text = "No inventory connected to check decklist against.";
                     return;
+                }
                 Dictionary<int, CardData>? cardList = await GameDataManager.GetCardListAsync();
                 if (cardList == null)
+                {
+                    tbStatus.Text = "Error loading cardlist.";
                     return;
+                }
                 List<int> deck = GameDataManager.GetDeckList(deckString);
                 Dictionary<int, int> deckCounts = deck.GroupBy(x => x).ToDictionary(g => g.Key, g => g.Count());
                 string? currency_name = (string?)this.cbCurrency.SelectedItem;
                 if (currency_name == null)
-                    throw new NullReferenceException("No token selected for purchase.");
+                {
+                    tbStatus.Text = "Failed to find buy token.";
+                    return;
+                }
                 Token token = (await Wallet.FetchTokens())[currency_name];
                 CancellationTokenSource cts = new();
                 int minQuality = 5 - cbMinQuality.SelectedIndex;
@@ -331,16 +282,17 @@ namespace GU_Exchange.Controls
                     decimal? ConversionRate = token.Value;
                     if (ConversionRate == null)
                     {
-                        tbPriceTotal.Text = $"Total: {priceTotal} {currency_name}";
+                        tbStatus.Text = $"Total: {priceTotal} {currency_name}";
                     }
                     else
                     {
-                        tbPriceTotal.Text = $"Total: {priceTotal} {currency_name} (${(priceTotal * (decimal)ConversionRate).ToString("0.00")})";
+                        tbStatus.Text = $"Total: {priceTotal} {currency_name} (${(priceTotal * (decimal)ConversionRate).ToString("0.00")})";
                     }
+                    btnBuy.IsEnabled = true;
                 }
                 else
                 {
-                    tbPriceTotal.Text = "Failed to fetch orders.";
+                    tbStatus.Text = "Failed to find offers for all required cards.";
                 }
                 
             }
