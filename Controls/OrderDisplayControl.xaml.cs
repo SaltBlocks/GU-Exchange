@@ -102,8 +102,9 @@ namespace GU_Exchange.Controls
             }
         }
 
-        public void SetError(bool error)
+        public void SetError(bool error, string? errorMsg = null)
         {
+            tbError.Text = errorMsg == null ? "Failed to fetch order" : errorMsg;
             if (error)
             {
                 spLoading.Visibility = Visibility.Collapsed;

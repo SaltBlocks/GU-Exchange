@@ -188,6 +188,7 @@ namespace GU_Exchange.Controls
                 return;
             }
             // Click occurred outside controlGrid, you can call your function here
+            ResourceManager.RateLimiter.CancelRequestsAndReset();
             ((MainWindow)Application.Current.MainWindow).CloseOverlay();
         }
 
@@ -307,26 +308,37 @@ namespace GU_Exchange.Controls
 
         private async void btnBuy_Click(object sender, RoutedEventArgs e)
         {
+            btnBuy.IsEnabled = false;
+            _cachedOrders.Clear();
             List<(Order order, TextBlock? statusText)> orderData = new();
+            Dictionary<Order, OrderDisplayControl> controlDict = new();
             foreach (OrderDisplayControl orderDisplay in cardPanel.Children)
             {
                 Order? order = orderDisplay.GetOrder();
                 if (order != null)
                 {
                     orderDisplay.SetLoading(true);
+                    controlDict.Add(order, orderDisplay);
                     orderData.Add((order, orderDisplay.getStatustextBlock()));
                 }
-            }
-            foreach ((Order order, TextBlock? statusText) order in orderData)
-            {
-                Console.WriteLine($"{order.order.Name}");
             }
             Wallet? wallet = Wallet.GetConnectedWallet();
             if (wallet == null)
             {
                 return;
             }
-            await wallet.RequestBuyOrders(Application.Current.MainWindow, orderData.ToArray(), tbStatus);
+            Dictionary<Order, bool> resultData = await wallet.RequestBuyOrders(Application.Current.MainWindow, orderData.ToArray(), tbStatus);
+            foreach (Order order in resultData.Keys)
+            {
+                if (resultData[order])
+                {
+                    controlDict[order].SetOwned(true);
+                }
+                else
+                {
+                    controlDict[order].SetError(true, "Purchase failed");
+                }
+            }
         }
     }
 }

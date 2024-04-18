@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Net.Http;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Soap;
@@ -945,7 +946,7 @@ namespace GU_Exchange.Helpers
                         }
                         tbStatus.Text = "Listing(s) cancelled.";
                     }
-                    return orders.ToDictionary(x => x.order, x => false); ;
+                    return orders.ToDictionary(x => x.order, x => false);
                 }
                 reLock = unlockWindow.Result == UnlockWalletWindow.UnlockResult.Relock;
             }
@@ -990,6 +991,7 @@ namespace GU_Exchange.Helpers
                     }
                     return (order.order, order.tbStatusListing, "Purchase complete.", true);
                 });
+                if (order.tbStatusListing != null) order.tbStatusListing.Text = "Buying card...";
                 // Add the task to a list of tasks so we can track when they finish.
                 listTasks.Add(createListing);
             }
@@ -1605,6 +1607,144 @@ namespace GU_Exchange.Helpers
             }
             tbStatus.Text = "Purchase complete";
             return true;
+        }
+
+        /// <summary>
+        /// Request the user to buy one or multiple orders.
+        /// This will purchase the orders immediately if the private key for the <see cref="Wallet"/> is unlocked and available.
+        /// </summary>
+        /// <param name="parent"></param>
+        /// <param name="orders"></param>
+        /// <param name="tbStatus"></param>
+        /// <returns></returns>
+        public override async Task<Dictionary<Order, bool>> RequestBuyOrders(Window parent, (Order order, TextBlock? tbStatusListing)[] orders, TextBlock tbStatus)
+        {
+            // Unlock user wallet.
+            foreach ((Order order, TextBlock? tbStatusListing) order in orders)
+            {
+                if (order.tbStatusListing != null) order.tbStatusListing.Text = "Waiting for wallet...";
+            }
+            tbStatus.Text = "Waiting for wallet to be unlocked...";
+            bool reLock = false;
+            if (IsLocked())
+                await UnlockWallet();
+
+            // Fetch data for signature requests.
+            tbStatus.Text = "Fetching orders...";
+            List<(Task<string?> fetchTask, Order order, TextBlock? tbStatusListing)> prepareTasks = new();
+            foreach ((Order order, TextBlock? tbStatusListing) order in orders)
+            {
+                Task<string?> fetchOrder = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await ResourceManager.RateLimiter.ReserveRequests(1);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        return null;
+                    }
+                    int bufferSize = 1024;
+                    IntPtr resultBuffer = Marshal.AllocHGlobal(bufferSize);
+                    string? result = IntPtrToUtf8String(imx_request_buy_order(order.order.OrderID.ToString(), Address, new Fee[0], 0, resultBuffer, bufferSize));
+                    Marshal.FreeHGlobal(resultBuffer);
+                    return result;
+                });
+                if (order.tbStatusListing != null) order.tbStatusListing.Text = "Fetching order...";
+                prepareTasks.Add((fetchOrder, order.order, order.tbStatusListing));
+            }
+
+            // Wait for all tasks to finish one by one and update the status text.
+            Dictionary<Task<string?>, TextBlock?> prepDict = prepareTasks.ToDictionary(x => x.fetchTask, x => x.tbStatusListing);
+            while (prepDict.Count > 0)
+            {
+                Task<string?> completed = await Task.WhenAny(prepDict.Keys);
+                Console.WriteLine(await completed);
+                TextBlock? tbStatusListing = prepDict[completed];
+                if (tbStatusListing != null) tbStatusListing.Text = "Order Fetched";
+                prepDict.Remove(completed);
+            }
+            return orders.ToDictionary(x => x.order, x => false);
+            /*
+                await Task.WhenAll(prepareTasks.Select(x => x.Item1));
+
+            // Prompt IMXlib to submit the listings.
+            tbStatus.Text = $"Purchasing order{(orders.Count() > 1 ? "s" : "")} on IMX...";
+            List<Task<(Order order, TextBlock? tbStatusListing, string message, bool result)>> listTasks = new();
+            foreach ((Order order, TextBlock? tbStatusListing) order in orders)
+            {
+                // Create a task for each listing so they can run asynchronously.
+                Task<(Order order, TextBlock? tbStatusListing, string message, bool result)> createListing = Task.Run(async () =>
+                {
+                    // Purchase the order.
+                    try
+                    {
+                        await ResourceManager.RateLimiter.ReserveRequests(2);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        return (order.order, order.tbStatusListing, "Unknown error", false);
+                    }
+                    int bufferSize = 1024;
+                    IntPtr resultBuffer = Marshal.AllocHGlobal(bufferSize);
+                    string? result = IntPtrToString(imx_buy_order(order.order.OrderID.ToString(), (double)order.order.PriceTotal(), new Fee[0], 0, GetPrivateKey(), resultBuffer, bufferSize));
+                    Marshal.FreeHGlobal(resultBuffer);
+
+                    // Handle the server response
+                    Log.Information($"Order purchase finished with result: {result ?? "None"}");
+                    if (result == null)
+                    {
+                        return (order.order, order.tbStatusListing, "Unknown error", false);
+                    }
+                    if (!result.Contains("trade_id"))
+                    {
+                        JObject? jsonResult = (JObject?)JsonConvert.DeserializeObject(result);
+                        string? message = (string?)jsonResult?.SelectToken("code");
+                        if (message == null)
+                        {
+                            return (order.order, order.tbStatusListing, "Unknown error", false);
+                        }
+                        return (order.order, order.tbStatusListing, message, false);
+                    }
+                    return (order.order, order.tbStatusListing, "Purchase complete.", true);
+                });
+                if (order.tbStatusListing != null) order.tbStatusListing.Text = "Buying card...";
+                // Add the task to a list of tasks so we can track when they finish.
+                listTasks.Add(createListing);
+            }
+
+            // Wait for all tasks to finish one by one and update the status text.
+            List<Task<(Order order, TextBlock? tbStatusListing, string message, bool result)>> listTasksCopy = new(listTasks);
+            while (listTasksCopy.Count > 0)
+            {
+                Task<(Order order, TextBlock? tbStatusListing, string message, bool result)> completed = await Task.WhenAny(listTasksCopy);
+                listTasksCopy.Remove(completed);
+                (Order order, TextBlock? tbStatusListing, string message, bool result) data = await completed;
+                if (data.tbStatusListing != null) data.tbStatusListing.Text = data.message;
+            }
+
+            // Wait for list tasks to finish.
+            (Order order, TextBlock? tbStatusListing, string message, bool res)[] results = await Task.WhenAll(listTasks);
+
+            // Relock the wallet if requested by the user.
+            if (reLock)
+                LockWallet();
+
+            // Inform the user about the combined result of all listings.
+            if (results.All(x => x.res))
+            {
+                tbStatus.Text = $"Order{(orders.Count() > 1 ? "s" : "")} purchased on IMX";
+            }
+            else if (results.All(x => !x.res))
+            {
+                tbStatus.Text = $"Failed to purchase order{(orders.Count() > 1 ? "s" : "")}";
+            }
+            else
+            {
+                tbStatus.Text = "Not all orders could be purchased.";
+            }
+
+            return results.ToDictionary(x => x.order, x => x.res);*/
         }
 
         /// <summary>
