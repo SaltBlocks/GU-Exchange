@@ -17,6 +17,7 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using static GU_Exchange.Helpers.IMXlib;
 
 namespace GU_Exchange.Helpers
@@ -515,6 +516,24 @@ namespace GU_Exchange.Helpers
             return null;
         }
 
+        public static async void WarnUnlinkedWallet(Wallet? wlt)
+        {
+            if (wlt == null)
+                return;
+            int apolloID = Settings.GetApolloID();
+            bool dontCheckGUConnected;
+            try
+            {
+                if (apolloID != -1 && !await GameDataManager.IsWalletLinked(apolloID, wlt.Address) && (!bool.TryParse(Settings.GetSetting("dont_check_GU_connected"), out dontCheckGUConnected) || !dontCheckGUConnected))
+                {
+                    MessageWindow window = new MessageWindow($"The inventory shown on the main screen will not reflect cards in your wallet as it is not linked to your GU account.", "GU link missing", MessageType.INFORM, true, "dont_check_GU_connected");
+                    window.Owner = (MainWindow)Application.Current.MainWindow;
+                    window.ShowDialog();
+                }
+            }
+            catch (HttpRequestException) { }
+        }
+
         /// <summary>
         /// Get the currently connected <see cref="Wallet"/>.
         /// </summary>
@@ -543,18 +562,7 @@ namespace GU_Exchange.Helpers
                     SignatureRequestServer.RequestedAddress = "*";
                     SignatureRequestServer.StopServer();
                 }
-                int apolloID = Settings.GetApolloID();
-                bool dontCheckGUConnected;
-                try
-                {
-                    if (apolloID != -1 && !await GameDataManager.IsWalletLinked(apolloID, wallet.Address) && (!bool.TryParse(Settings.GetSetting("dont_check_GU_connected"), out dontCheckGUConnected) || !dontCheckGUConnected))
-                    {
-                        MessageWindow window = new MessageWindow($"The inventory shown on the main screen will not reflect cards in this wallet as it is not linked to your GU account.", "GU link missing", MessageType.INFORM, true, "dont_check_GU_connected");
-                        window.Owner = (MainWindow)Application.Current.MainWindow;
-                        window.ShowDialog();
-                    }
-                }
-                catch (HttpRequestException) { }
+                WarnUnlinkedWallet(wallet);
 
                 bool? isLinked = await wallet.IsLinkedAsync();
                 if (isLinked != null && !(bool)isLinked)
@@ -1625,7 +1633,6 @@ namespace GU_Exchange.Helpers
                 if (order.tbStatusListing != null) order.tbStatusListing.Text = "Waiting for wallet...";
             }
             tbStatus.Text = "Waiting for wallet to be unlocked...";
-            bool reLock = false;
             if (IsLocked())
                 await UnlockWallet();
 
@@ -1659,42 +1666,98 @@ namespace GU_Exchange.Helpers
             while (prepDict.Count > 0)
             {
                 Task<string?> completed = await Task.WhenAny(prepDict.Keys);
-                Console.WriteLine(await completed);
                 TextBlock? tbStatusListing = prepDict[completed];
                 if (tbStatusListing != null) tbStatusListing.Text = "Order Fetched";
                 prepDict.Remove(completed);
             }
-            return orders.ToDictionary(x => x.order, x => false);
-            /*
-                await Task.WhenAll(prepareTasks.Select(x => x.Item1));
+            
+            // Request user signatures.
+            tbStatus.Text = $"Waiting for user signature{(orders.Count() > 1 ? "s" : "")}...";
+            List<Task<SignatureData>> sigTasks = new();
+            List<(Task<bool> buyTask, Order order, TextBlock? tbStatusListing)> buyTasks = new();
 
-            // Prompt IMXlib to submit the listings.
-            tbStatus.Text = $"Purchasing order{(orders.Count() > 1 ? "s" : "")} on IMX...";
-            List<Task<(Order order, TextBlock? tbStatusListing, string message, bool result)>> listTasks = new();
-            foreach ((Order order, TextBlock? tbStatusListing) order in orders)
+            foreach ((Task<string?> fetchTask, Order order, TextBlock? tbStatusListing) prepareTask in prepareTasks)
             {
-                // Create a task for each listing so they can run asynchronously.
-                Task<(Order order, TextBlock? tbStatusListing, string message, bool result)> createListing = Task.Run(async () =>
+                // Check if the data is valid.
+                string? data = await prepareTask.fetchTask;
+                if (data == null)
                 {
-                    // Purchase the order.
+                    if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Text = "Failed: No data";
+                    continue;
+                }
+                JObject? jsonData = (JObject?)JsonConvert.DeserializeObject(data);
+                if (jsonData == null)
+                {
+                    if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Text = "Invalid JSON";
+                    continue;
+                }
+
+                string? nonce = (string?)jsonData?.SelectToken("nonce");
+                string? signableMessage = (string?)jsonData?.SelectToken("signable_message");
+                if (nonce == null || signableMessage == null)
+                {
+                    string? message = (string?)jsonData?.SelectToken("code");
+                    if (message == null)
+                    {
+                        if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Text = "Invalid JSON";
+                        continue;
+                    }
+                    if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Text = message;
+                    continue;
+                }
+
+                // Request signature.
+                Task<SignatureData> buySignature = SignatureRequestServer.RequestSignatureAsync(signableMessage);
+                if (prepareTask.tbStatusListing != null)
+                {
+                    prepareTask.tbStatusListing.Text = "Awaiting signature...";
+                }
+
+                // Submit listing to IMX.
+                Task<bool> buyOrder = Task.Run(async () =>
+                {
+                    SignatureData signature;
                     try
                     {
-                        await ResourceManager.RateLimiter.ReserveRequests(2);
+                        signature = await buySignature;
                     }
                     catch (OperationCanceledException)
                     {
-                        return (order.order, order.tbStatusListing, "Unknown error", false);
+                        if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Dispatcher.Invoke(() =>
+                        {
+                            prepareTask.tbStatusListing.Text = "Cancelled";
+                        });
+                        return false;
+                    }
+                    if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Dispatcher.Invoke(() =>
+                        {
+                            prepareTask.tbStatusListing.Text = "Buying order...";
+                        });
+                    try
+                    {
+                        await ResourceManager.RateLimiter.ReserveRequests(1);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Dispatcher.Invoke(() =>
+                        {
+                            prepareTask.tbStatusListing.Text = "Network error";
+                        });
+                        return false;
                     }
                     int bufferSize = 1024;
                     IntPtr resultBuffer = Marshal.AllocHGlobal(bufferSize);
-                    string? result = IntPtrToString(imx_buy_order(order.order.OrderID.ToString(), (double)order.order.PriceTotal(), new Fee[0], 0, GetPrivateKey(), resultBuffer, bufferSize));
+                    string? result = "trade_id"; //IntPtrToUtf8String(imx_finish_buy_order(nonce, (double)prepareTask.order.PriceTotal(), GetPrivateKey(), signature.Signature, resultBuffer, bufferSize));
                     Marshal.FreeHGlobal(resultBuffer);
-
-                    // Handle the server response
                     Log.Information($"Order purchase finished with result: {result ?? "None"}");
+
                     if (result == null)
                     {
-                        return (order.order, order.tbStatusListing, "Unknown error", false);
+                        if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Dispatcher.Invoke(() =>
+                        {
+                            prepareTask.tbStatusListing.Text = "Error: No data";
+                        });
+                        return false;
                     }
                     if (!result.Contains("trade_id"))
                     {
@@ -1702,40 +1765,46 @@ namespace GU_Exchange.Helpers
                         string? message = (string?)jsonResult?.SelectToken("code");
                         if (message == null)
                         {
-                            return (order.order, order.tbStatusListing, "Unknown error", false);
+                            if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Dispatcher.Invoke(() =>
+                            {
+                                prepareTask.tbStatusListing.Text = "Unknown Error";
+                            });
+                            return false;
                         }
-                        return (order.order, order.tbStatusListing, message, false);
+                        if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Dispatcher.Invoke(() =>
+                        {
+                            prepareTask.tbStatusListing.Text = message;
+                        });
+                        return false;
                     }
-                    return (order.order, order.tbStatusListing, "Purchase complete.", true);
+                    if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Dispatcher.Invoke(() =>
+                    {
+                        prepareTask.tbStatusListing.Text = "Purchase complete";
+                    });
+                    return true;
                 });
-                if (order.tbStatusListing != null) order.tbStatusListing.Text = "Buying card...";
-                // Add the task to a list of tasks so we can track when they finish.
-                listTasks.Add(createListing);
+
+                sigTasks.Add(buySignature);
+                buyTasks.Add((buyOrder, prepareTask.order, prepareTask.tbStatusListing));
             }
 
-            // Wait for all tasks to finish one by one and update the status text.
-            List<Task<(Order order, TextBlock? tbStatusListing, string message, bool result)>> listTasksCopy = new(listTasks);
-            while (listTasksCopy.Count > 0)
-            {
-                Task<(Order order, TextBlock? tbStatusListing, string message, bool result)> completed = await Task.WhenAny(listTasksCopy);
-                listTasksCopy.Remove(completed);
-                (Order order, TextBlock? tbStatusListing, string message, bool result) data = await completed;
-                if (data.tbStatusListing != null) data.tbStatusListing.Text = data.message;
-            }
+            // Show signature request window.
+            Console.WriteLine(sigTasks.Count);
+            UseWebWalletWindow useWalletWindow = new(sigTasks);
+            useWalletWindow.Owner = parent;
+            useWalletWindow.ShowDialog();
 
-            // Wait for list tasks to finish.
-            (Order order, TextBlock? tbStatusListing, string message, bool res)[] results = await Task.WhenAll(listTasks);
+            await Task.WhenAll(buyTasks.Select(x => x.buyTask));
 
-            // Relock the wallet if requested by the user.
-            if (reLock)
-                LockWallet();
+            Dictionary<Order, bool> results = buyTasks.ToDictionary(x => x.order, x => x.buyTask.Result);
+            results = results.Concat(orders.Where(x => !results.ContainsKey(x.order)).ToDictionary(x => x.order, x => false)).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
 
             // Inform the user about the combined result of all listings.
-            if (results.All(x => x.res))
+            if (results.All(x => x.Value))
             {
                 tbStatus.Text = $"Order{(orders.Count() > 1 ? "s" : "")} purchased on IMX";
             }
-            else if (results.All(x => !x.res))
+            else if (results.All(x => !x.Value))
             {
                 tbStatus.Text = $"Failed to purchase order{(orders.Count() > 1 ? "s" : "")}";
             }
@@ -1743,8 +1812,7 @@ namespace GU_Exchange.Helpers
             {
                 tbStatus.Text = "Not all orders could be purchased.";
             }
-
-            return results.ToDictionary(x => x.order, x => x.res);*/
+            return results;
         }
 
         /// <summary>

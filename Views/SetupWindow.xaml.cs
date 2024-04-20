@@ -239,6 +239,7 @@ namespace GU_Exchange
                     await Wallet.SetConnectedWallet(Wallet.wallets[wallet]);
                     Settings.SetSetting("ConnectedWallet", Wallet.wallets[wallet].Address);
                     Settings.SaveSettings();
+                    ((MainWindow)Application.Current.MainWindow).CloseOverlay();
                     await ((MainWindow)Application.Current.MainWindow).SetupWalletInfoAsync();
                     return;
                 }

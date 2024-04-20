@@ -239,7 +239,7 @@ namespace GU_Exchange.Controls
                 int invChange = 0;
                 if (await GameDataManager.IsWalletLinked(Settings.GetApolloID(), wallet.Address))
                     invChange = -transferAmount;
-                else if (await GameDataManager.IsWalletLinked(Settings.GetApolloID(), this.tbAddress.Text))
+                if (await GameDataManager.IsWalletLinked(Settings.GetApolloID(), this.tbAddress.Text))
                     invChange = transferAmount;
                 Inventory? inv = (Inventory?)App.Current.Properties["Inventory"];
                 if (inv != null && invChange != 0)

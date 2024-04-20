@@ -178,6 +178,7 @@ namespace GU_Exchange
                 setup.Owner = this;
                 setup.ShowDialog();
             }
+            Wallet.WarnUnlinkedWallet(Wallet.GetConnectedWallet());
         }
 
         /// <summary>
