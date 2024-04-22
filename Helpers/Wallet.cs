@@ -516,6 +516,10 @@ namespace GU_Exchange.Helpers
             return null;
         }
 
+        /// <summary>
+        /// Show a warning to the user if the provided wallet is not connected to the users GU account.
+        /// </summary>
+        /// <param name="wlt"></param>
         public static async void WarnUnlinkedWallet(Wallet? wlt)
         {
             if (wlt == null)
@@ -1014,7 +1018,7 @@ namespace GU_Exchange.Helpers
                 if (data.tbStatusListing != null) data.tbStatusListing.Text = data.message;
             }
 
-            // Wait for list tasks to finish.
+            // Wait for the tasks to finish.
             (Order order, TextBlock? tbStatusListing, string message, bool res)[] results = await Task.WhenAll(listTasks);
 
             // Relock the wallet if requested by the user.
@@ -1632,7 +1636,7 @@ namespace GU_Exchange.Helpers
             {
                 if (order.tbStatusListing != null) order.tbStatusListing.Text = "Waiting for wallet...";
             }
-            tbStatus.Text = "Waiting for wallet to be unlocked...";
+            tbStatus.Text = "Waiting for wallet...";
             if (IsLocked())
                 await UnlockWallet();
 
@@ -1667,7 +1671,7 @@ namespace GU_Exchange.Helpers
             {
                 Task<string?> completed = await Task.WhenAny(prepDict.Keys);
                 TextBlock? tbStatusListing = prepDict[completed];
-                if (tbStatusListing != null) tbStatusListing.Text = "Order Fetched";
+                if (tbStatusListing != null) tbStatusListing.Text = "Order fetched";
                 prepDict.Remove(completed);
             }
             
@@ -1696,13 +1700,16 @@ namespace GU_Exchange.Helpers
                 string? signableMessage = (string?)jsonData?.SelectToken("signable_message");
                 if (nonce == null || signableMessage == null)
                 {
-                    string? message = (string?)jsonData?.SelectToken("code");
-                    if (message == null)
+                    string? code = (string?)jsonData?.SelectToken("code");
+                    string? message = (string?)jsonData?.SelectToken("message");
+                    if (message != null)
+                        Log.Warning($"Failed to fetch order: {message}");
+                    if (code == null)
                     {
                         if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Text = "Invalid JSON";
                         continue;
                     }
-                    if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Text = message;
+                    if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Text = code;
                     continue;
                 }
 
@@ -1747,7 +1754,7 @@ namespace GU_Exchange.Helpers
                     }
                     int bufferSize = 1024;
                     IntPtr resultBuffer = Marshal.AllocHGlobal(bufferSize);
-                    string? result = "trade_id"; //IntPtrToUtf8String(imx_finish_buy_order(nonce, (double)prepareTask.order.PriceTotal(), GetPrivateKey(), signature.Signature, resultBuffer, bufferSize));
+                    string? result = IntPtrToUtf8String(imx_finish_buy_order(nonce, (double)prepareTask.order.PriceTotal(), GetPrivateKey(), signature.Signature, resultBuffer, bufferSize));
                     Marshal.FreeHGlobal(resultBuffer);
                     Log.Information($"Order purchase finished with result: {result ?? "None"}");
 
@@ -1762,8 +1769,11 @@ namespace GU_Exchange.Helpers
                     if (!result.Contains("trade_id"))
                     {
                         JObject? jsonResult = (JObject?)JsonConvert.DeserializeObject(result);
-                        string? message = (string?)jsonResult?.SelectToken("code");
-                        if (message == null)
+                        string? code = (string?)jsonResult?.SelectToken("code");
+                        string? message = (string?)jsonData?.SelectToken("message");
+                        if (message != null)
+                            Log.Warning($"Failed to fetch order: {message}");
+                        if (code == null)
                         {
                             if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Dispatcher.Invoke(() =>
                             {
@@ -1773,7 +1783,7 @@ namespace GU_Exchange.Helpers
                         }
                         if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Dispatcher.Invoke(() =>
                         {
-                            prepareTask.tbStatusListing.Text = message;
+                            prepareTask.tbStatusListing.Text = code;
                         });
                         return false;
                     }
@@ -1789,13 +1799,13 @@ namespace GU_Exchange.Helpers
             }
 
             // Show signature request window.
-            Console.WriteLine(sigTasks.Count);
-            UseWebWalletWindow useWalletWindow = new(sigTasks);
-            useWalletWindow.Owner = parent;
-            useWalletWindow.ShowDialog();
-
-            await Task.WhenAll(buyTasks.Select(x => x.buyTask));
-
+            if (sigTasks.Count != 0) // Skip if there are no orders.
+            {
+                UseWebWalletWindow useWalletWindow = new(sigTasks);
+                useWalletWindow.Owner = parent;
+                useWalletWindow.ShowDialog();
+                await Task.WhenAll(buyTasks.Select(x => x.buyTask));
+            }
             Dictionary<Order, bool> results = buyTasks.ToDictionary(x => x.order, x => x.buyTask.Result);
             results = results.Concat(orders.Where(x => !results.ContainsKey(x.order)).ToDictionary(x => x.order, x => false)).ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
 
@@ -1816,7 +1826,7 @@ namespace GU_Exchange.Helpers
         }
 
         /// <summary>
-        /// Request the user to List one or multiple .
+        /// Request the user to List one or multiple.
         /// This will submit the listings immediately if the private key for the <see cref="Wallet"/> is unlocked and available.
         /// </summary>
         /// <param name="parent"></param>
