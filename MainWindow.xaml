@@ -52,7 +52,7 @@
             <MenuItem Header="List">
                 <MenuItem Header="Collection" IsEnabled="False" />
                 <MenuItem Header="Update listings" IsEnabled="False" />
-                <MenuItem Header="Cancel listings" IsEnabled="False" />
+                <MenuItem Header="Cancel listings" Click="miCancelListings_Click" />
             </MenuItem>
             <MenuItem Header="Transfer">
                 <MenuItem Header="Collection" IsEnabled="False" />

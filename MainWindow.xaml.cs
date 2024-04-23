@@ -726,5 +726,15 @@ namespace GU_Exchange
             Grid.SetRowSpan(_overlayControl, 4);
             this.MainGrid.Children.Add(_overlayControl);
         }
+
+        private void miCancelListings_Click(object sender, RoutedEventArgs e)
+        {
+            CloseOverlay();
+            _overlayControl = new CancelListingsControl();
+            _overlayControl.Margin = new Thickness(0, 0, 0, 0);
+            Grid.SetRow(_overlayControl, 2);
+            Grid.SetRowSpan(_overlayControl, 4);
+            this.MainGrid.Children.Add(_overlayControl);
+        }
     }
 }
