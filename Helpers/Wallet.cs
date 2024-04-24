@@ -219,6 +219,7 @@ namespace GU_Exchange.Helpers
             { "GODS", new Token("GODS", "0xccc8cb5229b0ac8069c51fd58367fd1e622afd97", null) },
             { "IMX", new Token("IMX", "0xf57e7e7c23978c3caec3c3548e3d615c346e79ff", null) }
         };
+        private static Dictionary<string, string> s_tokenData = new();
         private static Task<Dictionary<string, Token>>? s_fetchTokenTask;
         #endregion
 
@@ -273,6 +274,32 @@ namespace GU_Exchange.Helpers
 
             s_fetchTokenTask = FetchTokensWebAsync();
             return await s_fetchTokenTask;
+        }
+
+        public static async Task<string> FetchTokenSymbol(string address)
+        {
+            if (s_tokenData.Count == 0)
+            {
+                try
+                {
+                    string strData = await ResourceManager.Client.GetStringAsync("https://api.x.immutable.com/v1/tokens");
+                    JObject? jsonData = (JObject?)JsonConvert.DeserializeObject(strData);
+                    if (jsonData == null)
+                        return "???";
+                    JToken? result = jsonData["result"];
+                    if (result == null)
+                    {
+                        return "???";
+                    }
+                    s_tokenData = result.ToArray().Where(x => x.SelectToken("token_address") != null).ToDictionary(x => (string?)x.SelectToken("token_address") ?? "", x => (string?)x.SelectToken("symbol") ?? "");
+                } catch (Exception e)
+                {
+                    Log.Error($"Failed to fetch tokens. {e.Message} : {e.StackTrace}");
+                }
+            }
+            string? symbol;
+            s_tokenData.TryGetValue(address, out symbol);
+            return symbol == null ? "???" : symbol;
         }
         #endregion
 

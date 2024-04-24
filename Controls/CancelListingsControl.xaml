@@ -29,8 +29,8 @@
         </Viewbox>
         <!-- #region Buttons. -->
         <StackPanel HorizontalAlignment="Center" Grid.Row="3" Orientation="Horizontal">
-            <Button x:Name="btnBuy" Content="Cancel all" Width="75" Height="25" Margin="10,5" IsEnabled="False"/>
-            <Button x:Name="btnCancel" Content="Close" Width="75" Height="25" Margin="10,5" Click="BtnClose_Click" />
+            <Button x:Name="btnCancelAll" Content="Cancel all" Width="75" Height="25" Margin="10,5" IsEnabled="False" Click="BtnCancelAll_Click"/>
+            <Button x:Name="btnClose" Content="Close" Width="75" Height="25" Margin="10,5" Click="BtnClose_Click" />
         </StackPanel>
         <!-- #endregion -->
     </Grid>
