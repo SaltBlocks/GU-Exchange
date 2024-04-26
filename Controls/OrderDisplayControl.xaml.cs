@@ -22,6 +22,11 @@ namespace GU_Exchange.Controls
     /// </summary>
     public partial class OrderDisplayControl : UserControl
     {
+        public enum DisplayStatus
+        {
+            Loading, Success, Fail
+        }
+
         private CancellationTokenSource imgToken;
         private Order? _order;
         public string CardName { get; private set; }
@@ -53,7 +58,8 @@ namespace GU_Exchange.Controls
             }
             catch (Exception)
             {
-                SetError(true);
+                SetStatus(DisplayStatus.Fail);
+                SetStatusMessage("Fetching order failed");
             }
             return false;
         }
@@ -62,7 +68,7 @@ namespace GU_Exchange.Controls
         {
             _order = order;
             tbPrice.Text = $"{Math.Round(order.PriceTotal(), 10)} {order.Currency}";
-            spLoading.Visibility = Visibility.Collapsed;
+            ShowStatus(false);
         }
 
         public Order? GetOrder()
@@ -70,58 +76,44 @@ namespace GU_Exchange.Controls
             return _order;
         }
 
-        public void SetLoading(bool loading)
+        public void SetStatus(DisplayStatus status)
         {
-            if (loading)
-            {
-                spLoading.Visibility = Visibility.Visible;
-                spOwned.Visibility = Visibility.Collapsed;
-                spFailed.Visibility = Visibility.Collapsed;
-            }
-            else
-            {
-                spLoading.Visibility = Visibility.Collapsed;
-                spOwned.Visibility = Visibility.Collapsed;
-                spFailed.Visibility = Visibility.Collapsed;
+            switch (status) {
+                case DisplayStatus.Success:
+                    spinner.Visibility = Visibility.Collapsed;
+                    success.Visibility = Visibility.Visible;
+                    error.Visibility = Visibility.Collapsed;
+                    break;
+                case DisplayStatus.Fail:
+                    spinner.Visibility = Visibility.Collapsed;
+                    success.Visibility = Visibility.Collapsed;
+                    error.Visibility = Visibility.Visible;
+                    break;
+                default:
+                case DisplayStatus.Loading:
+                    spinner.Visibility = Visibility.Visible;
+                    success.Visibility = Visibility.Collapsed;
+                    error.Visibility = Visibility.Collapsed;
+                    break;
             }
         }
 
-        public void SetOwned(bool owned)
+        public void SetStatusMessage(string message)
         {
-            if (owned)
-            {
-                spLoading.Visibility = Visibility.Collapsed;
-                spOwned.Visibility = Visibility.Visible;
-                spFailed.Visibility = Visibility.Collapsed;
-            }
-            else
-            {
-                spLoading.Visibility = Visibility.Visible;
-                spOwned.Visibility = Visibility.Collapsed;
-                spFailed.Visibility = Visibility.Collapsed;
-            }
-        }
-
-        public void SetError(bool error, string? errorMsg = null)
-        {
-            tbError.Text = errorMsg == null ? "Failed to fetch order" : errorMsg;
-            if (error)
-            {
-                spLoading.Visibility = Visibility.Collapsed;
-                spOwned.Visibility = Visibility.Collapsed;
-                spFailed.Visibility = Visibility.Visible;
-            }
-            else
-            {
-                spLoading.Visibility = Visibility.Visible;
-                spOwned.Visibility = Visibility.Collapsed;
-                spFailed.Visibility = Visibility.Collapsed;
-            }
+            tbStatus.Text = message;
         }
 
         public TextBlock getStatustextBlock()
         {
             return tbStatus;
+        }
+
+        public void ShowStatus(bool showStatus)
+        {
+            if (showStatus)
+                spDisplay.Visibility = Visibility.Visible;
+            else
+                spDisplay.Visibility = Visibility.Collapsed;
         }
     }
 }

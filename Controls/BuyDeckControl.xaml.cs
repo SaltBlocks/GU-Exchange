@@ -152,7 +152,8 @@ namespace GU_Exchange.Controls
                             if (amount == 0)
                                 break;
                             OrderDisplayControl control = new(cardName, proto, quality);
-                            control.SetOwned(true);
+                            control.SetStatus(OrderDisplayControl.DisplayStatus.Success);
+                            control.SetStatusMessage("Owned");
                             ownedCards.Add(control);
                             amount--;
                         }
@@ -269,7 +270,8 @@ namespace GU_Exchange.Controls
                 Order? order = orderDisplay.GetOrder();
                 if (order != null)
                 {
-                    orderDisplay.SetLoading(true);
+                    orderDisplay.SetStatus(OrderDisplayControl.DisplayStatus.Loading);
+                    orderDisplay.SetStatusMessage("Loading");
                     controlDict.Add(order, orderDisplay);
                     orderData.Add((order, orderDisplay.getStatustextBlock()));
                 }
@@ -306,11 +308,14 @@ namespace GU_Exchange.Controls
                         int proto = controlDict[order].ProtoID;
                         inv.SetNumberOwned(proto, quality, Math.Max(inv.GetNumberOwned(proto, quality) + 1, 0));
                     }
-                    controlDict[order].SetOwned(true);
+
+                    controlDict[order].SetStatus(OrderDisplayControl.DisplayStatus.Success);
+                    controlDict[order].SetStatusMessage("Owned");
                 }
                 else
                 {
-                    controlDict[order].SetError(true, "Purchase failed");
+                    controlDict[order].SetStatus(OrderDisplayControl.DisplayStatus.Fail);
+                    controlDict[order].SetStatusMessage("Purchase failed");
                 }
             }
             

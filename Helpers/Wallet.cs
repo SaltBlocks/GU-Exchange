@@ -1190,7 +1190,7 @@ namespace GU_Exchange.Helpers
             // Unlock user wallet.
             foreach ((string orderID, TextBlock? tbStatusCancellation) order in orders)
             {
-                if (order.tbStatusCancellation != null) order.tbStatusCancellation.Text = "Waiting for wallet to be unlocked...";
+                if (order.tbStatusCancellation != null) order.tbStatusCancellation.Text = "Waiting for wallet...";
             }
             tbStatus.Text = "Waiting for wallet to be unlocked...";
             bool reLock = false;
@@ -1205,9 +1205,9 @@ namespace GU_Exchange.Helpers
                     {
                         if (order.tbStatusCancellation != null)
                         {
-                            order.tbStatusCancellation.Text = "User cancelled action.";
+                            order.tbStatusCancellation.Text = "Cancelled";
                         }
-                        tbStatus.Text = "Listing(s) cancelled.";
+                        tbStatus.Text = $"Action{(orders.Count() > 1 ? "s" : "")} cancelled.";
                     }
                     return orders.ToDictionary(x => x.orderID, x => false);
                 }
@@ -1241,25 +1241,48 @@ namespace GU_Exchange.Helpers
                     Log.Information($"Order cancellation finished with result: {result ?? "None"}");
                     if (result == null)
                     {
-                        if (order.tbStatusCancellation != null) order.tbStatusCancellation.Text = "An unknown error occurred";
+                        if (order.tbStatusCancellation != null) order.tbStatusCancellation.Text = "Unknown error";
                         return (order.orderID, false);
                     }
                     if (!result.Contains("order_id"))
                     {
                         JObject? jsonResult = (JObject?)JsonConvert.DeserializeObject(result);
+                        string? code = (string?)jsonResult?.SelectToken("code");
                         string? message = (string?)jsonResult?.SelectToken("message");
-                        if (message == null)
+                        if (code == null || message == null)
                         {
-                            if (order.tbStatusCancellation != null) order.tbStatusCancellation.Text = "An unknown error occurred";
+                            if (order.tbStatusCancellation != null) order.tbStatusCancellation.Dispatcher.Invoke(() =>
+                            {
+                                order.tbStatusCancellation.Text = "Unknown error";
+                            });
                             return (order.orderID, false);
                         }
-                        if (order.tbStatusCancellation != null) order.tbStatusCancellation.Text = message;
+                        if (order.tbStatusCancellation != null) order.tbStatusCancellation.Dispatcher.Invoke(() =>
+                        {
+                            order.tbStatusCancellation.Text = code;
+                        });
+                        Log.Warning($"Order cancellation failed with message: {message}");
                         return (order.orderID, false);
                     }
                     return (order.orderID, true);
                 });
+                if (order.tbStatusCancellation != null) order.tbStatusCancellation.Text = "Cancelling...";
                 cancelTasks.Add(cancelListing);
             }
+
+            // Wait for all tasks to finish one by one and update the status text.
+            List<Task<(string orderID, bool result)>> cancelTasksCopy = new(cancelTasks);
+            while (cancelTasksCopy.Count > 0)
+            {
+                Task<(string orderID, bool result)> completed = await Task.WhenAny(cancelTasksCopy);
+                cancelTasksCopy.Remove(completed);
+                (string orderID, bool result) data = await completed;
+                foreach ((string orderID, TextBlock? tbStatusCancellation) order in orders.Where(x => x.orderID == data.orderID))
+                {
+                    if (order.tbStatusCancellation != null) order.tbStatusCancellation.Text = data.result ? "Listing cancelled" : "Failed";
+                }
+            }
+
             // Wait for all cancellation tasks to finish.
             (string orderID, bool res)[] results = await Task.WhenAll(cancelTasks);
             if (reLock)
@@ -1742,10 +1765,7 @@ namespace GU_Exchange.Helpers
 
                 // Request signature.
                 Task<SignatureData> buySignature = SignatureRequestServer.RequestSignatureAsync(signableMessage);
-                if (prepareTask.tbStatusListing != null)
-                {
-                    prepareTask.tbStatusListing.Text = "Awaiting signature...";
-                }
+                if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Text = "Awaiting signature...";
 
                 // Submit listing to IMX.
                 Task<bool> buyOrder = Task.Run(async () =>
@@ -2030,7 +2050,7 @@ namespace GU_Exchange.Helpers
             // Unlock user wallet.
             foreach ((string orderID, TextBlock? tbStatusCancellation) order in orders)
             {
-                if (order.tbStatusCancellation != null) order.tbStatusCancellation.Text = "Waiting for wallet to be unlocked...";
+                if (order.tbStatusCancellation != null) order.tbStatusCancellation.Text = "Waiting for wallet...";
             }
             tbStatus.Text = "Waiting for wallet...";
             if (IsLocked())
@@ -2057,6 +2077,7 @@ namespace GU_Exchange.Helpers
                     Marshal.FreeHGlobal(resultBuffer);
                     return result;
                 });
+                if (order.tbStatusCancellation != null) order.tbStatusCancellation.Text = "Requesting cancellation...";
                 prepareTasks.Add((cancelListing, order.orderID, order.tbStatusCancellation));
             }
             await Task.WhenAll(prepareTasks.Select(x => x.Item1));
@@ -2065,18 +2086,19 @@ namespace GU_Exchange.Helpers
             tbStatus.Text = $"Waiting for user signature{(orders.Count() > 1 ? "s" : "")}...";
             List<Task<SignatureData>> sigTasks = new();
             List<(Task<bool>, string orderID, TextBlock? tbStatusListing)> cancelTasks = new();
-            foreach ((Task<string?> prep, string orderID, TextBlock? tbStatusListing) prepareTask in prepareTasks)
+            foreach ((Task<string?> prep, string orderID, TextBlock? tbStatusCancellation) prepareTask in prepareTasks)
             {
                 // Check if the data is valid.
                 string? signableMessage = await prepareTask.prep;
                 if (signableMessage == null)
                 {
-                    if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Text = "Order cancellation failed (No data)";
+                    if (prepareTask.tbStatusCancellation != null) prepareTask.tbStatusCancellation.Text = "Cancellation failed";
                     continue;
                 }
 
                 // Request signature.
                 Task<SignatureData> getSignature = SignatureRequestServer.RequestSignatureAsync(signableMessage);
+                if (prepareTask.tbStatusCancellation != null) prepareTask.tbStatusCancellation.Text = "Awaiting signature...";
 
                 // Submit cancellation to IMX.
                 Task<bool> cancelListing = Task.Run(async () =>
@@ -2088,7 +2110,10 @@ namespace GU_Exchange.Helpers
                     }
                     catch (OperationCanceledException)
                     {
-                        if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Text = "Order cancellation failed (Cancelled by user)";
+                        if (prepareTask.tbStatusCancellation != null) prepareTask.tbStatusCancellation.Dispatcher.Invoke(() =>
+                        {
+                            prepareTask.tbStatusCancellation.Text = "Cancellation failed";
+                        });
                         return false;
                     }
                     try
@@ -2097,7 +2122,10 @@ namespace GU_Exchange.Helpers
                     }
                     catch (OperationCanceledException)
                     {
-                        if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Text = "An unknown error occurred";
+                        if (prepareTask.tbStatusCancellation != null) prepareTask.tbStatusCancellation.Dispatcher.Invoke(() =>
+                        {
+                            prepareTask.tbStatusCancellation.Text = "Unknown error";
+                        });
                         return false;
                     }
                     int bufferSize = 1024;
@@ -2107,33 +2135,47 @@ namespace GU_Exchange.Helpers
                     Log.Information($"Order cancellation finished with result: {result ?? "None"}");
                     if (result == null)
                     {
-                        if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Text = "An unknown error occurred";
+                        if (prepareTask.tbStatusCancellation != null) prepareTask.tbStatusCancellation.Dispatcher.Invoke(() =>
+                        {
+                            prepareTask.tbStatusCancellation.Text = "Unknown error";
+                        });
                         return false;
                     }
                     if (!result.Contains("order_id"))
                     {
                         JObject? jsonResult = (JObject?)JsonConvert.DeserializeObject(result);
+                        string? code = (string?)jsonResult?.SelectToken("code");
                         string? message = (string?)jsonResult?.SelectToken("message");
                         if (message == null)
                         {
-                            if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Text = "An unknown error occurred";
+                            if (prepareTask.tbStatusCancellation != null) prepareTask.tbStatusCancellation.Dispatcher.Invoke(() =>
+                            {
+                                prepareTask.tbStatusCancellation.Text = "Unknown error";
+                            });
                             return false;
                         }
-                        if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Text = message;
+                        if (prepareTask.tbStatusCancellation != null) prepareTask.tbStatusCancellation.Dispatcher.Invoke(() =>
+                        {
+                            prepareTask.tbStatusCancellation.Text = code;
+                        });
+                        Log.Warning($"Order cancellation failed with message: {message}");
                         return false;
                     }
+                    if (prepareTask.tbStatusCancellation != null) prepareTask.tbStatusCancellation.Dispatcher.Invoke(() =>
+                    {
+                        prepareTask.tbStatusCancellation.Text = "Listing cancelled";
+                    });
                     return true;
                 });
 
                 sigTasks.Add(getSignature);
-                cancelTasks.Add((cancelListing, prepareTask.orderID, prepareTask.tbStatusListing));
+                cancelTasks.Add((cancelListing, prepareTask.orderID, prepareTask.tbStatusCancellation));
             }
 
             // Show signature request window.
             UseWebWalletWindow useWalletWindow = new(sigTasks);
             useWalletWindow.Owner = parent;
             useWalletWindow.ShowDialog();
-
 
             // Wait for all cancellation tasks to finish.
             Dictionary<string, bool> results = (await Task.WhenAll(cancelTasks.Select(async x =>
@@ -2147,7 +2189,6 @@ namespace GU_Exchange.Helpers
                     return (x.orderID, false);
                 }
             }))).ToDictionary(x => x.orderID, x => x.Item2);
-            //Dictionary<string, bool> results = (await Task.WhenAll(cancelTasks.Select(async x => (x.orderID, await x.Item1)))).ToDictionary(x => x.orderID, x => x.Item2);
 
             // Inform the user about the combined result of all cancellations.
             if (results.All(x => x.Value))

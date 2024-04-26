@@ -68,10 +68,10 @@ namespace GU_Exchange.Controls
                         if (cardName == null || img_url == null)
                             continue;
                         string[] card_data = img_url.Split("id=")[1].Split("&q=");
-                        Console.WriteLine($"{card_data[0]}, {card_data[1]}");
                         Order or = new Order(order, await getOrderCurrencyName(order));
                         _orders.Add(or);
                         OrderDisplayControl control = new(cardName, int.Parse(card_data[0]), int.Parse(card_data[1]));
+                        control.ShowStatus(false);
                         control.SetOrder(or);
                         cardPanel.Children.Add(control);
                     }
@@ -186,7 +186,8 @@ namespace GU_Exchange.Controls
                 Order? order = orderDisplay.GetOrder();
                 if (order != null)
                 {
-                    orderDisplay.SetLoading(true);
+                    orderDisplay.ShowStatus(true);
+                    orderDisplay.SetStatus(OrderDisplayControl.DisplayStatus.Loading);
                     controlDict.Add(order.OrderID.ToString(), orderDisplay);
                     orderData.Add((order.OrderID.ToString(), orderDisplay.getStatustextBlock()));
                 }
@@ -194,6 +195,18 @@ namespace GU_Exchange.Controls
 
             // Cancel the order and allow the wallet to update the status message.
             Dictionary<string, bool> result = await wallet.RequestCancelOrders(Application.Current.MainWindow, orderData.ToArray(), tbStatus);
+
+            foreach (string order in result.Keys)
+            {
+                if (result[order])
+                {
+                    controlDict[order].SetStatus(OrderDisplayControl.DisplayStatus.Success);
+                }
+                else
+                {
+                    controlDict[order].SetStatus(OrderDisplayControl.DisplayStatus.Fail);
+                }
+            }
             ((MainWindow)Application.Current.MainWindow).menuBar.IsEnabled = true;
             btnClose.IsEnabled = true;
         }

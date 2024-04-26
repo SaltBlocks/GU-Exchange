@@ -45,9 +45,8 @@
                 <Separator />
                 <MenuItem Header="Exit" Click="miExit_Click" />
             </MenuItem>
-            <MenuItem Header="Buy" Click="miBuyDeck_Click">
-                <MenuItem Header="Deck" />
-                <MenuItem Header="Set" IsEnabled="False" />
+            <MenuItem Header="Buy">
+                <MenuItem Header="Deck" Click="miBuyDeck_Click"/>
             </MenuItem>
             <MenuItem Header="List">
                 <MenuItem Header="Collection" IsEnabled="False" />
