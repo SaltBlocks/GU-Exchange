@@ -142,7 +142,6 @@ namespace GU_Exchange.Controls
             // Click occurred outside controlGrid, close the overlay.
             if (btnClose.IsEnabled)
             {
-                ResourceManager.RateLimiter.CancelRequestsAndReset();
                 ((MainWindow)Application.Current.MainWindow).CloseOverlay();
             }
         }
@@ -164,6 +163,12 @@ namespace GU_Exchange.Controls
         /// <param name="e"></param>
         private async void BtnCancelAll_Click(object sender, RoutedEventArgs e)
         {
+            if (cardPanel.Children.Count == 0)
+            {
+                tbStatus.Text = $"No active orders to cancel.";
+                return;
+            }
+
             // Prevent user from closing the window until this method finished during the purchase.
             btnCancelAll.IsEnabled = false;
             btnClose.IsEnabled = false;
@@ -192,6 +197,8 @@ namespace GU_Exchange.Controls
                     orderData.Add((order.OrderID.ToString(), orderDisplay.getStatustextBlock()));
                 }
             }
+
+
 
             // Cancel the order and allow the wallet to update the status message.
             Dictionary<string, bool> result = await wallet.RequestCancelOrders(Application.Current.MainWindow, orderData.ToArray(), tbStatus);

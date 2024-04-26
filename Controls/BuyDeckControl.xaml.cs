@@ -83,7 +83,6 @@ namespace GU_Exchange.Controls
             // Click occurred outside controlGrid, close the overlay.
             if (btnCancel.IsEnabled)
             {
-                ResourceManager.RateLimiter.CancelRequestsAndReset();
                 ((MainWindow)Application.Current.MainWindow).CloseOverlay();
             }
         }

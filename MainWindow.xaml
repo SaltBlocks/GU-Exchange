@@ -40,22 +40,22 @@
             <MenuItem Header="Menu" SubmenuOpened="MenuItem_SubmenuOpened">
                 <MenuItem Header="Link Account / Wallet" Click="miLink_Click" />
                 <MenuItem x:Name="miLock" Header="Lock Wallet" Click="miLock_Click" />
-                <MenuItem x:Name="miCpyAddress" Header="Copy Address (0x...)" Click="miCpyAddress_Click" />
+                <MenuItem x:Name="miCpyAddress" Header="Copy Address (0x...)" Click="MiCpyAddress_Click" />
                 <MenuItem x:Name="miRefresh" Header="Refresh inventory" Click="RefreshInventory_Click" />
                 <Separator />
                 <MenuItem Header="Exit" Click="miExit_Click" />
             </MenuItem>
             <MenuItem Header="Buy">
-                <MenuItem Header="Deck" Click="miBuyDeck_Click"/>
+                <MenuItem Header="Deck" Click="MiBuyDeck_Click"/>
             </MenuItem>
             <MenuItem Header="List">
                 <MenuItem Header="Collection" IsEnabled="False" />
                 <MenuItem Header="Update listings" IsEnabled="False" />
-                <MenuItem Header="Cancel listings" Click="miCancelListings_Click" />
+                <MenuItem Header="Cancel listings" Click="MiCancelListings_Click" />
             </MenuItem>
             <MenuItem Header="Transfer">
-                <MenuItem Header="Collection" IsEnabled="False" />
-                <MenuItem Header="Currency" Click="TransferCurrency_Click" />
+                <MenuItem Header="Collection" Click="MiTransferCollection" />
+                <MenuItem Header="Currency" Click="MiTransferCurrency_Click" />
             </MenuItem>
         </Menu>
         <!-- #endregion -->

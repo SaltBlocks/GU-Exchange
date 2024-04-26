@@ -1,23 +1,20 @@
-﻿using System;
+﻿using GU_Exchange.Controls;
+using GU_Exchange.Helpers;
+using Serilog;
+using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using Serilog;
 using System.Net.Http;
-using System.Printing;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using GU_Exchange.Controls;
-using GU_Exchange.Helpers;
-using Serilog.Core;
-using Newtonsoft.Json.Bson;
 
 namespace GU_Exchange
 {
@@ -622,6 +619,47 @@ namespace GU_Exchange
             Close();
         }
 
+        private void MiTransferCurrency_Click(object sender, RoutedEventArgs e)
+        {
+            CloseOverlay();
+            _overlayControl = new TransferCurrencyControl();
+            _overlayControl.Margin = new Thickness(0, 0, 0, 0);
+            Grid.SetRow(_overlayControl, 2);
+            Grid.SetRowSpan(_overlayControl, 4);
+            this.MainGrid.Children.Add(_overlayControl);
+        }
+
+        private void MiCpyAddress_Click(object sender, RoutedEventArgs e)
+        {
+            Wallet? wallet = Wallet.GetConnectedWallet();
+            if (wallet == null)
+                return;
+            Clipboard.SetText(wallet.Address);
+            MessageWindow window = new MessageWindow($"Your wallet address was copies to your clipboard, use Ctrl + V to paste it.", "Export wallet address", MessageType.INFORM);
+            window.Owner = this;
+            window.ShowDialog();
+        }
+
+        private void MiBuyDeck_Click(object sender, RoutedEventArgs e)
+        {
+            CloseOverlay();
+            _overlayControl = new BuyDeckControl();
+            _overlayControl.Margin = new Thickness(0, 0, 0, 0);
+            Grid.SetRow(_overlayControl, 2);
+            Grid.SetRowSpan(_overlayControl, 4);
+            this.MainGrid.Children.Add(_overlayControl);
+        }
+
+        private void MiCancelListings_Click(object sender, RoutedEventArgs e)
+        {
+            CloseOverlay();
+            _overlayControl = new CancelListingsControl();
+            _overlayControl.Margin = new Thickness(0, 0, 0, 0);
+            Grid.SetRow(_overlayControl, 2);
+            Grid.SetRowSpan(_overlayControl, 4);
+            this.MainGrid.Children.Add(_overlayControl);
+        }
+
         /// <summary>
         /// Update the menu if it is opened.
         /// </summary>
@@ -696,45 +734,14 @@ namespace GU_Exchange
 
         #endregion
 
-        private void TransferCurrency_Click(object sender, RoutedEventArgs e)
+        private void MiTransferCollection(object sender, RoutedEventArgs e)
         {
             CloseOverlay();
-            _overlayControl = new TransferCurrencyControl();
+            _overlayControl = new TransferCollectionControl();
             _overlayControl.Margin = new Thickness(0, 0, 0, 0);
             Grid.SetRow(_overlayControl, 2);
             Grid.SetRowSpan(_overlayControl, 4);
-            this.MainGrid.Children.Add(_overlayControl);
-        }
-
-        private void miCpyAddress_Click(object sender, RoutedEventArgs e)
-        {
-            Wallet? wallet = Wallet.GetConnectedWallet();
-            if (wallet == null)
-                return;
-            Clipboard.SetText(wallet.Address);
-            MessageWindow window = new MessageWindow($"Your wallet address was copies to your clipboard, use Ctrl + V to paste it.", "Export wallet address", MessageType.INFORM);
-            window.Owner = this;
-            window.ShowDialog();
-        }
-
-        private void miBuyDeck_Click(object sender, RoutedEventArgs e)
-        {
-            CloseOverlay();
-            _overlayControl = new BuyDeckControl();
-            _overlayControl.Margin = new Thickness(0, 0, 0, 0);
-            Grid.SetRow(_overlayControl, 2);
-            Grid.SetRowSpan(_overlayControl, 4);
-            this.MainGrid.Children.Add(_overlayControl);
-        }
-
-        private void miCancelListings_Click(object sender, RoutedEventArgs e)
-        {
-            CloseOverlay();
-            _overlayControl = new CancelListingsControl();
-            _overlayControl.Margin = new Thickness(0, 0, 0, 0);
-            Grid.SetRow(_overlayControl, 2);
-            Grid.SetRowSpan(_overlayControl, 4);
-            this.MainGrid.Children.Add(_overlayControl);
+            MainGrid.Children.Add(_overlayControl);
         }
     }
 }
