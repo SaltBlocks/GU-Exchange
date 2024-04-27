@@ -166,7 +166,6 @@ namespace GU_Exchange.Controls
                 {
                     btnTransfer.IsEnabled = false;
                 }
-                int.Parse((string)cbNumber.SelectedItem);
             }
             catch (NullReferenceException)
             {
@@ -238,9 +237,9 @@ namespace GU_Exchange.Controls
             {
                 int invChange = 0;
                 if (await GameDataManager.IsWalletLinked(Settings.GetApolloID(), wallet.Address))
-                    invChange = -transferAmount;
+                    invChange -= transferAmount;
                 if (await GameDataManager.IsWalletLinked(Settings.GetApolloID(), this.tbAddress.Text))
-                    invChange = transferAmount;
+                    invChange += transferAmount;
                 Inventory? inv = (Inventory?)App.Current.Properties["Inventory"];
                 if (inv != null && invChange != 0)
                 {
@@ -266,7 +265,7 @@ namespace GU_Exchange.Controls
                 }
             }
 
-            // Buying the order succeeded, now update the inventory and local wallet to reflect the successfull purchase.
+            // The transfer succeeded.
             success.Visibility = Visibility.Visible;
 
             // Refresh the wallet in the parent CardControl.

@@ -21,7 +21,7 @@
             <TextBlock Text="Transfer GU collection" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
         </Viewbox>
         <!--  #region Panel to display cards. -->
-        <ScrollViewer x:Name="scrollBar" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Auto" Margin="5,0,5,0" Grid.Row="1">
+        <ScrollViewer x:Name="scrollBar" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Auto" Margin="5,0,5,0" Grid.Row="1" ScrollChanged="ScrollViewer_ScrollChanged">
             <WrapPanel x:Name="cardPanel" Margin="0,0,0,0" ScrollViewer.CanContentScroll="True" ScrollViewer.HorizontalScrollBarVisibility="Visible" MaxWidth="{Binding ActualWidth, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ScrollViewer}}}" HorizontalAlignment="Center"/>
         </ScrollViewer>
         <!-- #endregion -->
@@ -36,13 +36,13 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <TextBlock Text="Transfer to address:" Width="110" Grid.Column="0" Foreground="Black"/>
-            <TextBox x:Name="tbAddress" Text="" Height="20" Grid.Column="1"/>
+            <TextBox x:Name="tbAddress" Text="" Height="20" Grid.Column="1" TextChanged="tbAddress_TextChanged"/>
             <Button Content="Lookup" Grid.Column="2" Click="btnLookup_Click"/>
         </Grid>
         <!-- #endregion -->
         <!-- #region Buttons. -->
         <StackPanel HorizontalAlignment="Center" Grid.Row="4" Orientation="Horizontal">
-            <Button x:Name="btnTransferAll" Content="Transfer all" Width="75" Height="25" Margin="10,5" IsEnabled="False"/>
+            <Button x:Name="btnTransferAll" Content="Transfer all" Width="75" Height="25" Margin="10,5" IsEnabled="False" Click="BtnTransfer_Click"/>
             <Button x:Name="btnClose" Content="Close" Width="75" Height="25" Margin="10,5" Click="btnClose_Click"/>
         </StackPanel>
         <!-- #endregion -->
