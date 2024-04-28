@@ -120,6 +120,7 @@ namespace GU_Exchange
             {
                 string? tokenID = card["token_id"]?.Value<string>();
                 if (tokenID == null) continue;
+                Console.WriteLine(imx_get_token_trade_fee("0xacb3c6a43d15b907e8433077b6d38ae40936fe2c", tokenID));
                 _allTokens.Add(tokenID);
                 if (!listedTokens.Contains(tokenID)) _listableTokens.Add(tokenID);
             }
@@ -148,7 +149,7 @@ namespace GU_Exchange
             tbListPrice.Text = listPrice.ToString("0.##########");
             try
             {
-                decimal receiveAmount = listPrice / new decimal(1.08) * new decimal(0.99);
+                decimal receiveAmount = listPrice / getFeeMultiplier() * new decimal(0.99);
                 tbReceiveAmount.Text = receiveAmount.ToString("0.##########");
             }
             catch (FormatException)
@@ -248,7 +249,7 @@ namespace GU_Exchange
             try
             {
                 decimal listPrice = Decimal.Parse(tbListPrice.Text);
-                decimal receiveAmount = listPrice / new decimal(1.08) * new decimal(0.99);
+                decimal receiveAmount = listPrice / getFeeMultiplier() * new decimal(0.99);
                 tbReceiveAmount.Text = receiveAmount.ToString("0.##########");
             } catch (FormatException)
             {
@@ -268,7 +269,7 @@ namespace GU_Exchange
             try
             {
                 decimal receiveAmount = Decimal.Parse(tbReceiveAmount.Text);
-                decimal listPrice = receiveAmount * new decimal(1.08) / new decimal(0.99);
+                decimal listPrice = receiveAmount * getFeeMultiplier() / new decimal(0.99);
                 tbListPrice.Text = listPrice.ToString("0.##########");
             }
             catch (FormatException)
@@ -459,7 +460,7 @@ namespace GU_Exchange
             tbListPrice.Text = listPrice.ToString("0.##########");
             try
             {
-                decimal receiveAmount = listPrice / new decimal(1.08) * new decimal(0.99);
+                decimal receiveAmount = listPrice / getFeeMultiplier() * new decimal(0.99);
                 tbReceiveAmount.Text = receiveAmount.ToString("0.##########");
             }
             catch (FormatException)
@@ -481,6 +482,23 @@ namespace GU_Exchange
             Order? cheapestOrder = await _cheapestOrders[tokenName];
             if (cheapestOrder == null) return null;
             return cheapestOrder.PriceTotal();
+        }
+
+        private decimal getFeeMultiplier()
+        {
+            switch ((string)_parent.cbQuality.SelectedItem)
+            {
+                case "Meteorite":
+                    return 1.08M;
+                case "Shadow":
+                    return 1.07M;
+                case "Gold":
+                    return 1.06M;
+                case "Diamond":
+                    return 1.035M;
+                default:
+                    return 1.08M;
+            }
         }
         #endregion
     }

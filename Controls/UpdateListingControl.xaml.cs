@@ -66,7 +66,7 @@ namespace GU_Exchange
             tbListPrice.Text = listPrice.ToString("0.##########");
             try
             {
-                decimal receiveAmount = listPrice / new decimal(1.08) * new decimal(0.99);
+                decimal receiveAmount = listPrice / getFeeMultiplier() * new decimal(0.99);
                 tbReceiveAmount.Text = receiveAmount.ToString("0.##########");
             }
             catch (FormatException)
@@ -143,7 +143,7 @@ namespace GU_Exchange
             try
             {
                 decimal listPrice = Decimal.Parse(tbListPrice.Text);
-                decimal receiveAmount = listPrice / new decimal(1.08) * new decimal(0.99);
+                decimal receiveAmount = listPrice / getFeeMultiplier() * new decimal(0.99);
                 tbReceiveAmount.Text = receiveAmount.ToString("0.##########");
             } catch (FormatException)
             {
@@ -163,7 +163,7 @@ namespace GU_Exchange
             try
             {
                 decimal receiveAmount = Decimal.Parse(tbReceiveAmount.Text);
-                decimal listPrice = receiveAmount * new decimal(1.08) / new decimal(0.99);
+                decimal listPrice = receiveAmount * getFeeMultiplier() / new decimal(0.99);
                 tbListPrice.Text = listPrice.ToString("0.##########");
             }
             catch (FormatException)
@@ -338,7 +338,7 @@ namespace GU_Exchange
             tbListPrice.Text = listPrice.ToString("0.##########");
             try
             {
-                decimal receiveAmount = listPrice / new decimal(1.08) * new decimal(0.99);
+                decimal receiveAmount = listPrice / getFeeMultiplier() * new decimal(0.99);
                 tbReceiveAmount.Text = receiveAmount.ToString("0.##########");
             }
             catch (FormatException)
@@ -356,6 +356,23 @@ namespace GU_Exchange
             Order? cheapestOrder = await _cheapestOrder;
             if (cheapestOrder == null) return null;
             return cheapestOrder.PriceTotal();
+        }
+
+        private decimal getFeeMultiplier()
+        {
+            switch ((string)_parent.cbQuality.SelectedItem)
+            {
+                case "Meteorite":
+                    return 1.08M;
+                case "Shadow":
+                    return 1.07M;
+                case "Gold":
+                    return 1.06M;
+                case "Diamond":
+                    return 1.035M;
+                default:
+                    return 1.08M;
+            }
         }
         #endregion
     }

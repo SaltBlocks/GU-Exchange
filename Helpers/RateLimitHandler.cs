@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -6,6 +7,7 @@ using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Timers;
 
 namespace GU_Exchange.Helpers
 {
@@ -28,7 +30,7 @@ namespace GU_Exchange.Helpers
             if (uri != null && uri.Host.Contains("api"))
             {
                 DateTime delayUntil = DateTime.Now;
-                lock (_lockObject)
+                lock (_requestTimes)
                 {
                     // Maintain only the max number of requests for the past 10 seconds.
                     while (_requestTimes.Count > _requestsPerSecond * 10)
@@ -72,7 +74,7 @@ namespace GU_Exchange.Helpers
         public async Task ReserveRequests(int requestAmount, CancellationToken? cancellationToken = null)
         {
             DateTime delayUntil = DateTime.Now;
-            lock (_lockObject)
+            lock (_requestTimes)
             {
                 for (int i = 0; i < requestAmount; i++)
                 {
@@ -110,6 +112,27 @@ namespace GU_Exchange.Helpers
                 }
                 else
                     await Task.Delay(delay, _cts.Token);
+            }
+        }
+
+        public void CancelRequests()
+        {
+            _cts.Cancel();
+            _cts = new CancellationTokenSource();
+            DateTime currentTime = DateTime.Now;
+            Queue<DateTime> tempQueue = new Queue<DateTime>();
+            lock (_requestTimes)
+            {
+                while (_requestTimes.Count > 0)
+                {
+                    DateTime date = _requestTimes.Dequeue();
+                    tempQueue.Enqueue(date <= currentTime ? date : currentTime);
+                }
+
+                while (tempQueue.Count > 0)
+                {
+                    _requestTimes.Enqueue(tempQueue.Dequeue());
+                }
             }
         }
 

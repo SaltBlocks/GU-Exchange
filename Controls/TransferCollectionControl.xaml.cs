@@ -59,7 +59,7 @@ namespace GU_Exchange.Controls
             }
             try
             {
-                Log.Information($"Fetching orders for wallet ");
+                Log.Information($"Fetching cards in wallet {wallet.Address}.");
                 bool hasNext = true;
                 string urlBase = $"https://api.x.immutable.com/v1/assets?page_size=200&user={wallet.Address}&collection=0xacb3c6a43d15b907e8433077b6d38ae40936fe2c";
                 string urlInventory = urlBase;

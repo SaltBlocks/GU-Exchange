@@ -49,7 +49,7 @@
                 <MenuItem Header="Deck" Click="MiBuyDeck_Click"/>
             </MenuItem>
             <MenuItem Header="List">
-                <MenuItem Header="Collection" IsEnabled="False" />
+                <MenuItem Header="Collection" Click="MiListCollection_Click" />
                 <MenuItem Header="Update listings" IsEnabled="False" />
                 <MenuItem Header="Cancel listings" Click="MiCancelListings_Click" />
             </MenuItem>

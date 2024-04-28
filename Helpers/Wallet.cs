@@ -71,7 +71,7 @@ namespace GU_Exchange.Helpers
         /// <summary>
         /// Constructs an order object from json data.
         /// </summary>
-        /// <param name="json_order">THe json object containing the order.</param>
+        /// <param name="json_order">The json object containing the order.</param>
         /// <param name="currency">The name of the currency the order is filed in.</param>
         /// <exception cref="NullReferenceException"></exception>
         public Order(JToken json_order, string currency)
@@ -133,7 +133,7 @@ namespace GU_Exchange.Helpers
                 }
             }
 
-            // Take into account the 1% maker marketplace fee to ensure we are using correct price values later on.
+            // Take into account the 1% taker marketplace fee to ensure we are using correct price values later on.
             FeeList.Add("MARKET_TAKER", quantity_base * new decimal(0.01) / multDecimals);
             quantity_base /= multDecimals;
 
@@ -166,7 +166,7 @@ namespace GU_Exchange.Helpers
         }
 
         /// <summary>
-        /// Get the total price for this order excluding user and taker marketplace fees.
+        /// Get the total price for this order excluding user added taker fees.
         /// </summary>
         /// <returns>The total order price.</returns>
         public decimal PriceTotal()
@@ -1082,7 +1082,7 @@ namespace GU_Exchange.Helpers
             // Unlock user wallet.
             foreach ((NFT card, string tokenID, double price, TextBlock? tbStatusListing) listing in listings)
             {
-                if (listing.tbStatusListing != null) listing.tbStatusListing.Text = "Waiting for wallet to be unlocked...";
+                if (listing.tbStatusListing != null) listing.tbStatusListing.Text = "Waiting for wallet...";
             }
             tbStatus.Text = "Waiting for wallet to be unlocked...";
             bool reLock = false;
@@ -1093,13 +1093,13 @@ namespace GU_Exchange.Helpers
                 unlockWindow.ShowDialog();
                 if (unlockWindow.Result == UnlockWalletWindow.UnlockResult.Cancel)
                 {
-                    foreach ((NFT card, string tokenID, double price, TextBlock? tbStatusListing) listing in listings)
+                    foreach ((NFT card, string tokenID, double price, TextBlock? tbStatusListing) cardListing in listings)
                     {
-                        if (listing.tbStatusListing != null)
+                        if (cardListing.tbStatusListing != null)
                         {
-                            listing.tbStatusListing.Text = "Listing cancelled.";
+                            cardListing.tbStatusListing.Text = "Listing cancelled";
                         }
-                        tbStatus.Text = "Listing(s) cancelled.";
+                        tbStatus.Text = $"Listing{(listings.Length > 1 ? "s" : "")} cancelled.";
                     }
                     return listings.ToDictionary(x => x.card, x => false); ;
                 }
@@ -1107,7 +1107,7 @@ namespace GU_Exchange.Helpers
             }
 
             // Prompt IMXlib to submit the listings.
-            tbStatus.Text = "Submitting listing(s) to IMX...";
+            tbStatus.Text = $"Submitting listing{(listings.Length > 1 ? "s" : "")} to IMX...";
             List<Task<(NFT card, bool result)>> listTasks = new();
             foreach ((NFT card, string tokenID, double price, TextBlock? tbStatusListing) listing in listings)
             {
@@ -1121,7 +1121,10 @@ namespace GU_Exchange.Helpers
                     }
                     catch (OperationCanceledException)
                     {
-                        if (listing.tbStatusListing != null) listing.tbStatusListing.Text = "An unknown error occurred";
+                        if (listing.tbStatusListing != null) listing.tbStatusListing.Dispatcher.Invoke(() =>
+                        {
+                            listing.tbStatusListing.Text = "Unknown error";
+                        });
                         return (listing.card, false);
                     }
                     int bufferSize = 1024;
@@ -1133,19 +1136,30 @@ namespace GU_Exchange.Helpers
                     Log.Information($"Order creation finished with result: {result ?? "None"}");
                     if (result == null)
                     {
-                        if (listing.tbStatusListing != null) listing.tbStatusListing.Text = "An unknown error occurred";
+                        if (listing.tbStatusListing != null) listing.tbStatusListing.Dispatcher.Invoke(() =>
+                        {
+                            listing.tbStatusListing.Text = "Unknown error";
+                        });
                         return (listing.card, false);
                     }
                     if (!result.Contains("order_id"))
                     {
                         JObject? jsonResult = (JObject?)JsonConvert.DeserializeObject(result);
                         string? message = (string?)jsonResult?.SelectToken("message");
-                        if (message == null)
+                        string? code = (string?)jsonResult?.SelectToken("code");
+                        if (message == null || code == null)
                         {
-                            if (listing.tbStatusListing != null) listing.tbStatusListing.Text = "An unknown error occurred";
+                            if (listing.tbStatusListing != null) listing.tbStatusListing.Dispatcher.Invoke(() =>
+                            {
+                                listing.tbStatusListing.Text = "Unknown error";
+                            });
                             return (listing.card, false);
                         }
-                        if (listing.tbStatusListing != null) listing.tbStatusListing.Text = message;
+                        if (listing.tbStatusListing != null) listing.tbStatusListing.Dispatcher.Invoke(() =>
+                        {
+                            listing.tbStatusListing.Text = code;
+                        });
+                        Log.Warning($"Listing failed: {message}");
                         return (listing.card, false);
                     }
                     return (listing.card, true);
@@ -1228,7 +1242,10 @@ namespace GU_Exchange.Helpers
                     }
                     catch (OperationCanceledException)
                     {
-                        if (order.tbStatusCancellation != null) order.tbStatusCancellation.Text = "An unknown error occurred";
+                        if (order.tbStatusCancellation != null) order.tbStatusCancellation.Dispatcher.Invoke(() =>
+                        {
+                            order.tbStatusCancellation.Text = "Unknown error";
+                        });
                         return (order.orderID, false);
                     }
                     // Cancel the order.
@@ -1241,7 +1258,10 @@ namespace GU_Exchange.Helpers
                     Log.Information($"Order cancellation finished with result: {result ?? "None"}");
                     if (result == null)
                     {
-                        if (order.tbStatusCancellation != null) order.tbStatusCancellation.Text = "Unknown error";
+                        if (order.tbStatusCancellation != null) order.tbStatusCancellation.Dispatcher.Invoke(() =>
+                        {
+                            order.tbStatusCancellation.Text = "Unknown error";
+                        });
                         return (order.orderID, false);
                     }
                     if (!result.Contains("order_id"))
@@ -1926,13 +1946,13 @@ namespace GU_Exchange.Helpers
                 string? data = await prepareTask.prep;
                 if (data == null)
                 {
-                    if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Text = "Order creation failed (No data)";
+                    if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Text = "Listing failed";
                     continue;
                 }
                 JObject? jsonData = (JObject?)JsonConvert.DeserializeObject(data);
                 if (jsonData == null)
                 {
-                    if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Text = "Order creation failed (Invalid JSON)";
+                    if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Text = "Listing failed";
                     continue;
                 }
 
@@ -1941,11 +1961,13 @@ namespace GU_Exchange.Helpers
                 if (nonce == null || signableMessage == null)
                 {
                     string? message = (string?)jsonData?.SelectToken("message");
-                    if (message == null)
+                    string? code = (string?)jsonData?.SelectToken("code");
+                    if (message == null || code == null)
                     {
-                        if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Text = "Order creation failed (Invalid JSON)";
+                        if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Text = "Listing failed";
                         continue;
                     }
+                    Log.Warning($"Listing failed: {message}");
                     if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Text = message;
                     continue;
                 }
@@ -1963,7 +1985,10 @@ namespace GU_Exchange.Helpers
                     }
                     catch (OperationCanceledException)
                     {
-                        if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Text = "Order creation failed (Cancelled by user)";
+                        if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Dispatcher.Invoke(() =>
+                        {
+                            prepareTask.tbStatusListing.Text = "Listing failed";
+                        });
                         return false;
                     }
                     try
@@ -1972,7 +1997,10 @@ namespace GU_Exchange.Helpers
                     }
                     catch (OperationCanceledException)
                     {
-                        if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Text = "An unknown error occurred";
+                        if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Dispatcher.Invoke(() =>
+                        {
+                            prepareTask.tbStatusListing.Text = "Unknown error";
+                        });
                         return false;
                     }
                     int bufferSize = 1024;
@@ -1982,19 +2010,30 @@ namespace GU_Exchange.Helpers
                     Log.Information($"Order creation finished with result: {result ?? "None"}");
                     if (result == null)
                     {
-                        if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Text = "An unknown error occurred";
+                        if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Dispatcher.Invoke(() =>
+                        {
+                            prepareTask.tbStatusListing.Text = "Unknown error";
+                        });
                         return false;
                     }
                     if (!result.Contains("order_id"))
                     {
                         JObject? jsonResult = (JObject?)JsonConvert.DeserializeObject(result);
                         string? message = (string?)jsonResult?.SelectToken("message");
-                        if (message == null)
+                        string? code = (string?)jsonResult?.SelectToken("code");
+                        if (message == null || code == null)
                         {
-                            if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Text = "An unknown error occurred";
+                            if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Dispatcher.Invoke(() =>
+                            {
+                                prepareTask.tbStatusListing.Text = "Unknown error";
+                            });
                             return false;
                         }
-                        if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Text = message;
+                        if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Dispatcher.Invoke(() =>
+                        {
+                            prepareTask.tbStatusListing.Text = code;
+                        });
+                        Log.Warning($"Listing failed: {message}");
                         return false;
                     }
                     return true;
