@@ -1107,7 +1107,7 @@ namespace GU_Exchange.Helpers
             }
 
             // Prompt IMXlib to submit the listings.
-            tbStatus.Text = $"Submitting listing{(listings.Length > 1 ? "s" : "")} to IMX...";
+            tbStatus.Text = $"Submitting listing{(listings.Length > 1 ? "s" : "")}...";
             List<Task<(NFT card, bool result)>> listTasks = new();
             foreach ((NFT card, string tokenID, double price, TextBlock? tbStatusListing) listing in listings)
             {
@@ -1115,6 +1115,10 @@ namespace GU_Exchange.Helpers
                 Task<(NFT card, bool result)> createListing = Task.Run(async () =>
                 {
                     // Submit the listing.
+                    if (listing.tbStatusListing != null) listing.tbStatusListing.Dispatcher.Invoke(() =>
+                    {
+                        listing.tbStatusListing.Text = "Submitting listing...";
+                    });
                     try
                     {
                         await ResourceManager.RateLimiter.ReserveRequests(2);
@@ -1162,11 +1166,25 @@ namespace GU_Exchange.Helpers
                         Log.Warning($"Listing failed: {message}");
                         return (listing.card, false);
                     }
+                    if (listing.tbStatusListing != null) listing.tbStatusListing.Dispatcher.Invoke(() =>
+                    {
+                        listing.tbStatusListing.Text = "Listing created";
+                    });
                     return (listing.card, true);
                 });
                 // Add the task to a list of tasks so we can track when they finish.
                 listTasks.Add(createListing);
             }
+
+            List<Task<(NFT card, bool result)>> trackListings = new(listTasks);
+            int totalTasks = listTasks.Count();
+            while (trackListings.Count() > 0)
+            {
+                Task<(NFT card, bool result)> data = await Task.WhenAny(trackListings);
+                trackListings.Remove(data);
+                tbStatus.Text = $"Submitted {totalTasks - trackListings.Count()} / {totalTasks} listings...";
+            }
+
             // Wait for list tasks to finish.
             (NFT card, bool res)[] results = await Task.WhenAll(listTasks);
 
@@ -1229,7 +1247,7 @@ namespace GU_Exchange.Helpers
             }
 
             // Prompt IMXlib to cancel orders.
-            tbStatus.Text = $"Cancelling listing{(orders.Count() > 1 ? "s" : "")} on IMX...";
+            tbStatus.Text = $"Cancelling listing{(orders.Count() > 1 ? "s" : "")}...";
             List<Task<(string orderID, bool result)>> cancelTasks = new();
             foreach ((string orderID, TextBlock? tbStatusCancellation) order in orders)
             {
@@ -1296,6 +1314,7 @@ namespace GU_Exchange.Helpers
             {
                 Task<(string orderID, bool result)> completed = await Task.WhenAny(cancelTasksCopy);
                 cancelTasksCopy.Remove(completed);
+                tbStatus.Text = $"Cancelled {orders.Count() - cancelTasksCopy.Count} / {orders.Count()} listings...";
                 (string orderID, bool result) data = await completed;
                 foreach ((string orderID, TextBlock? tbStatusCancellation) order in orders.Where(x => x.orderID == data.orderID))
                 {
@@ -1934,6 +1953,18 @@ namespace GU_Exchange.Helpers
                 });
                 prepareTasks.Add((createListing, listing.card, listing.tbStatusListing));
             }
+            List<Task<string?>> trackPreparations = new(prepareTasks.Select(x => x.Item1));
+            int totalTasks = prepareTasks.Count();
+            while (trackPreparations.Count() > 0)
+            {
+                Task<string?> data = await Task.WhenAny(trackPreparations);
+                trackPreparations.Remove(data);
+                TextBlock? tbStatusListing = prepareTasks.Where(x => x.Item1 == data).First().Item3;
+                if (tbStatusListing != null) tbStatusListing.Text = "Awaiting signature...";
+                tbStatus.Text = $"Prepared {totalTasks - trackPreparations.Count()} / {totalTasks} orders to sign...";
+            }
+
+
             await Task.WhenAll(prepareTasks.Select(x => x.Item1));
 
             // Request user signatures.

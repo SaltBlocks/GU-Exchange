@@ -13,7 +13,6 @@ using System.Windows.Media;
 using System.Net.Http;
 using static GU_Exchange.Helpers.IMXlib;
 using GU_Exchange.Helpers;
-using ImageProcessor.Processors;
 using Serilog;
 
 namespace GU_Exchange
@@ -120,7 +119,6 @@ namespace GU_Exchange
             {
                 string? tokenID = card["token_id"]?.Value<string>();
                 if (tokenID == null) continue;
-                Console.WriteLine(imx_get_token_trade_fee("0xacb3c6a43d15b907e8433077b6d38ae40936fe2c", tokenID));
                 _allTokens.Add(tokenID);
                 if (!listedTokens.Contains(tokenID)) _listableTokens.Add(tokenID);
             }

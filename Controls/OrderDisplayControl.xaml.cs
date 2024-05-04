@@ -32,10 +32,12 @@ namespace GU_Exchange.Controls
         public string CardName { get; private set; }
         public int ProtoID { get; private set; }
         public int Quality { get; private set; }
+        public DisplayStatus Status { get; private set; }
 
         public OrderDisplayControl(string cardName, int protoID, int quality)
         {
             InitializeComponent();
+            Status = DisplayStatus.Loading;
             CardName = cardName;
             ProtoID = protoID;
             Quality = quality;
@@ -67,7 +69,7 @@ namespace GU_Exchange.Controls
         public void SetOrder(Order order)
         {
             _order = order;
-            tbPrice.Text = $"{Math.Round(order.PriceTotal(), 10)} {order.Currency}";
+            tbSubText.Text = $"{Math.Round(order.PriceTotal(), 10)} {order.Currency}";
             ShowStatus(false);
         }
 
@@ -78,6 +80,7 @@ namespace GU_Exchange.Controls
 
         public void SetStatus(DisplayStatus status)
         {
+            Status = status;
             switch (status) {
                 case DisplayStatus.Success:
                     spinner.Visibility = Visibility.Collapsed;
@@ -101,6 +104,16 @@ namespace GU_Exchange.Controls
         public void SetStatusMessage(string message)
         {
             tbStatus.Text = message;
+        }
+
+        public string GetSubText()
+        {
+            return tbSubText.Text;
+        }
+
+        public void SetSubText(string mesage)
+        {
+            tbSubText.Text = mesage;
         }
 
         public TextBlock getStatustextBlock()

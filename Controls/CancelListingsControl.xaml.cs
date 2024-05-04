@@ -1,25 +1,13 @@
 ﻿using GU_Exchange.Helpers;
-using ImageProcessor.Processors;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json;
 using Serilog;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Net.Http;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
-using System.Net;
-using System.Runtime.CompilerServices;
 
 namespace GU_Exchange.Controls
 {
@@ -28,14 +16,24 @@ namespace GU_Exchange.Controls
     /// </summary>
     public partial class CancelListingsControl : UserControl
     {
+        #region Class Properties
         private readonly HashSet<Order> _orders;
+        #endregion
+        #region Default Constructor
+        /// <summary>
+        /// Constructor for a User Control to let the user cancel all active sell orders for GU cards.
+        /// </summary>
         public CancelListingsControl()
         {
             InitializeComponent();
             _orders = new();
             setupOrders();
         }
-
+        #endregion
+        #region UserControl Setup.
+        /// <summary>
+        /// Fetch active orders on connected wallet and show them in the cardpanel.
+        /// </summary>
         private async void setupOrders()
         {
             Wallet? wallet = Wallet.GetConnectedWallet();
@@ -48,7 +46,7 @@ namespace GU_Exchange.Controls
             {
                 Log.Information($"Fetching orders for wallet ");
                 bool hasNext = true;
-                string urlBase = $"https://api.x.immutable.com/v3/orders?direction=asc&include_fees=true&order_by=buy_quantity&page_size=50&sell_token_address=0xacb3c6a43d15b907e8433077b6d38ae40936fe2c&status=active&user={wallet.Address}";
+                string urlBase = $"https://api.x.immutable.com/v3/orders?direction=asc&include_fees=true&order_by=buy_quantity&page_size=200&sell_token_address=0xacb3c6a43d15b907e8433077b6d38ae40936fe2c&status=active&user={wallet.Address}";
                 string urlInventory = urlBase;
                 while (hasNext)
                 {
@@ -87,22 +85,8 @@ namespace GU_Exchange.Controls
                 return;
             }
         }
-
-        private async Task<string> getOrderCurrencyName(JToken order)
-        {
-            string? token_address = (string?)order.SelectToken("buy.data.token_address");
-            if (token_address == null )
-                return "???";
-            if (token_address == "")
-            {
-                string? token_type = (string?)order.SelectToken("buy.type");
-                if (token_type == null)
-                    return "???";
-                return token_type;
-            }
-            return await Wallet.FetchTokenSymbol(token_address);
-        }
-
+        #endregion
+        #region Event Handlers
         /// <summary>
         /// Adjust the size of the CardControl when the window size is changed.
         /// </summary>
@@ -157,7 +141,7 @@ namespace GU_Exchange.Controls
         }
 
         /// <summary>
-        /// Cancel the existing order for this card posted by the user.
+        /// Cancel all currently active listings created by the connected wallet.
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
@@ -169,7 +153,7 @@ namespace GU_Exchange.Controls
                 return;
             }
 
-            // Prevent user from closing the window until this method finished during the purchase.
+            // Prevent user from closing the window until this method finished.
             btnCancelAll.IsEnabled = false;
             btnClose.IsEnabled = false;
             ((MainWindow)Application.Current.MainWindow).menuBar.IsEnabled = false;
@@ -198,9 +182,7 @@ namespace GU_Exchange.Controls
                 }
             }
 
-
-
-            // Cancel the order and allow the wallet to update the status message.
+            // Cancel the orders and allow the wallet to update the status message.
             Dictionary<string, bool> result = await wallet.RequestCancelOrders(Application.Current.MainWindow, orderData.ToArray(), tbStatus);
 
             foreach (string order in result.Keys)
@@ -217,5 +199,22 @@ namespace GU_Exchange.Controls
             ((MainWindow)Application.Current.MainWindow).menuBar.IsEnabled = true;
             btnClose.IsEnabled = true;
         }
+        #endregion
+        #region Supporting methods
+        private async Task<string> getOrderCurrencyName(JToken order)
+        {
+            string? token_address = (string?)order.SelectToken("buy.data.token_address");
+            if (token_address == null )
+                return "???";
+            if (token_address == "")
+            {
+                string? token_type = (string?)order.SelectToken("buy.type");
+                if (token_type == null)
+                    return "???";
+                return token_type;
+            }
+            return await Wallet.FetchTokenSymbol(token_address);
+        }
+        #endregion
     }
 }

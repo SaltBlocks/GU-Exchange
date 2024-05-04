@@ -6,22 +6,10 @@ using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
-using System.Web;
-using System.Threading;
 using static GU_Exchange.Helpers.IMXlib;
-using System.Runtime.CompilerServices;
 
 namespace GU_Exchange.Controls
 {
@@ -30,25 +18,38 @@ namespace GU_Exchange.Controls
     /// </summary>
     public partial class TransferCollectionControl : UserControl
     {
+        /// <summary>
+        /// Enum for the window transfer status.
+        /// </summary>
         private enum WindowStatus
         {
             Waiting, Transferring, Transferred, Failed
         }
 
-        private WindowStatus status;
-        private int displayIndex;
-        private readonly List<(string, int, int)> cardData;
+        #region Class Properties
+        private WindowStatus _status;
+        private int _displayIndex;
+        private readonly List<(string, int, int)> _cardData;
         private readonly HashSet<string> _tokenIds;
+        #endregion
+        #region Default Constructor
+        /// <summary>
+        /// Constructor for a UserControl to allow the user to transfer all cards in the connected wallet.
+        /// </summary>
         public TransferCollectionControl()
         {
             InitializeComponent();
-            status = WindowStatus.Waiting;
-            displayIndex = 0;
-            cardData = new();
+            _status = WindowStatus.Waiting;
+            _displayIndex = 0;
+            _cardData = new();
             _tokenIds = new();
             setupInventory();
         }
-
+        #endregion
+        #region Setup methods
+        /// <summary>
+        /// Fetch all cards in the connected wallet and display them to the user.
+        /// </summary>
         private async void setupInventory()
         {
             Wallet? wallet = Wallet.GetConnectedWallet();
@@ -82,13 +83,13 @@ namespace GU_Exchange.Controls
                         if (cardName == null || img_url == null || token_id == null)
                             continue;
                         string[] card_data = img_url.Split("id=")[1].Split("&q=");
-                        cardData.Add((cardName, int.Parse(card_data[0]), int.Parse(card_data[1])));
-                        if (displayIndex < 50)
+                        _cardData.Add((cardName, int.Parse(card_data[0]), int.Parse(card_data[1])));
+                        if (_displayIndex < 50)
                         {
                             OrderDisplayControl control = new(cardName, int.Parse(card_data[0]), int.Parse(card_data[1]));
                             SetupOrderDisplay(control);
                             cardPanel.Children.Add(control);
-                            displayIndex++;
+                            _displayIndex++;
                         }
                         _tokenIds.Add(token_id);
                     }
@@ -103,7 +104,8 @@ namespace GU_Exchange.Controls
                 return;
             }
         }
-
+        #endregion
+        #region Event Handler.
         /// <summary>
         /// Adjust the size of the CardControl when the window size is changed.
         /// </summary>
@@ -164,12 +166,12 @@ namespace GU_Exchange.Controls
                 return;
             }
             int added = 0;
-            while (added < 50 && displayIndex < cardData.Count)
+            while (added < 50 && _displayIndex < _cardData.Count)
             {
-                OrderDisplayControl control = new(cardData[displayIndex].Item1, cardData[displayIndex].Item2, cardData[displayIndex].Item3);
+                OrderDisplayControl control = new(_cardData[_displayIndex].Item1, _cardData[_displayIndex].Item2, _cardData[_displayIndex].Item3);
                 SetupOrderDisplay(control);
                 cardPanel.Children.Add(control);
-                displayIndex++;
+                _displayIndex++;
                 added++;
             }
         }
@@ -205,7 +207,7 @@ namespace GU_Exchange.Controls
                 window.ShowDialog();
                 if (!window.Result)
                 {
-                    status = WindowStatus.Failed;
+                    _status = WindowStatus.Failed;
                     tbStatus.Text = "Transfer cancelled...";
                     foreach (OrderDisplayControl display in cardPanel.Children)
                     {
@@ -222,7 +224,7 @@ namespace GU_Exchange.Controls
             btnClose.IsEnabled = false;
             ((MainWindow)Application.Current.MainWindow).menuBar.IsEnabled = false;
 
-            status = WindowStatus.Transferring;
+            _status = WindowStatus.Transferring;
             foreach (OrderDisplayControl display in cardPanel.Children)
             {
                 display.SetStatusMessage("Transferring...");
@@ -244,7 +246,7 @@ namespace GU_Exchange.Controls
             {
                 // Transfers failed.
                 tbStatus.Text = "All transfers failed";
-                status = WindowStatus.Failed;
+                _status = WindowStatus.Failed;
                 foreach (OrderDisplayControl display in cardPanel.Children)
                 {
                     display.SetStatusMessage("Transfer failed");
@@ -255,7 +257,7 @@ namespace GU_Exchange.Controls
             else
             {
                 tbStatus.Text = "All transfers succeeded";
-                status = WindowStatus.Transferred;
+                _status = WindowStatus.Transferred;
                 foreach (OrderDisplayControl display in cardPanel.Children)
                 {
                     display.SetStatus(OrderDisplayControl.DisplayStatus.Success);
@@ -270,7 +272,7 @@ namespace GU_Exchange.Controls
                 Inventory? inv = (Inventory?)App.Current.Properties["Inventory"];
                 if (inv != null && invChange != 0)
                 {
-                    foreach ((string, int, int) card in cardData)
+                    foreach ((string, int, int) card in _cardData)
                     {
                         inv.SetNumberOwned(card.Item2, card.Item3, Math.Max(inv.GetNumberOwned(card.Item2, card.Item3) + invChange, 0));
                     }
@@ -282,7 +284,12 @@ namespace GU_Exchange.Controls
             ((MainWindow)Application.Current.MainWindow).menuBar.IsEnabled = true;
         }
 
-    private void btnClose_Click(object sender, RoutedEventArgs e)
+        /// <summary>
+        /// Close the window if the close button is pressed.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void btnClose_Click(object sender, RoutedEventArgs e)
         {
             ((MainWindow)Application.Current.MainWindow).CloseOverlay();
         }
@@ -301,9 +308,14 @@ namespace GU_Exchange.Controls
                 tbAddress.Text = window.GetSelectedAddress();
         }
 
+        /// <summary>
+        /// Enable or disable the transfer button depending on if the data entered by the user is valid.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
         private void tbAddress_TextChanged(object sender, TextChangedEventArgs e)
         {
-            if (Wallet.IsValidEthereumAddress(tbAddress.Text) && status == WindowStatus.Waiting)
+            if (Wallet.IsValidEthereumAddress(tbAddress.Text) && _status == WindowStatus.Waiting)
             {
                 btnTransferAll.IsEnabled = true;
             }
@@ -312,27 +324,33 @@ namespace GU_Exchange.Controls
                 btnTransferAll.IsEnabled = false;
             }
         }
-
+        #endregion
+        #region Supporting methods.
+        /// <summary>
+        /// Set the status of the transfer in an OrderDisplay.
+        /// </summary>
+        /// <param name="control"></param>
         private void SetupOrderDisplay(OrderDisplayControl control)
         {
-            if (status == WindowStatus.Waiting)
+            if (_status == WindowStatus.Waiting)
             {
                 control.ShowStatus(false);
-            } else if (status == WindowStatus.Transferring)
+            } else if (_status == WindowStatus.Transferring)
             {
                 control.ShowStatus(true);
                 control.SetStatusMessage("Transferring...");
-            } else if (status == WindowStatus.Transferred)
+            } else if (_status == WindowStatus.Transferred)
             {
                 control.ShowStatus(true);
                 control.SetStatus(OrderDisplayControl.DisplayStatus.Success);
                 control.SetStatusMessage("Transfer complete");
-            } else if (status == WindowStatus.Failed)
+            } else if (_status == WindowStatus.Failed)
             {
                 control.ShowStatus(true);
                 control.SetStatus(OrderDisplayControl.DisplayStatus.Fail);
                 control.SetStatusMessage("Transfer failed");
             }
         }
+        #endregion
     }
 }

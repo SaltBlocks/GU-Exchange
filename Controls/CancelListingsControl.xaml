@@ -7,26 +7,32 @@
              mc:Ignorable="d" 
              d:DesignHeight="500" d:DesignWidth="875" Background="#7FE4E4E4" SizeChanged="UserControl_SizeChanged" MouseDown="UserControl_MouseDown">
     <Grid x:Name="controlGrid" Background="#FFE4E4E4">
+        <!--#region Grid Layout. -->
         <Grid.RowDefinitions>
             <RowDefinition Height="1*" MaxHeight="60"/>
             <RowDefinition Height="4*"/>
             <RowDefinition Height="30"/>
             <RowDefinition Height="50"/>
         </Grid.RowDefinitions>
+        <!-- #endregion -->
         <!-- #region Grid Border. -->
         <Border BorderBrush="Black" BorderThickness="1" Grid.RowSpan="6"/>
         <!--#endregion-->
-        <Viewbox Grid.Row="0" Margin="10,10,10,10">
+        <!-- #region Title. -->
+            <Viewbox Grid.Row="0" Margin="10,10,10,10">
             <TextBlock Text="Cancel Listings" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
         </Viewbox>
-        <!--  #region Panel to display cards. -->
+        <!-- #endregion -->
+        <!--  #region Card display panel. -->
         <ScrollViewer x:Name="scrollBar" HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Auto" Margin="5,0,5,0" Grid.Row="1">
             <WrapPanel x:Name="cardPanel" Margin="0,0,0,0" ScrollViewer.CanContentScroll="True" ScrollViewer.HorizontalScrollBarVisibility="Visible" MaxWidth="{Binding ActualWidth, RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type ScrollViewer}}}" HorizontalAlignment="Center"/>
         </ScrollViewer>
         <!-- #endregion -->
-        <Viewbox Grid.Row="2" Margin="0,0,0,0">
+        <!--#region Status bar. -->
+            <Viewbox Grid.Row="2" Margin="0,0,0,0">
             <TextBlock x:Name="tbStatus" Text="Fetching active listings..." HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
         </Viewbox>
+        <!-- #endregion -->
         <!-- #region Buttons. -->
         <StackPanel HorizontalAlignment="Center" Grid.Row="3" Orientation="Horizontal">
             <Button x:Name="btnCancelAll" Content="Cancel all" Width="75" Height="25" Margin="10,5" IsEnabled="False" Click="BtnCancelAll_Click"/>
