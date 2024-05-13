@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace GU_Exchange.Helpers
@@ -77,7 +78,7 @@ namespace GU_Exchange.Helpers
         /// </summary>
         /// <param name="message"></param>
         /// <returns></returns>
-        public static async Task<SignatureData> RequestSignatureAsync(string message)
+        public static async Task<SignatureData> RequestSignatureAsync(string message, CancellationToken? cancelToken = null)
         {
             bool previouslyRequested;
             lock (s_signatureRequestTasks)
@@ -93,6 +94,16 @@ namespace GU_Exchange.Helpers
             {
                 s_signatureRequestTasks.Add(message, taskCompletionSource);
             }
+
+            // Attach the cancellation token to the task if provided
+            cancelToken?.Register(() =>
+            {
+                taskCompletionSource.TrySetCanceled();
+                lock (s_signatureRequestTasks)
+                {
+                    s_signatureRequestTasks.Remove(message);
+                }
+            });
             return await taskCompletionSource.Task;
         }
 
@@ -206,7 +217,11 @@ namespace GU_Exchange.Helpers
         /// <param name="response"></param>
         static void ReturnMessages(HttpListenerResponse response)
         {
-            string message = JsonConvert.SerializeObject(s_signatureRequestTasks.Keys);
+            string message;
+            lock (s_signatureRequestTasks)
+            {
+                message = JsonConvert.SerializeObject(s_signatureRequestTasks.Keys);
+            }
             byte[] buffer = Encoding.UTF8.GetBytes(message);
             response.ContentLength64 = buffer.Length;
             response.OutputStream.Write(buffer, 0, buffer.Length);

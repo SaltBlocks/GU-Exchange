@@ -14,6 +14,7 @@ using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Soap;
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -1921,6 +1922,7 @@ namespace GU_Exchange.Helpers
         /// <returns></returns>
         public override async Task<Dictionary<NFT, bool>> RequestCreateOrders(Window parent, (NFT card, string tokenID, double price, TextBlock? tbStatusListing)[] listings, TextBlock tbStatus)
         {
+            CancellationTokenSource masterCancelSource = new();
             // Unlock wallet (using default password).
             foreach ((NFT card, string tokenID, double price, TextBlock? tbStatusListing) listing in listings)
             {
@@ -1939,7 +1941,7 @@ namespace GU_Exchange.Helpers
                 {
                     try
                     {
-                        await ResourceManager.RateLimiter.ReserveRequests(1);
+                        await ResourceManager.RateLimiter.ReserveRequests(1, masterCancelSource.Token);
                     }
                     catch (OperationCanceledException)
                     {
@@ -1953,28 +1955,27 @@ namespace GU_Exchange.Helpers
                 });
                 prepareTasks.Add((createListing, listing.card, listing.tbStatusListing));
             }
+            
+            List<Task<SignatureData>> sigTasks = new();
+            List<(Task<bool>, NFT card, TextBlock? tbStatusListing)> listTasks = new();
+
+            // Show signature request window.
+            UseWebWalletWindow useWalletWindow = new();
+            useWalletWindow.Owner = parent;
+            useWalletWindow.Show();
+
             List<Task<string?>> trackPreparations = new(prepareTasks.Select(x => x.Item1));
             int totalTasks = prepareTasks.Count();
             while (trackPreparations.Count() > 0)
             {
-                Task<string?> data = await Task.WhenAny(trackPreparations);
-                trackPreparations.Remove(data);
-                TextBlock? tbStatusListing = prepareTasks.Where(x => x.Item1 == data).First().Item3;
+                Task<string?> dataTask = await Task.WhenAny(trackPreparations);
+                trackPreparations.Remove(dataTask);
+                TextBlock? tbStatusListing = prepareTasks.Where(x => x.Item1 == dataTask).First().Item3;
                 if (tbStatusListing != null) tbStatusListing.Text = "Awaiting signature...";
                 tbStatus.Text = $"Prepared {totalTasks - trackPreparations.Count()} / {totalTasks} orders to sign...";
-            }
-
-
-            await Task.WhenAll(prepareTasks.Select(x => x.Item1));
-
-            // Request user signatures.
-            tbStatus.Text = $"Waiting for user signature{(listings.Count() > 1 ? "s" : "")}...";
-            List<Task<SignatureData>> sigTasks = new();
-            List<(Task<bool>, NFT card, TextBlock? tbStatusListing)> listTasks = new();
-            foreach ((Task<string?> prep, NFT card, TextBlock? tbStatusListing) prepareTask in prepareTasks)
-            {
+                (Task<string?> prep, NFT card, TextBlock? tbStatusListing) prepareTask = prepareTasks.Find(x => x.Item1 == dataTask);
                 // Check if the data is valid.
-                string? data = await prepareTask.prep;
+                string? data = await dataTask;
                 if (data == null)
                 {
                     if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Text = "Listing failed";
@@ -2004,7 +2005,7 @@ namespace GU_Exchange.Helpers
                 }
 
                 // Request signature.
-                Task<SignatureData> getSignature = SignatureRequestServer.RequestSignatureAsync(signableMessage);
+                Task<SignatureData> getSignature = SignatureRequestServer.RequestSignatureAsync(signableMessage, masterCancelSource.Token);
 
                 // Submit listing to IMX.
                 Task<bool> createListing = Task.Run(async () =>
@@ -2020,11 +2021,17 @@ namespace GU_Exchange.Helpers
                         {
                             prepareTask.tbStatusListing.Text = "Listing failed";
                         });
+                        useWalletWindow.AutoClose = true;
+                        masterCancelSource.Cancel();
                         return false;
                     }
+                    if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Dispatcher.Invoke(() =>
+                    {
+                        prepareTask.tbStatusListing.Text = "Creating listing...";
+                    });
                     try
                     {
-                        await ResourceManager.RateLimiter.ReserveRequests(1);
+                        await ResourceManager.RateLimiter.ReserveRequests(1, masterCancelSource.Token);
                     }
                     catch (OperationCanceledException)
                     {
@@ -2067,18 +2074,18 @@ namespace GU_Exchange.Helpers
                         Log.Warning($"Listing failed: {message}");
                         return false;
                     }
+                    if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Dispatcher.Invoke(() =>
+                    {
+                        prepareTask.tbStatusListing.Text = "Listing created";
+                    });
                     return true;
                 });
 
                 sigTasks.Add(getSignature);
+                useWalletWindow.AddTask(getSignature);
                 listTasks.Add((createListing, prepareTask.card, prepareTask.tbStatusListing));
             }
-
-            // Show signature request window.
-            UseWebWalletWindow useWalletWindow = new(sigTasks);
-            useWalletWindow.Owner = parent;
-            useWalletWindow.ShowDialog();
-
+            useWalletWindow.AutoClose = true;
             // Wait for listings to finish.
             Dictionary<NFT, bool> results = (await Task.WhenAll(listTasks.Select(async x =>
             {
@@ -2091,6 +2098,7 @@ namespace GU_Exchange.Helpers
                     return (x.card, false);
                 }
             }))).ToDictionary(x => x.card, x => x.Item2);
+            results = results.Concat(listings.Where(x => !results.ContainsKey(x.card)).ToDictionary(x => x.card, x => false)).ToDictionary(x => x.Key, x => x.Value);
 
             // Inform the user of the listing result.
             if (results.All(x => x.Value))
@@ -2117,6 +2125,7 @@ namespace GU_Exchange.Helpers
         /// <returns></returns>
         public override async Task<Dictionary<string, bool>> RequestCancelOrders(Window parent, (string orderID, TextBlock? tbStatusCancellation)[] orders, TextBlock tbStatus)
         {
+            CancellationTokenSource masterCancelSource = new();
             // Unlock user wallet.
             foreach ((string orderID, TextBlock? tbStatusCancellation) order in orders)
             {
@@ -2135,7 +2144,7 @@ namespace GU_Exchange.Helpers
                 {
                     try
                     {
-                        await ResourceManager.RateLimiter.ReserveRequests(1);
+                        await ResourceManager.RateLimiter.ReserveRequests(1, masterCancelSource.Token);
                     }
                     catch (OperationCanceledException)
                     {
@@ -2150,25 +2159,36 @@ namespace GU_Exchange.Helpers
                 if (order.tbStatusCancellation != null) order.tbStatusCancellation.Text = "Requesting cancellation...";
                 prepareTasks.Add((cancelListing, order.orderID, order.tbStatusCancellation));
             }
-            await Task.WhenAll(prepareTasks.Select(x => x.Item1));
 
-            // Request user signatures.
-            tbStatus.Text = $"Waiting for user signature{(orders.Count() > 1 ? "s" : "")}...";
             List<Task<SignatureData>> sigTasks = new();
             List<(Task<bool>, string orderID, TextBlock? tbStatusListing)> cancelTasks = new();
-            foreach ((Task<string?> prep, string orderID, TextBlock? tbStatusCancellation) prepareTask in prepareTasks)
+
+            // Show signature request window.
+            UseWebWalletWindow useWalletWindow = new();
+            useWalletWindow.Owner = parent;
+            useWalletWindow.Show();
+
+            List<Task<string?>> trackPreparations = new(prepareTasks.Select(x => x.Item1));
+            int totalTasks = prepareTasks.Count();
+            while (trackPreparations.Count() > 0)
             {
+                Task<string?> dataTask = await Task.WhenAny(trackPreparations);
+                trackPreparations.Remove(dataTask);
+                TextBlock? tbStatusCancellation = prepareTasks.Where(x => x.Item1 == dataTask).First().Item3;
+                if (tbStatusCancellation != null) tbStatusCancellation.Text = "Awaiting signature...";
+                tbStatus.Text = $"Prepared {totalTasks - trackPreparations.Count()} / {totalTasks} orders to cancel...";
+
+                (Task<string?>, string orderID, TextBlock?) prepareTask = prepareTasks.Find(x => x.Item1 == dataTask);
                 // Check if the data is valid.
-                string? signableMessage = await prepareTask.prep;
+                string? signableMessage = await dataTask;
                 if (signableMessage == null)
                 {
-                    if (prepareTask.tbStatusCancellation != null) prepareTask.tbStatusCancellation.Text = "Cancellation failed";
+                    if (tbStatusCancellation != null) tbStatusCancellation.Text = "Cancellation failed";
                     continue;
                 }
 
                 // Request signature.
-                Task<SignatureData> getSignature = SignatureRequestServer.RequestSignatureAsync(signableMessage);
-                if (prepareTask.tbStatusCancellation != null) prepareTask.tbStatusCancellation.Text = "Awaiting signature...";
+                Task<SignatureData> getSignature = SignatureRequestServer.RequestSignatureAsync(signableMessage, masterCancelSource.Token);
 
                 // Submit cancellation to IMX.
                 Task<bool> cancelListing = Task.Run(async () =>
@@ -2180,21 +2200,22 @@ namespace GU_Exchange.Helpers
                     }
                     catch (OperationCanceledException)
                     {
-                        if (prepareTask.tbStatusCancellation != null) prepareTask.tbStatusCancellation.Dispatcher.Invoke(() =>
+                        masterCancelSource.Cancel();
+                        if (tbStatusCancellation != null) tbStatusCancellation.Dispatcher.Invoke(() =>
                         {
-                            prepareTask.tbStatusCancellation.Text = "Cancellation failed";
+                            tbStatusCancellation.Text = "Cancellation failed";
                         });
                         return false;
                     }
                     try
                     {
-                        await ResourceManager.RateLimiter.ReserveRequests(1);
+                        await ResourceManager.RateLimiter.ReserveRequests(1, masterCancelSource.Token);
                     }
                     catch (OperationCanceledException)
                     {
-                        if (prepareTask.tbStatusCancellation != null) prepareTask.tbStatusCancellation.Dispatcher.Invoke(() =>
+                        if (tbStatusCancellation != null) tbStatusCancellation.Dispatcher.Invoke(() =>
                         {
-                            prepareTask.tbStatusCancellation.Text = "Unknown error";
+                            tbStatusCancellation.Text = "Unknown error";
                         });
                         return false;
                     }
@@ -2205,9 +2226,9 @@ namespace GU_Exchange.Helpers
                     Log.Information($"Order cancellation finished with result: {result ?? "None"}");
                     if (result == null)
                     {
-                        if (prepareTask.tbStatusCancellation != null) prepareTask.tbStatusCancellation.Dispatcher.Invoke(() =>
+                        if (tbStatusCancellation != null) tbStatusCancellation.Dispatcher.Invoke(() =>
                         {
-                            prepareTask.tbStatusCancellation.Text = "Unknown error";
+                            tbStatusCancellation.Text = "Unknown error";
                         });
                         return false;
                     }
@@ -2218,35 +2239,31 @@ namespace GU_Exchange.Helpers
                         string? message = (string?)jsonResult?.SelectToken("message");
                         if (message == null)
                         {
-                            if (prepareTask.tbStatusCancellation != null) prepareTask.tbStatusCancellation.Dispatcher.Invoke(() =>
+                            if (tbStatusCancellation != null) tbStatusCancellation.Dispatcher.Invoke(() =>
                             {
-                                prepareTask.tbStatusCancellation.Text = "Unknown error";
+                                tbStatusCancellation.Text = "Unknown error";
                             });
                             return false;
                         }
-                        if (prepareTask.tbStatusCancellation != null) prepareTask.tbStatusCancellation.Dispatcher.Invoke(() =>
+                        if (tbStatusCancellation != null) tbStatusCancellation.Dispatcher.Invoke(() =>
                         {
-                            prepareTask.tbStatusCancellation.Text = code;
+                            tbStatusCancellation.Text = code;
                         });
                         Log.Warning($"Order cancellation failed with message: {message}");
                         return false;
                     }
-                    if (prepareTask.tbStatusCancellation != null) prepareTask.tbStatusCancellation.Dispatcher.Invoke(() =>
+                    if (tbStatusCancellation != null) tbStatusCancellation.Dispatcher.Invoke(() =>
                     {
-                        prepareTask.tbStatusCancellation.Text = "Listing cancelled";
+                        tbStatusCancellation.Text = "Listing cancelled";
                     });
                     return true;
                 });
 
                 sigTasks.Add(getSignature);
-                cancelTasks.Add((cancelListing, prepareTask.orderID, prepareTask.tbStatusCancellation));
+                useWalletWindow.AddTask(getSignature);
+                cancelTasks.Add((cancelListing, prepareTask.orderID, tbStatusCancellation));
             }
-
-            // Show signature request window.
-            UseWebWalletWindow useWalletWindow = new(sigTasks);
-            useWalletWindow.Owner = parent;
-            useWalletWindow.ShowDialog();
-
+            useWalletWindow.AutoClose = true;
             // Wait for all cancellation tasks to finish.
             Dictionary<string, bool> results = (await Task.WhenAll(cancelTasks.Select(async x =>
             {

@@ -303,7 +303,7 @@ namespace GU_Exchange.Controls
                 OrderDisplayControl control = new(_cardData[_displayIndex].Item1, _cardData[_displayIndex].Item2, _cardData[_displayIndex].Item3);
                 if (_listingResults.ContainsKey(_cardData[_displayIndex].Item4))
                 {
-                    if (_listingResults.ContainsKey(_cardData[_displayIndex].Item4))
+                    if (_listingResults[_cardData[_displayIndex].Item4])
                     {
                         SetupOrderDisplay(control);
                         control.ShowStatus(true);

@@ -117,6 +117,10 @@ namespace GU_Exchange
         /// <param name="e"></param>
         private void UserControl_MouseDown(object sender, MouseButtonEventArgs e)
         {
+            // Don't let the user close out while listing is in progress.
+            if (loadingPanel.Visibility == Visibility.Visible && btnClose.Visibility != Visibility.Visible)
+                return;
+
             // Get the position of the mouse click relative to the buyGrid
             Point clickPoint = e.GetPosition(buyGrid);
 
@@ -189,6 +193,10 @@ namespace GU_Exchange
         /// <param name="e"></param>
         private void BtnClose_Click(object sender, RoutedEventArgs e)
         {
+            // Don't let the user close out while listing is in progress.
+            if (loadingPanel.Visibility == Visibility.Visible && btnClose.Visibility != Visibility.Visible)
+                return;
+
             _ = _parent.ReloadOrderbookAsync();
             this.Visibility = Visibility.Collapsed;
         }
@@ -202,6 +210,8 @@ namespace GU_Exchange
         {
             userChoicePanel.Visibility = Visibility.Collapsed;
             loadingPanel.Visibility = Visibility.Visible;
+            ((MainWindow)Application.Current.MainWindow).menuBar.IsEnabled = false;
+            _parent.CanClose = false;
 
             decimal? bestPrice = await GetCheapestPrice();
             if (bestPrice != null)
@@ -221,6 +231,8 @@ namespace GU_Exchange
                             error.Visibility = Visibility.Visible;
                             btnClose.Visibility = Visibility.Visible;
                             tbStatus.Text = "Price update cancelled.";
+                            ((MainWindow)Application.Current.MainWindow).menuBar.IsEnabled = true;
+                            _parent.CanClose = true;
                             return;
                         }
                     }
@@ -236,6 +248,8 @@ namespace GU_Exchange
                 error.Visibility = Visibility.Visible;
                 btnClose.Visibility = Visibility.Visible;
                 tbStatus.Text = "Seller wallet not connected";
+                ((MainWindow)Application.Current.MainWindow).menuBar.IsEnabled = true;
+                _parent.CanClose = true;
                 return;
             }
 
@@ -261,6 +275,8 @@ namespace GU_Exchange
                 error.Visibility = Visibility.Visible;
                 btnClose.Visibility = Visibility.Visible;
                 tbStatus.Text = "Sell price improperly formatted.";
+                ((MainWindow)Application.Current.MainWindow).menuBar.IsEnabled = true;
+                _parent.CanClose = true;
                 return;
             }
             (NFT, string, double, TextBlock?)[] listingArray = { listing };
@@ -272,6 +288,8 @@ namespace GU_Exchange
                 // Purchase failed.
                 error.Visibility = Visibility.Visible;
                 btnClose.Visibility = Visibility.Visible;
+                ((MainWindow)Application.Current.MainWindow).menuBar.IsEnabled = true;
+                _parent.CanClose = true;
                 return;
             }
 
@@ -281,6 +299,8 @@ namespace GU_Exchange
             // Refresh the wallet in the parent CardControl.
             _ = _parent.SetupInventoryAsync();
             btnClose.Visibility = Visibility.Visible;
+            ((MainWindow)Application.Current.MainWindow).menuBar.IsEnabled = true;
+            _parent.CanClose = true;
         }
 
         /// <summary>
@@ -304,6 +324,8 @@ namespace GU_Exchange
                 tbStatus.Text = "No wallet connected";
                 return;
             }
+            ((MainWindow)Application.Current.MainWindow).menuBar.IsEnabled = false;
+            _parent.CanClose = false;
 
             // Cancel the order and allow the wallet to update the status message.
             (string, TextBlock?)[] orderData = { (_order.OrderID.ToString(), tbStatus) };
@@ -315,13 +337,17 @@ namespace GU_Exchange
                 spinner.Visibility = Visibility.Collapsed;
                 error.Visibility = Visibility.Visible;
                 btnClose.Visibility = Visibility.Visible;
-                return;
             }
+            else
+            {
 
-            // Refresh the  parent CardControl.
-            spinner.Visibility = Visibility.Collapsed;
-            success.Visibility = Visibility.Visible;
-            btnClose.Visibility = Visibility.Visible;
+                // Refresh the  parent CardControl.
+                spinner.Visibility = Visibility.Collapsed;
+                success.Visibility = Visibility.Visible;
+                btnClose.Visibility = Visibility.Visible;
+            }
+            ((MainWindow)Application.Current.MainWindow).menuBar.IsEnabled = true;
+            _parent.CanClose = true;
         }
         #endregion
 

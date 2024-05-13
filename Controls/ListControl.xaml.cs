@@ -221,6 +221,10 @@ namespace GU_Exchange
         /// <param name="e"></param>
         private void UserControl_MouseDown(object sender, MouseButtonEventArgs e)
         {
+            // Don't let the user close out while listing is in progress.
+            if (loadingPanel.Visibility == Visibility.Visible && btnClose.Visibility != Visibility.Visible)
+                return;
+
             // Get the position of the mouse click relative to the buyGrid
             Point clickPoint = e.GetPosition(buyGrid);
 
@@ -306,6 +310,8 @@ namespace GU_Exchange
         {
             userChoicePanel.Visibility = Visibility.Collapsed;
             loadingPanel.Visibility = Visibility.Visible;
+            ((MainWindow)Application.Current.MainWindow).menuBar.IsEnabled = false;
+            _parent.CanClose = false;
 
             decimal? bestPrice = await GetCheapestPrice();
             if (bestPrice != null)
@@ -325,6 +331,8 @@ namespace GU_Exchange
                             error.Visibility = Visibility.Visible;
                             btnClose.Visibility = Visibility.Visible;
                             tbStatus.Text = "Listing(s) cancelled.";
+                            ((MainWindow)Application.Current.MainWindow).menuBar.IsEnabled = true;
+                            _parent.CanClose = true;
                             return;
                         }
                     }
@@ -340,6 +348,8 @@ namespace GU_Exchange
                 error.Visibility = Visibility.Visible;
                 btnClose.Visibility = Visibility.Visible;
                 tbStatus.Text = "No wallet connected";
+                ((MainWindow)Application.Current.MainWindow).menuBar.IsEnabled = true;
+                _parent.CanClose = true;
                 return;
             }
 
@@ -367,6 +377,8 @@ namespace GU_Exchange
                     error.Visibility = Visibility.Visible;
                     btnClose.Visibility = Visibility.Visible;
                     tbStatus.Text = "Sell price improperly formatted.";
+                    ((MainWindow)Application.Current.MainWindow).menuBar.IsEnabled = true;
+                    _parent.CanClose = true;
                     return;
                 }
             }
@@ -378,6 +390,8 @@ namespace GU_Exchange
                 // Purchase failed.
                 error.Visibility = Visibility.Visible;
                 btnClose.Visibility = Visibility.Visible;
+                ((MainWindow)Application.Current.MainWindow).menuBar.IsEnabled = true;
+                _parent.CanClose = true;
                 return;
             }
 
@@ -387,6 +401,8 @@ namespace GU_Exchange
             // Refresh the wallet in the parent CardControl.
             _ = _parent.SetupInventoryAsync();
             btnClose.Visibility = Visibility.Visible;
+            ((MainWindow)Application.Current.MainWindow).menuBar.IsEnabled = true;
+            _parent.CanClose = true;
         }
 
         /// <summary>
@@ -410,6 +426,8 @@ namespace GU_Exchange
                 tbStatus.Text = "No wallet connected";
                 return;
             }
+            ((MainWindow)Application.Current.MainWindow).menuBar.IsEnabled = false;
+            _parent.CanClose = false;
 
             // Cancel the order(s) and allow the wallet to update the status message.
             List<(string orderID, TextBlock? tbListing)> listings = _activeOrders.Select(orderID => (orderID, (TextBlock?)null)).ToList();
@@ -421,6 +439,8 @@ namespace GU_Exchange
                 spinner.Visibility = Visibility.Collapsed;
                 error.Visibility = Visibility.Visible;
                 btnClose.Visibility = Visibility.Visible;
+                ((MainWindow)Application.Current.MainWindow).menuBar.IsEnabled = true;
+                _parent.CanClose = true;
                 return;
             }
 
@@ -442,6 +462,8 @@ namespace GU_Exchange
             tbNumber.Text = $"/ {_listableTokens.Count()} (0 listed)";
             loadingPanel.Visibility = Visibility.Collapsed;
             userChoicePanel.Visibility = Visibility.Visible;
+            ((MainWindow)Application.Current.MainWindow).menuBar.IsEnabled = true;
+            _parent.CanClose = true;
         }
         #endregion
 

@@ -16,13 +16,22 @@ namespace GU_Exchange
     {
         #region Class Parameters
         private readonly List<Task> Tasks;
+        public bool AutoClose { get; set; }
         #endregion
 
         #region Constructors
+        public UseWebWalletWindow()
+        {
+            InitializeComponent();
+            Tasks = new();
+            AutoClose = false;
+            InitializeTasks();
+        }
         public UseWebWalletWindow(Task task)
         {
             InitializeComponent();
             Tasks = new List<Task> { task };
+            AutoClose = true;
             InitializeTasks();
         }
 
@@ -30,6 +39,7 @@ namespace GU_Exchange
         {
             InitializeComponent();
             Tasks = tasks;
+            AutoClose = true;
             InitializeTasks();
         }
 
@@ -37,6 +47,7 @@ namespace GU_Exchange
         {
             InitializeComponent();
             Tasks = tasks.ToList();
+            AutoClose = true;
             InitializeTasks();
         }
         #endregion
@@ -88,6 +99,13 @@ namespace GU_Exchange
         #endregion
 
         #region Supporting functions
+        public void AddTask(Task task)
+        {
+            Tasks.Add(task);
+            lblWebInstructions.Content = $"{Tasks.Count} action{(Tasks.Count == 1 ? "" : "s")} require{(Tasks.Count == 1 ? "s" : "")} your wallet signature.";
+            if (Tasks.Count() == 1)
+                TrackTasks();
+        }
         /// <summary>
         /// Setup the window text and start tracking tasks.
         /// </summary>
@@ -111,7 +129,8 @@ namespace GU_Exchange
                 // Update UI with the completed tasks count
                 lblWebInstructions.Content = $"{Tasks.Count} action{(Tasks.Count == 1 ? "" : "s")} require{(Tasks.Count == 1 ? "s" : "")} your wallet signature.";
             }
-            Close();
+            if (AutoClose)
+                Close();
         }
         #endregion
     }

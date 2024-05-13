@@ -37,6 +37,7 @@ namespace GU_Exchange
         private readonly Task<BitmapSource?> _imgShadow;
         private readonly Task<BitmapSource?> _imgGold;
         private readonly Task<BitmapSource?> _imgDiamond;
+        public bool CanClose;
         #endregion
 
         #region Default Constructor
@@ -57,6 +58,7 @@ namespace GU_Exchange
             _imgShadow = ResourceManager.GetCardImageAsync(CardID, 3, false, s_imgTokenSource.Token);
             _imgGold = ResourceManager.GetCardImageAsync(CardID, 2, false, s_imgTokenSource.Token);
             _imgDiamond = ResourceManager.GetCardImageAsync(CardID, 1, false, s_imgTokenSource.Token);
+            CanClose = true;
             cbToken.Items.Add("ETH");
             cbToken.Items.Add("GODS");
             cbToken.Items.Add("IMX");
@@ -386,7 +388,8 @@ namespace GU_Exchange
         /// <param name="e"></param>
         private void BtnClose_Click(object sender, RoutedEventArgs e)
         {
-            ((MainWindow)Application.Current.MainWindow).CloseOverlay();
+            if (CanClose)
+                ((MainWindow)Application.Current.MainWindow).CloseOverlay();
         }
 
         /// <summary>
@@ -419,6 +422,10 @@ namespace GU_Exchange
         /// <param name="e"></param>
         private void UserControl_MouseDown(object sender, MouseButtonEventArgs e)
         {
+            // Dont allow the user to close the window if this is disabled.
+            if (!CanClose)
+                return;
+
             // Get the position of the mouse click relative to the controlGrid
             Point clickPoint = e.GetPosition(controlGrid);
 
