@@ -220,7 +220,7 @@ namespace GU_Exchange.Helpers
             { "GODS", new Token("GODS", "0xccc8cb5229b0ac8069c51fd58367fd1e622afd97", null) },
             { "IMX", new Token("IMX", "0xf57e7e7c23978c3caec3c3548e3d615c346e79ff", null) }
         };
-        private static Dictionary<string, string> s_tokenData = new();
+        //private static Dictionary<string, string> s_tokenData = new();
         private static Task<Dictionary<string, Token>>? s_fetchTokenTask;
         #endregion
 
@@ -247,6 +247,25 @@ namespace GU_Exchange.Helpers
                 s_currencyList["ETH"].Value = price_eth;
                 s_currencyList["GODS"].Value = price_gods;
                 s_currencyList["IMX"].Value = price_imx;
+
+                string strData = await ResourceManager.Client.GetStringAsync("https://api.x.immutable.com/v1/tokens");
+                jsonData = (JObject?)JsonConvert.DeserializeObject(strData);
+                if (jsonData != null)
+                {
+                    JToken? result = jsonData["result"];
+                    if (result != null)
+                    {
+                        foreach (JToken token in result.ToArray().Where(x => x.SelectToken("token_address") != null && x.SelectToken("symbol") != null))
+                        {
+                            string symbol = (string) token.SelectToken("symbol")!;
+                            string address = (string)token.SelectToken("token_address")!;
+                            if (!s_currencyList.ContainsKey(symbol))
+                            {
+                                s_currencyList.Add(symbol, new Token(symbol, address, null));
+                            }
+                        }
+                    }
+                }
             }
             catch (HttpRequestException)
             {
@@ -277,30 +296,31 @@ namespace GU_Exchange.Helpers
             return await s_fetchTokenTask;
         }
 
-        public static async Task<string> FetchTokenSymbol(string address)
+        public static async Task<Token?> FetchToken(string symbol)
         {
-            if (s_tokenData.Count == 0)
+            if (s_currencyList.ContainsKey(symbol))
             {
-                try
+                return s_currencyList[symbol];
+            }
+            else
+            {
+                Dictionary<string, Token> tokens = await FetchTokensWebAsync();
+                if (tokens.ContainsKey(symbol))
                 {
-                    string strData = await ResourceManager.Client.GetStringAsync("https://api.x.immutable.com/v1/tokens");
-                    JObject? jsonData = (JObject?)JsonConvert.DeserializeObject(strData);
-                    if (jsonData == null)
-                        return "???";
-                    JToken? result = jsonData["result"];
-                    if (result == null)
-                    {
-                        return "???";
-                    }
-                    s_tokenData = result.ToArray().Where(x => x.SelectToken("token_address") != null).ToDictionary(x => (string?)x.SelectToken("token_address") ?? "", x => (string?)x.SelectToken("symbol") ?? "");
-                } catch (Exception e)
-                {
-                    Log.Error($"Failed to fetch tokens. {e.Message} : {e.StackTrace}");
+                    return tokens[symbol];
                 }
             }
-            string? symbol;
-            s_tokenData.TryGetValue(address, out symbol);
-            return symbol == null ? "???" : symbol;
+            return null;
+        }
+
+        public static async Task<string> FetchTokenSymbol(string address)
+        {
+            Dictionary<string, string> tokenData = (await FetchTokens()).ToDictionary(x => x.Value.Address, x => x.Key);
+            if (tokenData.ContainsKey(address))
+            {
+                return tokenData[address];
+            }
+            return "???";
         }
         #endregion
 
@@ -1238,7 +1258,7 @@ namespace GU_Exchange.Helpers
                     {
                         if (order.tbStatusCancellation != null)
                         {
-                            order.tbStatusCancellation.Text = "Cancelled";
+                            order.tbStatusCancellation.Text = "Failed";
                         }
                         tbStatus.Text = $"Action{(orders.Count() > 1 ? "s" : "")} cancelled.";
                     }

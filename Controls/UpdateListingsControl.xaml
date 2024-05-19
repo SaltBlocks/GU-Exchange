@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="GU_Exchange.Controls.CancelListingsControl"
+﻿<UserControl x:Class="GU_Exchange.Controls.UpdateListingsControl"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
@@ -7,7 +7,7 @@
              mc:Ignorable="d" 
              d:DesignHeight="500" d:DesignWidth="875" Background="#7FE4E4E4" SizeChanged="UserControl_SizeChanged" MouseDown="UserControl_MouseDown">
     <Grid x:Name="controlGrid" Background="#FFE4E4E4">
-        <!--#region Grid Layout. -->
+        <!--#region Grid layout. -->
         <Grid.RowDefinitions>
             <RowDefinition Height="1*" MaxHeight="60"/>
             <RowDefinition Height="4*"/>
@@ -18,9 +18,9 @@
         <!-- #region Grid Border. -->
         <Border BorderBrush="Black" BorderThickness="1" Grid.RowSpan="6"/>
         <!--#endregion-->
-        <!-- #region Title. -->
-            <Viewbox Grid.Row="0" Margin="10,10,10,10">
-            <TextBlock Text="Cancel Listings" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
+        <!--#region Title. -->
+        <Viewbox Grid.Row="0" Margin="10,10,10,10">
+            <TextBlock Text="Update Listings" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
         </Viewbox>
         <!-- #endregion -->
         <!--  #region Card display panel. -->
@@ -29,13 +29,13 @@
         </ScrollViewer>
         <!-- #endregion -->
         <!--#region Status bar. -->
-            <Viewbox Grid.Row="2" Margin="0,0,0,0">
-            <TextBlock x:Name="tbStatus" Text="Fetching active listings..." HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
+        <Viewbox Grid.Row="2" Margin="0,0,0,0">
+            <TextBlock x:Name="tbStatus" Text="Fetching collection..." HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
         </Viewbox>
         <!-- #endregion -->
         <!-- #region Buttons. -->
         <StackPanel HorizontalAlignment="Center" Grid.Row="3" Orientation="Horizontal">
-            <Button x:Name="btnCancelAll" Content="Cancel all" Width="75" Height="25" Margin="10,5" IsEnabled="False" Click="BtnCancelAll_Click"/>
+            <Button x:Name="btnUpdateAll" Content="Update All" Width="75" Height="25" Margin="10,5" IsEnabled="False" Click="BtnUpdateAll_Click" />
             <Button x:Name="btnClose" Content="Close" Width="75" Height="25" Margin="10,5" Click="BtnClose_Click" />
         </StackPanel>
         <!-- #endregion -->

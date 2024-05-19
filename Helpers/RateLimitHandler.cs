@@ -32,20 +32,20 @@ namespace GU_Exchange.Helpers
                 DateTime delayUntil = DateTime.Now;
                 lock (_requestTimes)
                 {
-                    // Maintain only the max number of requests for the past 10 seconds.
-                    while (_requestTimes.Count > _requestsPerSecond * 10)
+                    // Maintain only the max number of requests for the past 5 seconds.
+                    while (_requestTimes.Count > _requestsPerSecond * 5)
                     {
                         _requestTimes.Dequeue();
                     }
 
                     // Check if we've logged enough requests to start rate limiting.
-                    if (_requestTimes.Count == _requestsPerSecond * 10)
+                    if (_requestTimes.Count == _requestsPerSecond * 5)
                     {
-                        // Check if we have buffer slots available for this request.
-                        if (_requestTimes.Peek() > DateTime.Now.AddSeconds(-10))
+                        // Check if we have buffer slots available for this request, keep the max number of requests within a 10% margin.
+                        if (_requestTimes.Peek() > DateTime.Now.AddSeconds(-5.5))
                         {
-                            // We've exceeded the buffer in the past 10 seconds, only allow x requests per second.
-                            delayUntil = _requestTimes.ElementAt(_requestTimes.Count - _requestsPerSecond).AddSeconds(1);
+                            // We've exceeded the buffer in the past 5 seconds, only allow x requests per second, keep the max number of requests within a 10% margin.
+                            delayUntil = _requestTimes.ElementAt(_requestTimes.Count - _requestsPerSecond).AddSeconds(1.1);
                         }
                     }
                     DateTime requestTime = delayUntil > DateTime.Now ? delayUntil : DateTime.Now;
@@ -78,20 +78,20 @@ namespace GU_Exchange.Helpers
             {
                 for (int i = 0; i < requestAmount; i++)
                 {
-                    // Maintain only the max number of requests for the past 10 seconds.
-                    while (_requestTimes.Count > _requestsPerSecond * 10)
+                    // Maintain only the max number of requests for the past 5 seconds.
+                    while (_requestTimes.Count > _requestsPerSecond * 5)
                     {
                         _requestTimes.Dequeue();
                     }
 
                     // Check if we've logged enough requests to start rate limiting.
-                    if (_requestTimes.Count == _requestsPerSecond * 10)
+                    if (_requestTimes.Count == _requestsPerSecond * 5)
                     {
-                        // Check if we have buffer slots available for this request.
-                        if (_requestTimes.Peek() > DateTime.Now.AddSeconds(-10))
+                        // Check if we have buffer slots available for this request, keep the max number of requests within a 10% margin.
+                        if (_requestTimes.Peek() > DateTime.Now.AddSeconds(-5.5))
                         {
-                            // We've exceeded the buffer in the past 10 seconds, only allow x requests per second.
-                            delayUntil = _requestTimes.ElementAt(_requestTimes.Count - _requestsPerSecond).AddSeconds(1);
+                            // We've exceeded the buffer in the past 5 seconds, only allow x requests per second, keep the max number of requests within a 10% margin.
+                            delayUntil = _requestTimes.ElementAt(_requestTimes.Count - _requestsPerSecond).AddSeconds(1.1);
                         }
                     }
                     DateTime requestTime = delayUntil > DateTime.Now ? delayUntil : DateTime.Now;

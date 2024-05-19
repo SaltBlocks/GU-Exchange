@@ -50,7 +50,7 @@
             </MenuItem>
             <MenuItem Header="List">
                 <MenuItem Header="Collection" Click="MiListCollection_Click" />
-                <MenuItem Header="Update listings" IsEnabled="False" />
+                <MenuItem Header="Update listings" Click="MiUpdateListings_Click"  />
                 <MenuItem Header="Cancel listings" Click="MiCancelListings_Click" />
             </MenuItem>
             <MenuItem Header="Transfer">

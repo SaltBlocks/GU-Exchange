@@ -753,5 +753,15 @@ namespace GU_Exchange
             Grid.SetRowSpan(_overlayControl, 4);
             MainGrid.Children.Add(_overlayControl);
         }
+
+        private void MiUpdateListings_Click(object sender, RoutedEventArgs e)
+        {
+            CloseOverlay();
+            _overlayControl = new UpdateListingsControl();
+            _overlayControl.Margin = new Thickness(0, 0, 0, 0);
+            Grid.SetRow(_overlayControl, 2);
+            Grid.SetRowSpan(_overlayControl, 4);
+            MainGrid.Children.Add(_overlayControl);
+        }
     }
 }

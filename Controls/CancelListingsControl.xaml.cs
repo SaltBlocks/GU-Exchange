@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Linq;
 
 namespace GU_Exchange.Controls
 {
@@ -17,7 +18,9 @@ namespace GU_Exchange.Controls
     public partial class CancelListingsControl : UserControl
     {
         #region Class Properties
-        private readonly HashSet<Order> _orders;
+        private int _orderIndex;
+        private readonly List<(string cardName, string[] cardData, Order order)> _orders;
+        private Dictionary<string, bool> cancellationResults;
         #endregion
         #region Default Constructor
         /// <summary>
@@ -26,7 +29,9 @@ namespace GU_Exchange.Controls
         public CancelListingsControl()
         {
             InitializeComponent();
+            _orderIndex = 0;
             _orders = new();
+            cancellationResults = new();
             setupOrders();
         }
         #endregion
@@ -67,11 +72,15 @@ namespace GU_Exchange.Controls
                             continue;
                         string[] card_data = img_url.Split("id=")[1].Split("&q=");
                         Order or = new Order(order, await getOrderCurrencyName(order));
-                        _orders.Add(or);
-                        OrderDisplayControl control = new(cardName, int.Parse(card_data[0]), int.Parse(card_data[1]));
-                        control.ShowStatus(false);
-                        control.SetOrder(or);
-                        cardPanel.Children.Add(control);
+                        _orders.Add((cardName, card_data, or));
+                        if (_orderIndex < 50)
+                        {
+                            OrderDisplayControl control = new(cardName, int.Parse(card_data[0]), int.Parse(card_data[1]));
+                            control.ShowStatus(false);
+                            control.SetOrder(or);
+                            cardPanel.Children.Add(control);
+                            _orderIndex++;
+                        }
                     }
                     urlInventory = $"{urlBase}&cursor={cursor}";
                 }
@@ -141,6 +150,49 @@ namespace GU_Exchange.Controls
         }
 
         /// <summary>
+        /// Used to detect when the user scrolls to the bottom of the page.
+        /// When this happens, new tiles are loaded and added to the window.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void ScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)
+        {
+            if (e.VerticalChange <= 0)
+            {
+                return;
+            }
+            if (e.VerticalOffset + e.ViewportHeight != e.ExtentHeight)
+            {
+                return;
+            }
+            int added = 0;
+            while (added < 50 && _orderIndex < _orders.Count)
+            {
+                OrderDisplayControl control = new(_orders[_orderIndex].cardName, int.Parse(_orders[_orderIndex].cardData[0]), int.Parse(_orders[_orderIndex].cardData[1]));
+                control.SetOrder(_orders[_orderIndex].order);
+
+                if (!cancellationResults.ContainsKey(_orders[_orderIndex].order.OrderID.ToString()))
+                    control.ShowStatus(false);
+                else if (cancellationResults[_orders[_orderIndex].order.OrderID.ToString()])
+                {
+                    control.ShowStatus(true);
+                    control.SetStatusMessage("Listing cancelled");
+                    control.SetStatus(OrderDisplayControl.DisplayStatus.Success);
+                }
+                else
+                {
+                    control.ShowStatus(true);
+                    control.SetStatusMessage("Failed");
+                    control.SetStatus(OrderDisplayControl.DisplayStatus.Fail);
+                }
+
+                cardPanel.Children.Add(control);
+                _orderIndex++;
+                added++;
+            }
+        }
+
+        /// <summary>
         /// Cancel all currently active listings created by the connected wallet.
         /// </summary>
         /// <param name="sender"></param>
@@ -156,6 +208,7 @@ namespace GU_Exchange.Controls
             // Prevent user from closing the window until this method finished.
             btnCancelAll.IsEnabled = false;
             btnClose.IsEnabled = false;
+            scrollBar.IsEnabled = false;
             ((MainWindow)Application.Current.MainWindow).menuBar.IsEnabled = false;
 
             // Get the connected wallet.
@@ -164,6 +217,7 @@ namespace GU_Exchange.Controls
             {
                 ((MainWindow)Application.Current.MainWindow).menuBar.IsEnabled = true;
                 btnClose.IsEnabled = true;
+                scrollBar.IsEnabled = true;
                 return;
             }
 
@@ -181,13 +235,23 @@ namespace GU_Exchange.Controls
                     orderData.Add((order.OrderID.ToString(), orderDisplay.getStatustextBlock()));
                 }
             }
+            HashSet<string> displayedOrders = orderData.Select(x => x.Item1).ToHashSet();
+            foreach ((string cardName, string[] cardData, Order order) order in _orders)
+            {
+                if (!displayedOrders.Contains(order.order.OrderID.ToString()))
+                {
+                    orderData.Add((order.order.OrderID.ToString(), null));
+                }
+            }
 
             // Cancel the orders and allow the wallet to update the status message.
-            Dictionary<string, bool> result = await wallet.RequestCancelOrders(Application.Current.MainWindow, orderData.ToArray(), tbStatus);
+            cancellationResults = await wallet.RequestCancelOrders(Application.Current.MainWindow, orderData.ToArray(), tbStatus);
 
-            foreach (string order in result.Keys)
+            foreach (string order in cancellationResults.Keys)
             {
-                if (result[order])
+                if (!controlDict.ContainsKey(order))
+                    continue;
+                if (cancellationResults[order])
                 {
                     controlDict[order].SetStatus(OrderDisplayControl.DisplayStatus.Success);
                 }
@@ -197,6 +261,7 @@ namespace GU_Exchange.Controls
                 }
             }
             ((MainWindow)Application.Current.MainWindow).menuBar.IsEnabled = true;
+            scrollBar.IsEnabled = true;
             btnClose.IsEnabled = true;
         }
         #endregion

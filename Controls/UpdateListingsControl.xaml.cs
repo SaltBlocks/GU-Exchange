@@ -5,10 +5,17 @@ using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Documents;
 using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Navigation;
+using System.Windows.Shapes;
 using System.Threading;
 using System.Web;
 using static GU_Exchange.Helpers.IMXlib;
@@ -16,46 +23,41 @@ using static GU_Exchange.Helpers.IMXlib;
 namespace GU_Exchange.Controls
 {
     /// <summary>
-    /// Interaction logic for ListAllControl.xaml
+    /// Interaction logic for UpdateListingsControl.xaml
     /// </summary>
-    public partial class ListAllControl : UserControl
+    public partial class UpdateListingsControl : UserControl
     {
         #region Class Properties
         private int _displayIndex;
         private CancellationTokenSource _orderFetchCancelSource;
-        private readonly Dictionary<string, List<Order>> _cachedOrders;
         private readonly Task _setupWalletTask;
-        private readonly List<(string, int, int, ulong, bool)> _cardData;
+        private readonly List<(string name, int proto, int quality, Order activeOrder)> _cardData;
         private readonly Dictionary<string, Task<string>> _orderBookFetchTasks;
-        private readonly Dictionary<ulong, bool> _listingResults;
+        private readonly Dictionary<string, List<Order>> _cachedOrders;
+        private readonly Dictionary<string, bool> _listingResults;
         #endregion
-        #region Default constructor.
+        #region Default Constructor
         /// <summary>
-        /// Constructor for a user control allowing the user to create listings for all owned GU cards at the current cheapest price.
+        /// Default constructor for a control allowing the user to change the listing price of all their orders to match the market price.
         /// </summary>
-        public ListAllControl()
+        public UpdateListingsControl()
         {
             InitializeComponent();
-            cbCurrency.Items.Add("ETH");
-            cbCurrency.Items.Add("GODS");
-            cbCurrency.Items.Add("IMX");
-            cbCurrency.SelectedIndex = 0;
-            _displayIndex = 0;
-            _cachedOrders = new();
             _cardData = new();
             _orderFetchCancelSource = new();
-            _listingResults = new();
             _orderBookFetchTasks = new();
-            _setupWalletTask = SetupWallet();
+            _cachedOrders = new();
+            _listingResults = new();
+            _displayIndex = 0;
+            _setupWalletTask = setupWallet();
             SetupPrices();
         }
         #endregion
-        #region Setup methods
+        #region UserControl Setup.
         /// <summary>
-        /// Fetch all cards in the users wallet.
+        /// Fetch active orders on connected wallet and show them in the cardpanel.
         /// </summary>
-        /// <returns></returns>
-        private async Task SetupWallet()
+        private async Task setupWallet()
         {
             Wallet? wallet = Wallet.GetConnectedWallet();
             if (wallet == null)
@@ -65,9 +67,10 @@ namespace GU_Exchange.Controls
             }
             try
             {
-                Log.Information($"Fetching cards in wallet {wallet.Address}.");
+                Log.Information($"Fetching orders for wallet ");
+
                 bool hasNext = true;
-                string urlBase = $"https://api.x.immutable.com/v1/assets?page_size=200&user={wallet.Address}&collection=0xacb3c6a43d15b907e8433077b6d38ae40936fe2c&sell_orders=true";
+                string urlBase = $"https://api.x.immutable.com/v3/orders?direction=asc&include_fees=true&order_by=buy_quantity&page_size=200&sell_token_address=0xacb3c6a43d15b907e8433077b6d38ae40936fe2c&status=active&user={wallet.Address}";
                 string urlInventory = urlBase;
                 while (hasNext)
                 {
@@ -82,76 +85,57 @@ namespace GU_Exchange.Controls
                         return;
                     foreach (JToken order in result)
                     {
-                        string? cardName = (string?)order.SelectToken("metadata.name");
-                        string? img_url = (string?)order.SelectToken("metadata.image");
-                        string? token_id = (string?)order.SelectToken("token_id");
-                        bool hasOrders = order.SelectToken("orders") != null;
-                        if (cardName == null || img_url == null || token_id == null)
+                        string? cardName = (string?)order.SelectToken("sell.data.properties.name");
+                        string? img_url = (string?)order.SelectToken("sell.data.properties.image_url");
+                        if (cardName == null || img_url == null)
                             continue;
                         string[] card_data = img_url.Split("id=")[1].Split("&q=");
-                        _cardData.Add((cardName, int.Parse(card_data[0]), int.Parse(card_data[1]), ulong.Parse(token_id), hasOrders));
+                        Order or = new Order(order, await getOrderCurrencyName(order));
+                        _cardData.Add((cardName, int.Parse(card_data[0]), int.Parse(card_data[1]), or));
                         if (_displayIndex < 50)
                         {
                             OrderDisplayControl control = new(cardName, int.Parse(card_data[0]), int.Parse(card_data[1]));
-                            if (hasOrders)
-                            {
-                                control.SetStatus(OrderDisplayControl.DisplayStatus.Success);
-                                control.SetStatusMessage("Already listed");
-                            }
+                            control.SetOrder(or);
+                            control.ShowStatus(true);
+                            control.SetStatusMessage("Checking price...");
                             cardPanel.Children.Add(control);
                             _displayIndex++;
                         }
                     }
                     urlInventory = $"{urlBase}&cursor={cursor}";
+                    tbStatus.Text = $"Fetched {_cardData.Count} active orders.";
                 }
-                cbCurrency.IsEnabled = true;
             }
             catch (Exception ex)
             {
-                if (!_orderFetchCancelSource.Token.IsCancellationRequested)
+                if (!_orderFetchCancelSource.IsCancellationRequested)
                 {
-                    Log.Warning($"Failed to fetching contents of wallet \"{wallet.Address}\". {ex.Message}: {ex.StackTrace}");
-                    tbStatus.Text = $"Failed to fetch wallet contents.";
+                    Log.Warning($"Failed to fetching orders for wallet \"{wallet.Address}\". {ex.Message}: {ex.StackTrace}");
+                    tbStatus.Text = $"Failed to fetch active orders.";
                 }
             }
         }
 
         /// <summary>
-        /// Fetch current prices for all cards owned by the user and display them to the user.
+        /// Fetch the current market price for all cards listed by the user and show them if the user listed price is higher than the cheapeast available offer.
         /// </summary>
         private async void SetupPrices()
         {
-            btnListAll.IsEnabled = false;
+            btnUpdateAll.IsEnabled = false;
             ((MainWindow)Application.Current.MainWindow).menuBar.IsEnabled = false;
-
-            CancellationTokenSource cts = new();
-            
             try
             {
                 await _setupWalletTask;
-                string? currency_name = (string?)cbCurrency.SelectedItem;
-                if (currency_name == null)
-                {
-                    tbStatus.Text = "Failed to find buy token.";
-                    return;
-                }
-
-                // Get orders for cards needed to complete the deck.
-                Token token = (await Wallet.FetchTokens())[currency_name];
-                if (_orderFetchCancelSource.IsCancellationRequested)
-                    throw new OperationCanceledException("Setting up prices was cancelled");
-                _orderFetchCancelSource.Cancel();
-                _orderFetchCancelSource = cts;
-                lock (_orderBookFetchTasks)
-                    _orderBookFetchTasks.Clear();
+                if (_orderFetchCancelSource.Token.IsCancellationRequested)
+                    throw new OperationCanceledException("Fetching orders was cancelled.");
                 CancellationToken ct = _orderFetchCancelSource.Token;
-                Dictionary<Task<decimal>, (string name, int proto, int quality, ulong token_id, bool hasOrders)> priceFetchTasks = new();
-                foreach ((string name, int proto, int quality, ulong token_id, bool hasOrders) card in _cardData)
+                Dictionary<Task<decimal>, (string name, int proto, int quality, Order activeOrder) > priceFetchTasks = new();
+                foreach ((string name, int proto, int quality, Order activeOrder) card in _cardData)
                 {
-                    if (!card.hasOrders)
-                        priceFetchTasks.Add(GetListPriceForCard(card.proto, card.quality, token, ct), card);
+                    Token token = (await Wallet.FetchTokens())[card.activeOrder.Currency];
+                    priceFetchTasks.Add(GetListPriceForCard(card.proto, card.quality, token, ct), card);
                 }
-
+                int updateCounter = 0;
                 while (priceFetchTasks.Count > 0)
                 {
                     Task<decimal> completed = await Task.WhenAny(priceFetchTasks.Keys);
@@ -159,17 +143,38 @@ namespace GU_Exchange.Controls
                     {
                         throw new OperationCanceledException("Fetching of orders was cancelled.");
                     }
-                    (string name, int proto, int quality, ulong token_id, bool hasOrders) card = priceFetchTasks[completed];
+                    (string name, int proto, int quality, Order activeOrder) card = priceFetchTasks[completed];
+                    if (card.activeOrder.PriceTotal() > await completed)
+                        updateCounter++;
+                    Token token = (await Wallet.FetchTokens())[card.activeOrder.Currency];
                     try
                     {
+                        HashSet<OrderDisplayControl> displaysToRemove = new();
                         foreach (OrderDisplayControl display in cardPanel.Children)
                         {
-                            if (display.ProtoID == card.proto && display.Quality == card.quality && !display.getStatustextBlock().Text.Equals("Already listed"))
+                            if (display.ProtoID == card.proto && display.Quality == card.quality && display.GetOrder()?.Currency == card.activeOrder.Currency)
                             {
-                                display.SetSubText($"List for: {Math.Round(await completed, 10)} {token.Name}");
-                                display.ShowStatus(false);
+                                decimal? currentPrice = display.GetOrder()?.PriceTotal();
+                                if (currentPrice == null)
+                                    continue; // This should never happen.
+                                
+                                if (!currentPrice.Equals(await completed))
+                                {
+                                    display.ShowStatus(false);
+                                    display.SetSubText($"Adjust price to: {Math.Round(await completed, 10)} {token.Name}");
+                                }
+                                else
+                                {
+                                    displaysToRemove.Add(display);
+                                }
                             }
                         }
+                        foreach (OrderDisplayControl control in displaysToRemove) 
+                        { 
+                            cardPanel.Children.Remove(control);
+                            AddOrderDisplay();
+                        }
+
                     }
                     catch (ArgumentOutOfRangeException)
                     {
@@ -186,45 +191,19 @@ namespace GU_Exchange.Controls
                     priceFetchTasks.Remove(completed);
                     tbStatus.Text = $"Fetching card prices: {_cardData.Count - priceFetchTasks.Count} / {_cardData.Count} fetched.";
                 }
-
-                int cardCount = _cardData.Count;
-                decimal priceTotal = 0M;
-                foreach ((string name, int proto, int quality, ulong token_id, bool hasOrders) card in _cardData)
+                if (updateCounter > 0)
                 {
-                    List<Order>? orders;
-                    bool loaded = _cachedOrders.TryGetValue($"{card.proto}q{card.quality}t{currency_name}", out orders);
-                    if (loaded && orders != null)
-                    {
-                        if (orders.Count == 0)
-                        {
-                            cardCount--;
-                            continue;
-                        }
-                        Order order = orders[0];
-                        priceTotal += order.PriceTotal() - new decimal(0.00000001);
-                    }
-                    else
-                    {
-                        cardCount--;
-                    }
+                    tbStatus.Text = $"Continue to adjust prices for {updateCounter} listings to match the market price.";
+                    btnUpdateAll.IsEnabled = true;
                 }
-                // Show the deck price to the user.
-                decimal? ConversionRate = token.Value;
-                string statusFinal = $"Continue to list {cardCount} cards for {Math.Round(priceTotal, 10)} {currency_name}";
-                if (ConversionRate != null)
+                else if (_cardData.Count == 0)
                 {
-                    statusFinal += $" (${ (priceTotal * (decimal)ConversionRate).ToString("0.00")})";
-                }
-                if (cardCount > 0)
-                {
-                    tbStatus.Text = statusFinal;
-                    btnListAll.IsEnabled = true;
+                    tbStatus.Text = $"No listings found.";
                 }
                 else
                 {
-                    tbStatus.Text = "No cards to list";
+                    tbStatus.Text = $"All your listings are the cheapest on the market.";
                 }
-                
             }
             catch (Exception ex)
             {
@@ -237,7 +216,32 @@ namespace GU_Exchange.Controls
             ((MainWindow)Application.Current.MainWindow).menuBar.IsEnabled = true;
         }
         #endregion
+
         #region Event Handler
+        /// <summary>
+        /// Used to detect when the user scrolls to the bottom of the page.
+        /// When this happens, new tiles are loaded and added to the window.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void ScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)
+        {
+            if (e.VerticalChange <= 0)
+            {
+                return;
+            }
+            if (e.VerticalOffset + e.ViewportHeight != e.ExtentHeight)
+            {
+                return;
+            }
+            int added = 0;
+            while (added < 50)
+            {
+                AddOrderDisplay();
+                added++;
+            }
+        }
+
         /// <summary>
         /// Adjust the size of the CardControl when the window size is changed.
         /// </summary>
@@ -284,94 +288,11 @@ namespace GU_Exchange.Controls
         }
 
         /// <summary>
-        /// Used to detect when the user scrolls to the bottom of the page.
-        /// When this happens, new tiles are loaded and added to the window.
+        /// Update the current prices of all listings posted by the user to match the market price.
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void ScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)
-        {
-            if (e.VerticalChange <= 0)
-            {
-                return;
-            }
-            if (e.VerticalOffset + e.ViewportHeight != e.ExtentHeight)
-            {
-                return;
-            }
-            int added = 0;
-            while (added < 50 && _displayIndex < _cardData.Count)
-            {
-                OrderDisplayControl control = new(_cardData[_displayIndex].Item1, _cardData[_displayIndex].Item2, _cardData[_displayIndex].Item3);
-                if (_listingResults.ContainsKey(_cardData[_displayIndex].Item4))
-                {
-                    if (_listingResults[_cardData[_displayIndex].Item4])
-                    {
-                        SetupOrderDisplay(control);
-                        control.ShowStatus(true);
-                        control.SetStatus(OrderDisplayControl.DisplayStatus.Success);
-                        control.SetStatusMessage("Listing created");
-                    }
-                    else
-                    {
-                        SetupOrderDisplay(control);
-                        control.ShowStatus(true);
-                        control.SetStatus(OrderDisplayControl.DisplayStatus.Fail);
-                        control.SetStatusMessage("Listing failed");
-                    }
-                }
-                else
-                {
-                    if (_cardData[_displayIndex].Item5)
-                    {
-                        control.SetStatus(OrderDisplayControl.DisplayStatus.Success);
-                        control.SetStatusMessage("Already listed");
-                    }
-                    else
-                        SetupOrderDisplay(control);
-                }
-                cardPanel.Children.Add(control);
-                _displayIndex++;
-                added++;
-            }
-        }
-
-        /// <summary>
-        /// Close the cardcontrol and return to the main menu.
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void BtnClose_Click(object sender, RoutedEventArgs e)
-        {
-            _orderFetchCancelSource.Cancel();
-            ResourceManager.RateLimiter.CancelRequests();
-            ((MainWindow)Application.Current.MainWindow).CloseOverlay();
-        }
-
-        /// <summary>
-        /// Cancel existing search task and restart if the user changes the currency.
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void ComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            if (_setupWalletTask != null && _setupWalletTask.IsCompleted)
-            {
-                ResourceManager.RateLimiter.CancelRequests();
-                foreach (OrderDisplayControl control in cardPanel.Children)
-                {
-                    SetupOrderDisplay(control);
-                }
-                SetupPrices();
-            }
-        }
-
-        /// <summary>
-        /// Create listings for all cards in the users wallet that do not allready have listings.
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private async void btnListAll_Click(object sender, RoutedEventArgs e)
+        private async void BtnUpdateAll_Click(object sender, RoutedEventArgs e)
         {
             if (_cardData.Count == 0)
             {
@@ -380,9 +301,8 @@ namespace GU_Exchange.Controls
             }
 
             // Prevent user from closing the window until this method finished during the purchase.
-            btnListAll.IsEnabled = false;
+            btnUpdateAll.IsEnabled = false;
             btnClose.IsEnabled = false;
-            cbCurrency.IsEnabled = false;
             scrollBar.IsEnabled = false;
             ((MainWindow)Application.Current.MainWindow).menuBar.IsEnabled = false;
 
@@ -395,35 +315,25 @@ namespace GU_Exchange.Controls
                 btnClose.IsEnabled = true;
                 return;
             }
-            string? currency_name = (string?)cbCurrency.SelectedItem;
-            if (currency_name == null)
-            {
-                ((MainWindow)Application.Current.MainWindow).menuBar.IsEnabled = true;
-                scrollBar.IsEnabled = true;
-                btnClose.IsEnabled = true;
-                tbStatus.Text = "Failed to find buy token.";
-                return;
-            }
-            Token token = (await Wallet.FetchTokens())[currency_name];
             OrderDisplayControl[] panelsArray = new OrderDisplayControl[cardPanel.Children.Count];
             cardPanel.Children.CopyTo(panelsArray, 0);
             HashSet<OrderDisplayControl> panels = panelsArray.ToHashSet();
 
             List<(NFT card, string tokenID, double price, TextBlock? tbListing)> listings = new();
-            foreach ((string name, int proto, int quality, ulong token_id, bool hasOrders) card in _cardData)
+            foreach ((string name, int proto, int quality, Order activeOrder) card in _cardData)
             {
-                if (card.hasOrders)
-                    continue;
                 List<Order>? orders;
-                bool loaded = _cachedOrders.TryGetValue($"{card.proto}q{card.quality}t{currency_name}", out orders);
-                if (!loaded || orders == null || orders.Count == 0)
+                bool loaded = _cachedOrders.TryGetValue($"{card.proto}q{card.quality}t{card.activeOrder.Currency}", out orders);
+                if (!loaded || orders == null || orders.Count == 0 || (orders[0].PriceTotal().Equals(card.activeOrder.PriceTotal()) && orders[0].Seller == wallet.Address))
                     continue;
-                decimal priceBuyer = 100 * (wallet.Address.Equals(orders[0].Seller) ? orders[0].PriceTotal() : orders[0].PriceTotal() - new decimal(0.00000001));
+
+                Console.WriteLine($"Updating price for {card.name} to {orders[0].PriceTotal() - new decimal(0.00000001)} {card.activeOrder.Currency}");
+                decimal priceBuyer = 100 * (orders[0].PriceTotal() - new decimal(0.00000001));
                 decimal priceList = priceBuyer / getFeeMultiplier(card.quality);
                 NFT nft = new NFT()
                 {
                     token_address = "0xacb3c6a43d15b907e8433077b6d38ae40936fe2c",
-                    token_id = card.token_id
+                    token_id = ulong.Parse(card.activeOrder.TokenID)
                 };
                 TextBlock? statusTextBlock = null;
                 foreach (OrderDisplayControl panel in panels)
@@ -437,23 +347,23 @@ namespace GU_Exchange.Controls
                         break;
                     }
                 }
-                listings.Add((nft, token.Address, decimal.ToDouble(priceList), statusTextBlock));
+                listings.Add((nft, (await Wallet.FetchTokens())[card.activeOrder.Currency].Address, decimal.ToDouble(priceList), statusTextBlock));
             }
 
             Dictionary<NFT, bool> result = await wallet.RequestCreateOrders(Application.Current.MainWindow, listings.ToArray(), this.tbStatus);
             foreach (KeyValuePair<NFT, bool> orderResult in result)
             {
-                _listingResults.Add(orderResult.Key.token_id, orderResult.Value);
+                _listingResults.Add(orderResult.Key.token_id.ToString(), orderResult.Value);
             }
 
             panels = panelsArray.ToHashSet();
-            Dictionary<ulong, (string, int, int, ulong, bool)> cardDict = _cardData.ToDictionary(x => x.Item4, x => x);
+            Dictionary<string, (string name, int proto, int quality, Order activeOrder)> cardDict = _cardData.ToDictionary(x => x.activeOrder.TokenID, x => x);
             foreach (NFT nft in result.Keys)
             {
-                (string name, int proto, int quality, ulong token_id, bool hasOrders) cardData = cardDict[nft.token_id];
+                (string name, int proto, int quality, Order activeOrder) cardData = cardDict[nft.token_id.ToString()];
                 foreach (OrderDisplayControl panel in panels)
                 {
-                    if (panel.ProtoID == cardData.proto && panel.Quality == cardData.quality && panel.getStatustextBlock().Text != "Already listed")
+                    if (panel.GetOrder() == cardData.activeOrder)
                     {
                         if (result[nft])
                         {
@@ -474,10 +384,37 @@ namespace GU_Exchange.Controls
             scrollBar.IsEnabled = true;
             btnClose.IsEnabled = true;
         }
-        #endregion
-        #region Supporting methods
+
         /// <summary>
-        /// Fetch an order for a card. Will return the cheapest card offset by the orderIndex.
+        /// Close the cardcontrol and return to the main menu.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void BtnClose_Click(object sender, RoutedEventArgs e)
+        {
+            ResourceManager.RateLimiter.CancelRequests();
+            ((MainWindow)Application.Current.MainWindow).CloseOverlay();
+        }
+        #endregion
+
+        #region Supporting methods
+        private async Task<string> getOrderCurrencyName(JToken order)
+        {
+            string? token_address = (string?)order.SelectToken("buy.data.token_address");
+            if (token_address == null)
+                return "???";
+            if (token_address == "")
+            {
+                string? token_type = (string?)order.SelectToken("buy.type");
+                if (token_type == null)
+                    return "???";
+                return token_type;
+            }
+            return await Wallet.FetchTokenSymbol(token_address);
+        }
+
+        /// <summary>
+        /// Fetch the optimal price for a card. Returns the current lowest offer price if it is posted by the user or otherwise an amount slightly below the cheapest offer.
         /// </summary>
         /// <param name="protoID"></param>
         /// <param name="quality"></param>
@@ -558,6 +495,85 @@ namespace GU_Exchange.Controls
         }
 
         /// <summary>
+        /// Tries to add a new order display to the window. If all cards are on display it does nothing.
+        /// </summary>
+        /// <returns>true if a display was added.</returns>
+        private bool AddOrderDisplay()
+        {
+            while (_displayIndex < _cardData.Count)
+            {
+                OrderDisplayControl control = new(_cardData[_displayIndex].Item1, _cardData[_displayIndex].Item2, _cardData[_displayIndex].Item3);
+                control.SetOrder(_cardData[_displayIndex].activeOrder);
+                control.ShowStatus(true);
+                control.SetStatusMessage("Checking price...");
+                if (!SetupOrderDisplay(control))
+                {
+                    _displayIndex++;
+                    continue;
+                }
+                if (_listingResults.ContainsKey(_cardData[_displayIndex].activeOrder.TokenID))
+                {
+                    if (_listingResults[_cardData[_displayIndex].activeOrder.TokenID])
+                    {
+                        control.ShowStatus(true);
+                        control.SetStatus(OrderDisplayControl.DisplayStatus.Success);
+                        control.SetStatusMessage("Price updated");
+                    }
+                    else
+                    {
+                        control.ShowStatus(true);
+                        control.SetStatus(OrderDisplayControl.DisplayStatus.Fail);
+                        control.SetStatusMessage("Listing failed");
+                    }
+                }
+                cardPanel.Children.Add(control);
+                _displayIndex++;
+                return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// Setup the order display for a specific card to show the correct listing price.
+        /// </summary>
+        /// <param name="display"></param>
+        private bool SetupOrderDisplay(OrderDisplayControl display)
+        {
+            Wallet? wallet = Wallet.GetConnectedWallet();
+            string? currency_name = display.GetOrder()?.Currency;
+            if (wallet == null || currency_name == null)
+            {
+                return false;
+            }
+            List<Order>? orders;
+            bool loaded = _cachedOrders.TryGetValue($"{display.ProtoID}q{display.Quality}t{currency_name}", out orders);
+            if (loaded && orders != null)
+            {
+                if (orders.Count == 0)
+                {
+                    display.ShowStatus(true);
+                    display.SetStatus(OrderDisplayControl.DisplayStatus.Fail);
+                    display.SetStatusMessage("Unknown card value");
+                    return false;
+                }
+                Order order = orders[0];
+                if (wallet.Address.Equals(order.Seller))
+                    return false;
+                string priceText = $"Adjust price to: {order.PriceTotal() - new decimal(0.00000001)} {currency_name}";
+                display.SetSubText(priceText);
+                display.ShowStatus(false);
+                return true;
+            }
+            else
+            {
+                display.SetStatus(OrderDisplayControl.DisplayStatus.Loading);
+                display.ShowStatus(true);
+                display.SetSubText("");
+                return true;
+            }
+        }
+
+        /// <summary>
         /// Get the fee multiplier for a card of a specifief quality.
         /// </summary>
         /// <param name="quality">The quality of the card (4 = meteorite, 1 = diamond)</param>
@@ -576,39 +592,6 @@ namespace GU_Exchange.Controls
                     return 1.035M;
                 default:
                     return 1.08M;
-            }
-        }
-
-        /// <summary>
-        /// Setup the order display for a specific card to show the correct listing price.
-        /// </summary>
-        /// <param name="display"></param>
-        private void SetupOrderDisplay(OrderDisplayControl display)
-        {
-            string? currency_name = (string?)cbCurrency.SelectedItem;
-            if (currency_name == null)
-            {
-                return;
-            }
-            List<Order>? orders;
-            bool loaded = _cachedOrders.TryGetValue($"{display.ProtoID}q{display.Quality}t{currency_name}", out orders);
-            if (loaded && orders != null)
-            {
-                if (orders.Count == 0)
-                {
-                    display.ShowStatus(true);
-                    display.SetStatus(OrderDisplayControl.DisplayStatus.Fail);
-                    display.SetStatusMessage("Unknown card value");
-                    return;
-                }
-                Order order = orders[0];
-                display.SetSubText($"List for: {Math.Round(order.PriceTotal() - new decimal(0.00000001), 10)} {currency_name}");
-                display.ShowStatus(false);
-            } else
-            {
-                display.SetStatus(OrderDisplayControl.DisplayStatus.Loading);
-                display.ShowStatus(true);
-                display.SetSubText("");
             }
         }
         #endregion
