@@ -5,7 +5,6 @@ using Newtonsoft.Json.Linq;
 using Serilog;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Globalization;
 using System.Linq;
 using System.Net.Http;
@@ -91,7 +90,7 @@ namespace GU_Exchange
             {
                 CardData data = dict[CardID];
                 this.tbCardName.Text = data.Name;
-                this.tbSet.Text = Capitalize(data.Set);
+                this.tbSet.Text = GameDataManager.GetSetDisplayName(Capitalize(data.Set));
                 this.tbGod.Text = Capitalize(data.God);
                 this.tbRarity.Text = Capitalize(data.Rarity);
                 this.cbQuality.Items.Add("Meteorite");

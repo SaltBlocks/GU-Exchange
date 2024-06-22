@@ -418,7 +418,7 @@ namespace GU_Exchange.Controls
                 bool loaded = _cachedOrders.TryGetValue($"{card.proto}q{card.quality}t{currency_name}", out orders);
                 if (!loaded || orders == null || orders.Count == 0)
                     continue;
-                decimal priceBuyer = 100 * (wallet.Address.Equals(orders[0].Seller) ? orders[0].PriceTotal() : orders[0].PriceTotal() - new decimal(0.00000001));
+                decimal priceBuyer = wallet.Address.Equals(orders[0].Seller) ? orders[0].PriceTotal() : orders[0].PriceTotal() - new decimal(0.00000001);
                 decimal priceList = priceBuyer / getFeeMultiplier(card.quality);
                 NFT nft = new NFT()
                 {

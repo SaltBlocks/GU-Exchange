@@ -6,9 +6,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Net.Http;
-using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Soap;
@@ -18,7 +16,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
 using static GU_Exchange.Helpers.IMXlib;
 
 namespace GU_Exchange.Helpers
@@ -296,6 +293,11 @@ namespace GU_Exchange.Helpers
             return await s_fetchTokenTask;
         }
 
+        /// <summary>
+        /// Fetch the token with the provided symbol.
+        /// </summary>
+        /// <param name="symbol"></param>
+        /// <returns></returns>
         public static async Task<Token?> FetchToken(string symbol)
         {
             if (s_currencyList.ContainsKey(symbol))
@@ -313,6 +315,11 @@ namespace GU_Exchange.Helpers
             return null;
         }
 
+        /// <summary>
+        /// Fetch the token symbol with the provided address.
+        /// </summary>
+        /// <param name="address"></param>
+        /// <returns></returns>
         public static async Task<string> FetchTokenSymbol(string address)
         {
             Dictionary<string, string> tokenData = (await FetchTokens()).ToDictionary(x => x.Value.Address, x => x.Key);

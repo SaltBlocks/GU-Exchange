@@ -16,15 +16,6 @@ namespace GU_Exchange.Helpers
         private static bool SettingsLoaded = false;
         #endregion
 
-        public static string GetConfigFolder()
-        {
-            if (!Directory.Exists(folderConfig))
-            {
-                Directory.CreateDirectory(folderConfig);
-            }
-            return folderConfig;
-        }
-
         #region Load/Save Settings
         /// <summary>
         /// Load GU Exchange settings from the disk.
@@ -80,6 +71,19 @@ namespace GU_Exchange.Helpers
         #endregion
 
         #region Getters/Setters.
+        /// <summary>
+        /// Get the config folder 
+        /// </summary>
+        /// <returns></returns>
+        public static string GetConfigFolder()
+        {
+            if (!Directory.Exists(folderConfig))
+            {
+                Directory.CreateDirectory(folderConfig);
+            }
+            return folderConfig;
+        }
+
         /// <summary>
         /// Get the apolloID linked to GU Exchange.
         /// </summary>

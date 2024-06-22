@@ -5,17 +5,10 @@ using Serilog;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 using System.Threading;
 using System.Web;
 using static GU_Exchange.Helpers.IMXlib;
@@ -216,7 +209,6 @@ namespace GU_Exchange.Controls
             ((MainWindow)Application.Current.MainWindow).menuBar.IsEnabled = true;
         }
         #endregion
-
         #region Event Handler
         /// <summary>
         /// Used to detect when the user scrolls to the bottom of the page.
@@ -327,8 +319,8 @@ namespace GU_Exchange.Controls
                 if (!loaded || orders == null || orders.Count == 0 || (orders[0].PriceTotal().Equals(card.activeOrder.PriceTotal()) && orders[0].Seller == wallet.Address))
                     continue;
 
-                Console.WriteLine($"Updating price for {card.name} to {orders[0].PriceTotal() - new decimal(0.00000001)} {card.activeOrder.Currency}");
-                decimal priceBuyer = 100 * (orders[0].PriceTotal() - new decimal(0.00000001));
+                Log.Information($"Updating price for {card.name} to {orders[0].PriceTotal() - new decimal(0.00000001)} {card.activeOrder.Currency}");
+                decimal priceBuyer = orders[0].PriceTotal() - new decimal(0.00000001);
                 decimal priceList = priceBuyer / getFeeMultiplier(card.quality);
                 NFT nft = new NFT()
                 {
@@ -396,7 +388,6 @@ namespace GU_Exchange.Controls
             ((MainWindow)Application.Current.MainWindow).CloseOverlay();
         }
         #endregion
-
         #region Supporting methods
         private async Task<string> getOrderCurrencyName(JToken order)
         {

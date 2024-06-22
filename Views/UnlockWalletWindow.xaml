@@ -7,14 +7,20 @@
         mc:Ignorable="d"
         Title="Unlock Wallet" Height="215" Width="330" ResizeMode="NoResize" SizeToContent="WidthAndHeight" WindowStartupLocation="CenterOwner">
     <Grid>
+        <!--#region Password field. -->
         <PasswordBox x:Name="txtPassword" HorizontalAlignment="Left" Height="25" Margin="20,110,20,0" VerticalAlignment="Top" Width="290" KeyUp="TxtPassword_KeyUp" />
+        <!-- #endregion -->
+        <!--#region Labels. -->
         <Label x:Name="lblTop" Content="Passsword for wallet " HorizontalAlignment="Center" Margin="0,10,0,0" VerticalAlignment="Top" HorizontalContentAlignment="Center" Width="330" Height="25"/>
         <Label x:Name="lblAddress" Content="" HorizontalAlignment="Center" Margin="0,35,0,0" VerticalAlignment="Top" HorizontalContentAlignment="Center" Width="330" Height="25"/>
         <Label x:Name="lblBottom" Content="is required to continue. " HorizontalAlignment="Center" Margin="0,60,0,0" VerticalAlignment="Top" HorizontalContentAlignment="Center" Width="330" Height="25"/>
         <Label Content="Password: " HorizontalAlignment="Left" Margin="20,85,0,0" VerticalAlignment="Top" Width="64" Height="25" Opacity="0.5" Foreground="Black"/>
         <Label x:Name="lblRelock" Content="Relock: " HorizontalAlignment="Left" Margin="246,85,0,0" VerticalAlignment="Top" Width="64" Height="25" Opacity="0.5" Foreground="Black"/>
+        <!-- #endregion -->
+        <!-- #region User interaction. -->
         <Button Content="Unlock" HorizontalAlignment="Left" Margin="100,145,0,10" VerticalAlignment="Top" Width="55" Click="Button_Unlock"/>
         <Button Content="Cancel" HorizontalAlignment="Left" Margin="175,145,100,10" VerticalAlignment="Top" Width="55" Click="Button_Cancel"/>
         <CheckBox x:Name="chkRelock" Content="CheckBox" HorizontalAlignment="Left" Height="15" Margin="294,90,0,0" VerticalAlignment="Top" Width="16" IsChecked="True"/>
+        <!-- #endregion -->
     </Grid>
 </Window>

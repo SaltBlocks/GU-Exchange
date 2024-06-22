@@ -73,6 +73,7 @@ namespace GU_Exchange.Helpers
         }
         #endregion
 
+        #region External signature requesting.
         /// <summary>
         /// Request the user sign the provided message. 
         /// </summary>
@@ -106,7 +107,9 @@ namespace GU_Exchange.Helpers
             });
             return await taskCompletionSource.Task;
         }
+        #endregion
 
+        #region Server loop.
         /// <summary>
         /// Loop to handle clients using the signature server to GU Exchange.
         /// </summary>
@@ -175,6 +178,9 @@ namespace GU_Exchange.Helpers
                                     case "/cancel":
                                         CancelRequests(response);
                                         break;
+                                    case "/favicon.ico":
+                                        ReturnIcon(response);
+                                        break;
                                     default:
                                         response.StatusCode = 404;
                                         break;
@@ -196,6 +202,7 @@ namespace GU_Exchange.Helpers
 
             }
         }
+        #endregion
 
         #region Handle HTTP traffic.
         /// <summary>
@@ -247,6 +254,42 @@ namespace GU_Exchange.Helpers
             byte[] buffer = Encoding.UTF8.GetBytes(RequestedAddress);
             response.ContentLength64 = buffer.Length;
             response.OutputStream.Write(buffer, 0, buffer.Length);
+        }
+
+        /// <summary>
+        /// Send the icon to display for the webpage.
+        /// </summary>
+        /// <param name="response"></param>
+        static void ReturnIcon(HttpListenerResponse response)
+        {
+            string filePath = "server/GU_Exchange_icon.ico";
+
+            // Ensure the file exists before proceeding
+            if (File.Exists(filePath))
+            {
+                try
+                {
+                    response.ContentType = "image/x-icon";
+                    byte[] iconBytes = File.ReadAllBytes(filePath);
+                    response.ContentLength64 = iconBytes.Length;
+                    using (Stream output = response.OutputStream)
+                    {
+                        output.Write(iconBytes, 0, iconBytes.Length);
+                    }
+                    response.StatusCode = (int)HttpStatusCode.OK;
+                }
+                catch (Exception ex)
+                {
+                    Log.Warning($"Error returning page image: {ex.Message}");
+                    response.StatusCode = (int)HttpStatusCode.InternalServerError;
+                }
+            }
+            else
+            {
+                Log.Warning($"Error: File not found at {filePath}");
+                response.StatusCode = (int)HttpStatusCode.NotFound;
+            }
+            response.Close();
         }
 
         /// <summary>

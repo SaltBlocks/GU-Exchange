@@ -17,6 +17,7 @@ namespace GU_Exchange.Helpers
 {
     class ResourceManager
     {
+        #region Class variables.
         public static RateLimitHandler RateLimiter = new RateLimitHandler(new HttpClientHandler(), 5);
         public static HttpClient Client = new(handler: RateLimiter)
         {
@@ -24,6 +25,7 @@ namespace GU_Exchange.Helpers
         };
         public static SizedDictionary<string, BitmapSource> imgCache = new(30);
         private static string _cardFolder = Path.Combine(Settings.GetConfigFolder(), "cards");
+        #endregion
 
         #region Supporting Methods.
         [DllImport("gdi32.dll")]

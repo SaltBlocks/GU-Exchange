@@ -49,7 +49,7 @@ namespace GU_Exchange.Controls
             }
             try
             {
-                Log.Information($"Fetching orders for wallet ");
+                Log.Information($"Fetching orders for wallet {wallet.Address}");
                 bool hasNext = true;
                 string urlBase = $"https://api.x.immutable.com/v3/orders?direction=asc&include_fees=true&order_by=buy_quantity&page_size=200&sell_token_address=0xacb3c6a43d15b907e8433077b6d38ae40936fe2c&status=active&user={wallet.Address}";
                 string urlInventory = urlBase;
@@ -266,6 +266,11 @@ namespace GU_Exchange.Controls
         }
         #endregion
         #region Supporting methods
+        /// <summary>
+        /// Get the token symbol associated with a provided order in json format.
+        /// </summary>
+        /// <param name="order"></param>
+        /// <returns></returns>
         private async Task<string> getOrderCurrencyName(JToken order)
         {
             string? token_address = (string?)order.SelectToken("buy.data.token_address");

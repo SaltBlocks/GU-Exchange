@@ -186,7 +186,7 @@ namespace GU_Exchange
             cbSet.Items.Add("Any set");
             foreach (string set in await GameDataManager.getSets())
             {
-                cbSet.Items.Add(set);
+                cbSet.Items.Add(GameDataManager.GetSetDisplayName(set));
             }
             cbGod.Items.Add("Any God");
             foreach (string god in await GameDataManager.getGods())
@@ -311,7 +311,7 @@ namespace GU_Exchange
                 string? tribe = null;
                 string? sort = null;
                 if (cbSet.SelectedValue != null && !cbSet.SelectedValue.Equals("Any set"))
-                    set = (string)cbSet.SelectedValue;
+                    set = GameDataManager.GetSetName((string)cbSet.SelectedValue);
                 if (cbGod.SelectedValue != null && !cbGod.SelectedValue.Equals("Any God"))
                     god = (string)cbGod.SelectedValue;
                 if (cbRarity.SelectedValue != null && !cbRarity.SelectedValue.Equals("Any rarity"))
@@ -589,6 +589,51 @@ namespace GU_Exchange
         }
 
         /// <summary>
+        /// Open the <see cref="UserControl"> for transferring the GU collection of the connected wallet.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void MiTransferCollection(object sender, RoutedEventArgs e)
+        {
+            CloseOverlay();
+            _overlayControl = new TransferCollectionControl();
+            _overlayControl.Margin = new Thickness(0, 0, 0, 0);
+            Grid.SetRow(_overlayControl, 2);
+            Grid.SetRowSpan(_overlayControl, 4);
+            MainGrid.Children.Add(_overlayControl);
+        }
+
+        /// <summary>
+        /// Open the <see cref="UserControl"> for listing the GU collection of the connected wallet for sale.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void MiListCollection_Click(object sender, RoutedEventArgs e)
+        {
+            CloseOverlay();
+            _overlayControl = new ListAllControl();
+            _overlayControl.Margin = new Thickness(0, 0, 0, 0);
+            Grid.SetRow(_overlayControl, 2);
+            Grid.SetRowSpan(_overlayControl, 4);
+            MainGrid.Children.Add(_overlayControl);
+        }
+
+        /// <summary>
+        /// Open the <see cref="UserControl"> for updating existing listings for the connected wallet.
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void MiUpdateListings_Click(object sender, RoutedEventArgs e)
+        {
+            CloseOverlay();
+            _overlayControl = new UpdateListingsControl();
+            _overlayControl.Margin = new Thickness(0, 0, 0, 0);
+            Grid.SetRow(_overlayControl, 2);
+            Grid.SetRowSpan(_overlayControl, 4);
+            MainGrid.Children.Add(_overlayControl);
+        }
+
+        /// <summary>
         /// Refresh the inventory display and the wallet currency amounts.
         /// </summary>
         /// <param name="sender"></param>
@@ -733,35 +778,5 @@ namespace GU_Exchange
         }
 
         #endregion
-
-        private void MiTransferCollection(object sender, RoutedEventArgs e)
-        {
-            CloseOverlay();
-            _overlayControl = new TransferCollectionControl();
-            _overlayControl.Margin = new Thickness(0, 0, 0, 0);
-            Grid.SetRow(_overlayControl, 2);
-            Grid.SetRowSpan(_overlayControl, 4);
-            MainGrid.Children.Add(_overlayControl);
-        }
-
-        private void MiListCollection_Click(object sender, RoutedEventArgs e)
-        {
-            CloseOverlay();
-            _overlayControl = new ListAllControl();
-            _overlayControl.Margin = new Thickness(0, 0, 0, 0);
-            Grid.SetRow(_overlayControl, 2);
-            Grid.SetRowSpan(_overlayControl, 4);
-            MainGrid.Children.Add(_overlayControl);
-        }
-
-        private void MiUpdateListings_Click(object sender, RoutedEventArgs e)
-        {
-            CloseOverlay();
-            _overlayControl = new UpdateListingsControl();
-            _overlayControl.Margin = new Thickness(0, 0, 0, 0);
-            Grid.SetRow(_overlayControl, 2);
-            Grid.SetRowSpan(_overlayControl, 4);
-            MainGrid.Children.Add(_overlayControl);
-        }
     }
 }

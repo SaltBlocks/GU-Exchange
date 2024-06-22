@@ -35,8 +35,10 @@ namespace GU_Exchange.Helpers
         [DllImport("IMXlib.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern IntPtr eth_get_address(string eth_priv_str, [Out] IntPtr result_buffer, int buffer_size);
         #endregion
+        #region Fetch token information.
         [DllImport("IMXlib.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern double imx_get_token_trade_fee(string token_address_str, string token_id_str);
+        #endregion
         #region Registration of ETH address with IMX.
         [DllImport("IMXlib.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern IntPtr imx_register_address(string eth_priv_str, IntPtr result_buffer, int buffer_size);
@@ -85,6 +87,8 @@ namespace GU_Exchange.Helpers
         [DllImport("IMXlib.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern IntPtr imx_finish_transfer(string nonce_str, string imx_seed_sig_str, string imx_transaction_sig_str, IntPtr result_buffer, int buffer_size);
         #endregion
+
+        #region Pointer convertion.
         public static string? IntPtrToString(IntPtr ptr)
         {
             return Marshal.PtrToStringAnsi(ptr);
@@ -94,5 +98,6 @@ namespace GU_Exchange.Helpers
         {
             return Marshal.PtrToStringUTF8(ptr);
         }
+        #endregion
     }
 }

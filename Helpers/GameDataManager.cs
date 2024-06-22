@@ -161,6 +161,17 @@ namespace GU_Exchange.Helpers
         public static PlayerData players = new();
         private static Task? s_setupCardsTask;
         private static Dictionary<int, CardData> s_loadedCardList = new();
+        private static Dictionary<string, string> s_setDisplayNames = new ()
+            {
+                { "Order", "Divine Order" },
+                { "Mortal", "Mortal Judgement" },
+                { "Verdict", "Light's Verdict" },
+                { "Wander", "Winter Wanderlands" },
+                { "Wolf", "Band of the Wolf" },
+                { "Tides", "Tides of Fate" },
+                { "Dread", "Dread Awakening" },
+                { "Trial", "Trial of the Gods" }
+            };
         private static readonly Task<Dictionary<int, decimal>> s_cardPriceFetchTask = FetchCardPricesAsync();
 
         // Wallets linked to players.
@@ -715,6 +726,27 @@ namespace GU_Exchange.Helpers
         {
             await s_setupQueries;
             return s_setList;
+        }
+
+        public static string GetSetDisplayName(string set)
+        {
+            if (s_setDisplayNames.ContainsKey(set))
+            {
+                return s_setDisplayNames[set];
+            }
+            return set;
+        }
+
+        public static string GetSetName(string displayName)
+        {
+            Console.WriteLine($"{displayName}: {s_setDisplayNames.ContainsValue(displayName)}");
+
+            if (s_setDisplayNames.ContainsValue(displayName))
+            {
+                string res = s_setDisplayNames.First(x => x.Value == displayName).Key;
+                return res;
+            }
+            return displayName;
         }
 
         /// <summary>

@@ -11,7 +11,6 @@
             <!-- #region Text Box. -->
             <TextBox x:Name="textInput" Width="200" Height="50" TextChanged="TextInput_TextChanged"/>
             <!-- #endregion -->
-            
             <!-- #region Suggestion box. -->
             <Popup x:Name="listPopup" Visibility="Collapsed" Height="100" StaysOpen="False" Placement="Bottom">
                 <ListBox x:Name="lbSuggestions" Visibility="Collapsed" Width="200" Height="100" SelectionChanged="SuggestionList_SelectionChanged" />

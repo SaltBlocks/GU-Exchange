@@ -3,28 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GU Exchange message signing page</title>
+    <link rel="shortcut icon" type="image/x-icon" href="favicon.ico" />
+    <title>GU Exchange</title>
     <style>
-		body {
-			font-family: 'Arial', sans-serif;
-			background-color: #f4f4f4;
-			margin: 0;
-			padding: 0;
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			height: 100vh;
-			flex-direction: column;
-		}
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            flex-direction: column;
+        }
 
-		#container {
-			background-color: #fff;
-			padding: 20px;
-			border-radius: 8px;
-			box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-			text-align: center;
-			width: 400px;
-		}
+        #container {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            width: 400px;
+        }
 
         .stadium {
             position: relative;
@@ -61,24 +62,24 @@
             font-family: 'Arial', sans-serif;
         }
 
-		h1 {
-			color: #333;
-			margin-bottom: 20px;
-		}
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
 
-		hr {
-			border: 1px solid #ddd;
-			margin: 20px 0;
-		}
+        hr {
+            border: 1px solid #ddd;
+            margin: 20px 0;
+        }
 
-		p {
-			color: #666;
-		}
+        p {
+            color: #666;
+        }
 
-		#actionText {
-			font-weight: bold;
-			margin-bottom: 20px;
-		}
+        #actionText {
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
 
         button:disabled {
             background-color: #ccc !important;
@@ -86,30 +87,30 @@
             cursor: not-allowed;
         }
 
-		button {
-			width: 100%;
-			background-color: #4CAF50;
-			color: white;
-			padding: 10px 0;
-			border: none;
-			border-radius: 4px;
-			cursor: pointer;
-			font-size: 14px;
-			margin-bottom: 10px;
-		}
+        button {
+            width: 100%;
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 0;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
 
-		button.cancel {
-			background-color: #f44336;
-		}
+            button.cancel {
+                background-color: #f44336;
+            }
 
-		button.connect-wallet {
-			background-color: #2196F3;
-		}
+            button.connect-wallet {
+                background-color: #2196F3;
+            }
 
         .invisible {
             display: none;
         }
-	</style>
+    </style>
 </head>
 <body>
     <div id="container">

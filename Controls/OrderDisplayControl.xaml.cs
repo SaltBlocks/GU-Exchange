@@ -1,19 +1,9 @@
 ﻿using GU_Exchange.Helpers;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 
 namespace GU_Exchange.Controls
 {
@@ -27,13 +17,21 @@ namespace GU_Exchange.Controls
             Loading, Success, Fail
         }
 
+        #region Class properties.
         private CancellationTokenSource imgToken;
         private Order? _order;
         public string CardName { get; private set; }
         public int ProtoID { get; private set; }
         public int Quality { get; private set; }
         public DisplayStatus Status { get; private set; }
-
+        #endregion
+        #region Default constructor.
+        /// <summary>
+        /// Constructor for a display showing a card image with a status.
+        /// </summary>
+        /// <param name="cardName"></param>
+        /// <param name="protoID"></param>
+        /// <param name="quality"></param>
         public OrderDisplayControl(string cardName, int protoID, int quality)
         {
             InitializeComponent();
@@ -45,12 +43,21 @@ namespace GU_Exchange.Controls
             imgToken = new();
             SetupImage();
         }
-
+        #endregion
+        #region Supporting methods.
+        /// <summary>
+        /// Setup the image to display.
+        /// </summary>
         public async void SetupImage()
         {
             imgCard.Source = await ResourceManager.GetCardImageAsync(ProtoID, Quality, false, imgToken.Token);
         }
 
+        /// <summary>
+        /// Set the order associated with the display using a task.
+        /// </summary>
+        /// <param name="task"></param>
+        /// <returns></returns>
         public async Task<bool> SetOrder(Task<Order> task)
         {
             try
@@ -66,6 +73,10 @@ namespace GU_Exchange.Controls
             return false;
         }
 
+        /// <summary>
+        /// Set the order associated with the display.
+        /// </summary>
+        /// <param name="order"></param>
         public void SetOrder(Order order)
         {
             _order = order;
@@ -73,11 +84,19 @@ namespace GU_Exchange.Controls
             ShowStatus(false);
         }
 
+        /// <summary>
+        /// Get the order associated with this display.
+        /// </summary>
+        /// <returns></returns>
         public Order? GetOrder()
         {
             return _order;
         }
 
+        /// <summary>
+        /// Set the status of the display.
+        /// </summary>
+        /// <param name="status"></param>
         public void SetStatus(DisplayStatus status)
         {
             Status = status;
@@ -101,26 +120,46 @@ namespace GU_Exchange.Controls
             }
         }
 
+        /// <summary>
+        /// Set the status message of this display.
+        /// </summary>
+        /// <param name="message"></param>
         public void SetStatusMessage(string message)
         {
             tbStatus.Text = message;
         }
 
+        /// <summary>
+        /// Get the subtext below the card image.
+        /// </summary>
+        /// <returns></returns>
         public string GetSubText()
         {
             return tbSubText.Text;
         }
 
+        /// <summary>
+        /// Set the subtext below the card image.
+        /// </summary>
+        /// <param name="mesage"></param>
         public void SetSubText(string mesage)
         {
             tbSubText.Text = mesage;
         }
 
+        /// <summary>
+        /// Get the textblock for this display.
+        /// </summary>
+        /// <returns></returns>
         public TextBlock getStatustextBlock()
         {
             return tbStatus;
         }
 
+        /// <summary>
+        /// Set whether or not the status bar on this display should be shown.
+        /// </summary>
+        /// <param name="showStatus"></param>
         public void ShowStatus(bool showStatus)
         {
             if (showStatus)
@@ -128,5 +167,6 @@ namespace GU_Exchange.Controls
             else
                 spDisplay.Visibility = Visibility.Collapsed;
         }
+        #endregion
     }
 }

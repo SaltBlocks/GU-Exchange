@@ -1,29 +1,43 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Timers;
 
 namespace GU_Exchange.Helpers
 {
     internal class RateLimitHandler : DelegatingHandler
     {
+        #region Class properties.
         private readonly int _requestsPerSecond;
         private readonly Queue<DateTime> _requestTimes = new Queue<DateTime>();
         private readonly object _lockObject = new object();
         private CancellationTokenSource _cts;
+        #endregion
 
+        #region Default constructor.
+        /// <summary>
+        /// Construct a <see cref="DelegatingHandler"/> that doesn't create more api requests per second than the provided maximum requests per second.
+        /// Keeps a buffer of 5 seconds to allow short bursts of a larger number of requests to pass and keeps the actual number of requests within a 10% margin of the largest number allowed.
+        /// </summary>
+        /// <param name="innerHandler"></param>
+        /// <param name="requestsPerSecond"></param>
         public RateLimitHandler(HttpMessageHandler innerHandler, int requestsPerSecond) : base(innerHandler)
         {
             _cts = new CancellationTokenSource();
             _requestsPerSecond = requestsPerSecond;
         }
+        #endregion
 
+        #region Handle request.
+        /// <summary>
+        /// Called whenever a request is made using the handler. If the request is an api call, will ensure that it is held until it no longer exceeds the set rate limit.
+        /// </summary>
+        /// <param name="request"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             Uri? uri = request.RequestUri;
@@ -70,7 +84,15 @@ namespace GU_Exchange.Helpers
             }
             return await base.SendAsync(request, cancellationToken);
         }
+        #endregion
 
+        #region Supporting functions.
+        /// <summary>
+        /// Reserve the specified number of requests for an external api call.
+        /// </summary>
+        /// <param name="requestAmount"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
         public async Task ReserveRequests(int requestAmount, CancellationToken? cancellationToken = null)
         {
             DateTime delayUntil = DateTime.Now;
@@ -115,6 +137,9 @@ namespace GU_Exchange.Helpers
             }
         }
 
+        /// <summary>
+        /// Cancel all requests that are awaiting a slot to make an api call.
+        /// </summary>
         public void CancelRequests()
         {
             _cts.Cancel();
@@ -136,11 +161,15 @@ namespace GU_Exchange.Helpers
             }
         }
 
+        /// <summary>
+        /// Cancel all requests and free all available slots for future api calls.
+        /// </summary>
         public void CancelRequestsAndReset()
         {
             _cts.Cancel();
             _cts = new CancellationTokenSource();
             _requestTimes.Clear();
         }
+        #endregion
     }
 }
