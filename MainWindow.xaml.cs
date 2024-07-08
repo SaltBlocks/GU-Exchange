@@ -125,6 +125,7 @@ namespace GU_Exchange
         public async void SetupAsync()
         {
             Task setupPlayers = GameDataManager.SetupPlayerDataAsync();                                 // Start fetching player names and apollo IDs locally or from web.
+            GameDataManager.FetchPlayedGamesAsync();                                                    // Fetch and process GU games played.
             Settings.LoadSettings();                                                                    // Load GU Exchange settings.
             Inventory inv = new Inventory(Settings.GetApolloID());                                      // Setup player inventory.
             Task inventoryUpdate = inv.UpdateInventoryAsync();
@@ -207,7 +208,7 @@ namespace GU_Exchange
                 else
                     cbTribe.Items.Add(tribe);
             }
-            string[] sortTypes = { "Search Query", "Rarity (Mythic-Common)", "Rarity (Common-Mythic)", "Price (High-Low)", "Price (Low-High)" };
+            string[] sortTypes = { "Search Query", "Rarity (Mythic-Common)", "Rarity (Common-Mythic)", "Price (High-Low)", "Price (Low-High)", "Playrate (High-Low)", "Playrate (Low-High)", "Winrate (High-Low)", "Winrate (Low-High)", "Winrate + Playrate (High-Low)", "Winrate + Playrate (Low-High)" };
             foreach (string sortType in sortTypes)
             {
                 cbSort.Items.Add(sortType);

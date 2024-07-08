@@ -47,11 +47,13 @@
                     <RowDefinition Height="1*"/>
                 </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="1*"/>
+                    <ColumnDefinition Width="2*"/>
+                    <ColumnDefinition Width="5*"/>
+                    <ColumnDefinition Width="2*"/>
                     <ColumnDefinition Width="5*"/>
                 </Grid.ColumnDefinitions>
                 <!-- #endregion -->
-                <Rectangle x:Name="rectInfo" Grid.RowSpan="4" Grid.ColumnSpan="2" Stroke="Black"/>
+                <Rectangle x:Name="rectInfo" Grid.RowSpan="4" Grid.ColumnSpan="4" Stroke="Black"/>
                 <Viewbox Margin="5,5,5,5" Grid.Row="0">
                     <TextBlock Text="Set: " HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
                 </Viewbox>
@@ -63,6 +65,12 @@
                 </Viewbox>
                 <Viewbox Margin="5,5,5,5" Grid.Row="3">
                     <TextBlock Text="Rarity: " HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
+                </Viewbox>
+                <Viewbox Margin="5,5,5,5" Grid.Row="0" Grid.Column="2">
+                    <TextBlock Text="Playrate: " HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
+                </Viewbox>
+                <Viewbox Margin="5,5,5,5" Grid.Row="1" Grid.Column="2">
+                    <TextBlock Text="Winrate: " HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
                 </Viewbox>
 
                 <Viewbox Grid.Row="0" Grid.Column="1" Margin="5,5,5,5" HorizontalAlignment="Left">
@@ -76,6 +84,12 @@
                 </Viewbox>
                 <Viewbox Grid.Row="3" Grid.Column="1" Margin="5,5,5,5" HorizontalAlignment="Left">
                     <TextBlock x:Name="tbRarity" Text="RARITY" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
+                </Viewbox>
+                <Viewbox Grid.Row="0" Grid.Column="3" Margin="5,5,5,5" HorizontalAlignment="Left">
+                    <TextBlock x:Name="tbPlayrate" Text="PLAYRATE" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
+                </Viewbox>
+                <Viewbox Grid.Row="1" Grid.Column="3" Margin="5,5,5,5" HorizontalAlignment="Left">
+                    <TextBlock x:Name="tbWinrate" Text="WINRATE" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
                 </Viewbox>
             </Grid>
             <!-- #endregion -->

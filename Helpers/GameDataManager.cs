@@ -3,11 +3,9 @@ using Newtonsoft.Json.Linq;
 using Serilog;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
-using System.Net.NetworkInformation;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Json;
 using System.Text.RegularExpressions;
@@ -183,6 +181,9 @@ namespace GU_Exchange.Helpers
         private static readonly HashSet<string> s_godList = new();
         private static readonly HashSet<string> s_rarityList = new();
         private static readonly HashSet<string> s_tribeList = new();
+
+        // Storage for card play and winrates.
+        private static readonly Dictionary<int, (int, int)> s_cardPlayData = new();
 
         // Cancellation tokens.
         private static CancellationTokenSource? fetchGamesTokenSource = null;
@@ -412,59 +413,264 @@ namespace GU_Exchange.Helpers
                 fetchGamesTokenSource.Cancel();
             }
             fetchGamesTokenSource = new();
+            List<DateTimeOffset> datesToFetch = new();
             DateTimeOffset now = DateTimeOffset.UtcNow;
-            long endTime = now.ToUnixTimeSeconds();
-            long startTime = endTime - 60 * 60 * 24;
-            string url = $"https://api.godsunchained.com/v0/match?end_time={startTime}-{endTime}&perPage=1000&page=";
-            try
+            DateTimeOffset dayStart = new DateTimeOffset(now.Year, now.Month, now.Day, 0, 0, 0, TimeSpan.Zero);
+            string path = Path.Combine(Settings.GetConfigFolder(), "games");
+            if (!Directory.Exists(path))
             {
-                string strGameData = await ResourceManager.Client.GetStringAsync(url + 1, fetchGamesTokenSource.Token);
-                JObject? jsonGames = (JObject?)JsonConvert.DeserializeObject(strGameData);
-                if (jsonGames == null)
-                    return;
-                int? gameCount = (int?)jsonGames["total"];
-                if (gameCount == null)
-                    return;
-                processGames(jsonGames);
-
-                try
+                Directory.CreateDirectory(path);
+            }
+            List<string> gameData = Directory.GetFiles(path, "*.json").ToList();
+            List<string> filesNeeded = new();
+            for (int i = 0; i < 7; i++)
+            {
+                string filePath = Path.Combine(path, $"{dayStart.Day}-{dayStart.Month}-{dayStart.Year}.json");
+                filesNeeded.Add(filePath);
+                if (gameData.Contains(filePath))
                 {
-                    for (int i = 1; i <= gameCount / 1000; i++)
+                    Dictionary<int, (int, int)> gamesPlayedOnDate = DeserializeDictionaryFromFile(filePath);
+                    StoreGameResult(gamesPlayedOnDate, s_cardPlayData);
+                }
+                else
+                {
+                    datesToFetch.Add(dayStart);
+                }
+                dayStart = dayStart.AddDays(-1);
+            }
+
+            foreach (string file in gameData)
+            {
+                if (file.EndsWith(".json") && !filesNeeded.Contains(file))
+                {
+                    File.Delete(file);
+                }
+            }
+
+            foreach (DateTimeOffset date in datesToFetch)
+            {
+                Dictionary<int, (int, int)> gamesPlayedOnDate = new();
+                long endTime = date.ToUnixTimeSeconds();
+                long startTime = endTime - 60 * 60 * 24;
+                string url = $"https://api.godsunchained.com/v0/match?end_time={startTime}-{endTime}&perPage=1000&page=";
+                bool fetched = false;
+                string strGameData = "";
+                while (!fetched)
+                {
+                    try
                     {
-                        strGameData = await ResourceManager.Client.GetStringAsync(url + (i + 1), fetchGamesTokenSource.Token);
-                        jsonGames = (JObject?)JsonConvert.DeserializeObject(strGameData);
-                        if (jsonGames == null)
-                            return;
-                        processGames(jsonGames);
+                        strGameData = await ResourceManager.Client.GetStringAsync(url + 1, fetchGamesTokenSource.Token);
+                        fetched = true;
+                    }
+                    catch (HttpRequestException e)
+                    {
+                        Log.Warning($"Failed to fetch Gods Unchained games played in the past 24 hours. {e.Message}: {e.StackTrace}");
+                        await Task.Delay(10000);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        return;
                     }
                 }
-                catch (HttpRequestException)
+                JObject? jsonGames = (JObject?)JsonConvert.DeserializeObject(strGameData);
+                if (jsonGames == null)
+                    continue;
+                int? gameCount = (int?)jsonGames["total"];
+                if (gameCount == null)
+                    continue;
+                Dictionary<int, (int, int)> gameResults = ProcessGames(jsonGames);
+                StoreGameResult(gameResults, gamesPlayedOnDate);
+                StoreGameResult(gameResults, s_cardPlayData);
+
+                for (int i = 1; i <= gameCount / 1000; i++)
                 {
-                    Log.Warning($"GU api ratelimit hit.");
+                    fetched = false;
+                    while (!fetched)
+                    {
+                        try
+                        {
+                            strGameData = await ResourceManager.Client.GetStringAsync(url + (i + 1), fetchGamesTokenSource.Token);
+                            fetched = true;
+                        }
+                        catch (HttpRequestException e)
+                        {
+                            Log.Warning($"Failed to fetch Gods Unchained games played in the past 24 hours. {e.Message}: {e.StackTrace}");
+                            await Task.Delay(10000);
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            return;
+                        }
+                    }
+                    jsonGames = (JObject?)JsonConvert.DeserializeObject(strGameData);
+                    if (jsonGames == null)
+                        continue;
+                    gameResults = ProcessGames(jsonGames);
+                    StoreGameResult(gameResults, gamesPlayedOnDate);
+                    StoreGameResult(gameResults, s_cardPlayData);
                 }
+                SerializeDictionaryToFile(gamesPlayedOnDate, Path.Combine(path, $"{date.Day}-{date.Month}-{date.Year}.json"));
             }
-            catch (HttpRequestException e)
-            {
-                Log.Warning($"Failed to fetch Gods Unchained games played in the past 24 hours. {e.Message}: {e.StackTrace}");
-            }
-            catch (OperationCanceledException)
-            {
-            }
+            
         }
 
         /// <summary>
         /// Process played games for statistics.
         /// </summary>
         /// <param name="jsonGames"></param>
-        private static void processGames(JObject jsonGames)
+        private static Dictionary<int, (int, int)> ProcessGames(JObject jsonGames)
         {
+            Dictionary<int, (int, int)> gameResults = new();
             JToken? games = jsonGames["records"];
             if (games == null)
-                return;
+                return gameResults;
             foreach (JToken game in games)
             {
                 // Process the game data.
+                int? gameMode = (int?)game["game_mode"];
+                if (gameMode == null || gameMode != 13)
+                    continue;
+                int? playerWin = (int?)game["player_won"];
+                int? playerLose = (int?)game["player_lost"];
+                JToken? gameData = game["player_info"];
+                if (playerWin == null || playerLose == null || gameData == null)
+                    continue;
+                List<JToken> gameList = gameData.ToList();
+                if (gameList.Count() != 2)
+                    continue;
+                JToken dataWin;
+                JToken dataLoss;
+                HashSet<int> processed = new();
+                if ((int?)gameList[0]["user_id"] == playerWin)
+                {
+                    dataWin = gameList[0]["cards"]!;
+                    dataLoss = gameList[1]["cards"]!;
+                }
+                else
+                {
+                    dataWin = gameList[1]["cards"]!;
+                    dataLoss = gameList[0]["cards"]!;
+                }
+                foreach (int? id in dataWin)
+                {
+                    if (id == null || processed.Contains((int)id))
+                        continue;
+                    (int, int) data;
+                    if (!gameResults.TryGetValue((int)id, out data))
+                        data = (1, 0);
+                    else
+                        data = (data.Item1 + 1, data.Item2);
+                    gameResults[(int)id] = data;
+                    processed.Add((int)id);
+                }
+                processed.Clear();
+                foreach (int? id in dataLoss)
+                {
+                    if (id == null || processed.Contains((int)id))
+                        continue;
+                    (int, int) data;
+                    if (!gameResults.TryGetValue((int)id, out data))
+                        data = (0, 1);
+                    else
+                        data = (data.Item1, data.Item2 + 1);
+                    gameResults[(int)id] = data;
+                    processed.Add((int)id);
+                }
             }
+            return gameResults;
+        }
+
+        private static void StoreGameResult(Dictionary<int, (int, int)> gameResults, Dictionary<int, (int, int)> storage)
+        {
+            lock (storage)
+            {
+                foreach (int proto in gameResults.Keys)
+                {
+                    (int, int) data = storage.TryGetValue(proto, out (int, int) value) ? value : (0, 0);
+                    data.Item1 += gameResults[proto].Item1;
+                    data.Item2 += gameResults[proto].Item2;
+                    storage[proto] = data;
+                }
+            }
+        }
+
+        private static void SerializeDictionaryToFile(Dictionary<int, (int, int)> dict, string filePath)
+        {
+            JObject jsonObject = new JObject();
+            foreach (KeyValuePair<int, (int, int)> kvp in dict)
+            {
+                JArray innerArray = new JArray { kvp.Value.Item1, kvp.Value.Item2 };
+                jsonObject[kvp.Key.ToString()] = innerArray;
+            }
+            File.WriteAllText(filePath, jsonObject.ToString());
+        }
+
+        private static Dictionary<int, (int, int)> DeserializeDictionaryFromFile(string filePath)
+        {
+            var jsonObject = JObject.Parse(File.ReadAllText(filePath));
+            var dict = new Dictionary<int, (int, int)>();
+            foreach (var kvp in jsonObject)
+            {
+                int key = int.Parse(kvp.Key);
+                JArray? values = kvp.Value as JArray;
+                if (values == null)
+                    continue;
+                int item1 = values[0].ToObject<int>();
+                int item2 = values[1].ToObject<int>();
+                dict[key] = (item1, item2);
+            }
+            return dict;
+        }
+
+        public static double GetPlayRate(int proto)
+        {
+            int gamesTotal = 0;
+            int gamesPlayed = 0;
+            lock (s_cardPlayData)
+            {
+                foreach((int, int) playData in s_cardPlayData.Values)
+                {
+                    gamesTotal += playData.Item1 + playData.Item2;
+                }
+                gamesPlayed = s_cardPlayData.TryGetValue(proto, out (int, int) value) ? value.Item1 + value.Item2 : 0;
+            }
+            return (double)gamesPlayed / gamesTotal;
+        }
+
+        public static double? GetWinRate(int proto)
+        {
+            int wins = 0;
+            int losses = 0;
+            lock (s_cardPlayData)
+            {
+                (int, int) cardData = s_cardPlayData.TryGetValue(proto, out (int, int) value) ? value : (0, 0);
+                wins = cardData.Item1;
+                losses = cardData.Item2;
+            }
+            if (wins + losses == 0)
+                return null;
+            return (double)wins / (wins + losses);
+        }
+
+        public static (double, double, double)? GetWinRateWithCI(int proto)
+        {
+            int wins = 0;
+            int losses = 0;
+            lock (s_cardPlayData)
+            {
+                (int, int) cardData = s_cardPlayData.TryGetValue(proto, out (int, int) value) ? value : (0, 0);
+                wins = cardData.Item1;
+                losses = cardData.Item2;
+            }
+            if (wins + losses == 0)
+                return null;
+            int total = wins + losses;
+            double winrate = (double)wins / (wins + losses);
+            double z = 1.96;
+            double a = winrate + z * z / (2 * total);
+            double b = z * Math.Sqrt((winrate * (1 - winrate) + z * z / (4 * total)) / total);
+            double c = 1 + z * z / total;
+            return (winrate, Math.Max(0, (a - b) / c), Math.Min(1, (a + b) / c));
         }
         #endregion
 
@@ -739,8 +945,6 @@ namespace GU_Exchange.Helpers
 
         public static string GetSetName(string displayName)
         {
-            Console.WriteLine($"{displayName}: {s_setDisplayNames.ContainsValue(displayName)}");
-
             if (s_setDisplayNames.ContainsValue(displayName))
             {
                 string res = s_setDisplayNames.First(x => x.Value == displayName).Key;
@@ -836,6 +1040,36 @@ namespace GU_Exchange.Helpers
                 {
                     result = result.OrderBy(card => card, new CardPriceComparer()).ToList();
                     textInBody = textInBody.OrderBy(card => card, new CardPriceComparer()).ToList();
+                }
+                else if (sort.Equals("Playrate (High-Low)"))
+                {
+                    result = result.OrderBy(card => card, new CardPlayRateComparer()).Reverse().ToList();
+                    textInBody = textInBody.OrderBy(card => card, new CardPlayRateComparer()).Reverse().ToList();
+                }
+                else if (sort.Equals("Playrate (Low-High)"))
+                {
+                    result = result.OrderBy(card => card, new CardPlayRateComparer()).ToList();
+                    textInBody = textInBody.OrderBy(card => card, new CardPlayRateComparer()).ToList();
+                }
+                else if (sort.Equals("Winrate (High-Low)"))
+                {
+                    result = result.OrderBy(card => card, new CardWinRateComparer()).Reverse().ToList();
+                    textInBody = textInBody.OrderBy(card => card, new CardWinRateComparer()).Reverse().ToList();
+                }
+                else if (sort.Equals("Winrate (Low-High)"))
+                {
+                    result = result.OrderBy(card => card, new CardWinRateComparer()).ToList();
+                    textInBody = textInBody.OrderBy(card => card, new CardWinRateComparer()).ToList();
+                }
+                else if (sort.Equals("Winrate + Playrate (High-Low)"))
+                {
+                    result = result.OrderBy(card => card, new CardLowerBoundWinRateComparer()).Reverse().ToList();
+                    textInBody = textInBody.OrderBy(card => card, new CardLowerBoundWinRateComparer()).Reverse().ToList();
+                }
+                else if (sort.Equals("Winrate + Playrate (Low-High)"))
+                {
+                    result = result.OrderBy(card => card, new CardLowerBoundWinRateComparer()).ToList();
+                    textInBody = textInBody.OrderBy(card => card, new CardLowerBoundWinRateComparer()).ToList();
                 }
                 else
                 {
@@ -998,6 +1232,59 @@ namespace GU_Exchange.Helpers
                         return x.Name.CompareTo(y.Name);
                     return rareComparison;
                 }
+            }
+        }
+
+        /// <summary>
+        /// Class used for sorting cards based on their playrate.
+        /// </summary>
+        public class CardPlayRateComparer : IComparer<CardData>
+        {
+            public int Compare(CardData? x, CardData? y)
+            {
+                if (x == null)
+                {
+                    return 1;
+                }
+                else if (y == null)
+                {
+                    return -1;
+                }
+                return GetPlayRate(x.ProtoID).CompareTo(GetPlayRate(y.ProtoID));
+            }
+        }
+
+        /// <summary>
+        /// Class used for sorting cards based on their winrate.
+        /// </summary>
+        public class CardWinRateComparer : IComparer<CardData>
+        {
+            public int Compare(CardData? x, CardData? y)
+            {
+                if (x == null)
+                    return 1;
+                else if (y == null)
+                    return -1;
+                double winrate1 = GetWinRate(x.ProtoID) ?? 0;
+                double winrate2 = GetWinRate(y.ProtoID) ?? 0;
+                return winrate1.CompareTo(winrate2);
+            }
+        }
+
+        /// <summary>
+        /// Class used for sorting cards based on their winrate.
+        /// </summary>
+        public class CardLowerBoundWinRateComparer : IComparer<CardData>
+        {
+            public int Compare(CardData? x, CardData? y)
+            {
+                if (x == null)
+                    return 1;
+                else if (y == null)
+                    return -1;
+                (double, double, double) winrate1 = GetWinRateWithCI(x.ProtoID) ?? (0, 0, 0);
+                (double, double, double) winrate2 = GetWinRateWithCI(y.ProtoID) ?? (0, 0, 0);
+                return winrate1.Item2.CompareTo(winrate2.Item2);
             }
         }
         #endregion

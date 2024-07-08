@@ -93,6 +93,9 @@ namespace GU_Exchange
                 this.tbSet.Text = GameDataManager.GetSetDisplayName(Capitalize(data.Set));
                 this.tbGod.Text = Capitalize(data.God);
                 this.tbRarity.Text = Capitalize(data.Rarity);
+                this.tbPlayrate.Text = $"{(GameDataManager.GetPlayRate(CardID) * 100).ToString("0.###")}% of decks";
+                (double, double, double)? winrate = GameDataManager.GetWinRateWithCI(CardID);
+                this.tbWinrate.Text = winrate == null ? "Not played" : $"{((double)(winrate.Value.Item1 * 100)).ToString("0.##")}% ({((double)(winrate.Value.Item2 * 100)).ToString("0.##")}% - {((double)(winrate.Value.Item3 * 100)).ToString("0.##")}%)";
                 this.cbQuality.Items.Add("Meteorite");
                 this.cbQuality.Items.Add("Shadow");
                 this.cbQuality.Items.Add("Gold");
