@@ -91,6 +91,7 @@
                 <Viewbox Grid.Row="1" Grid.Column="3" Margin="5,5,5,5" HorizontalAlignment="Left">
                     <TextBlock x:Name="tbWinrate" Text="WINRATE" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
                 </Viewbox>
+                <Button x:Name="btnChart" Content="Show price chart" Grid.Row="2" Grid.Column="2" Grid.ColumnSpan="2" Height="25" Margin="10,0,10,0" Click="btnChart_Click"/>
             </Grid>
             <!-- #endregion -->
             <!-- #region Currency selector.-->

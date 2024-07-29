@@ -183,6 +183,7 @@ namespace GU_Exchange.Helpers
         private static readonly HashSet<string> s_tribeList = new();
 
         // Storage for card play and winrates.
+        private static int s_gamesAnalysed = 0;
         private static readonly Dictionary<int, (int, int)> s_cardPlayData = new();
 
         // Cancellation tokens.
@@ -429,8 +430,9 @@ namespace GU_Exchange.Helpers
                 filesNeeded.Add(filePath);
                 if (gameData.Contains(filePath))
                 {
-                    Dictionary<int, (int, int)> gamesPlayedOnDate = DeserializeDictionaryFromFile(filePath);
-                    StoreGameResult(gamesPlayedOnDate, s_cardPlayData);
+                    (int gamesPlayed, Dictionary<int, (int, int)> data) gameDataOnDate = DeserializeDictionaryFromFile(filePath);
+                    StoreGameResult(gameDataOnDate.data, s_cardPlayData);
+                    s_gamesAnalysed += gameDataOnDate.gamesPlayed;
                 }
                 else
                 {
@@ -481,6 +483,7 @@ namespace GU_Exchange.Helpers
                 Dictionary<int, (int, int)> gameResults = ProcessGames(jsonGames);
                 StoreGameResult(gameResults, gamesPlayedOnDate);
                 StoreGameResult(gameResults, s_cardPlayData);
+                s_gamesAnalysed += Math.Min(1000, (int)gameCount);
 
                 for (int i = 1; i <= gameCount / 1000; i++)
                 {
@@ -508,8 +511,9 @@ namespace GU_Exchange.Helpers
                     gameResults = ProcessGames(jsonGames);
                     StoreGameResult(gameResults, gamesPlayedOnDate);
                     StoreGameResult(gameResults, s_cardPlayData);
+                    s_gamesAnalysed += Math.Min(1000, (int)gameCount - i * 1000);
                 }
-                SerializeDictionaryToFile(gamesPlayedOnDate, Path.Combine(path, $"{date.Day}-{date.Month}-{date.Year}.json"));
+                SerializeDictionaryToFile((int)gameCount, gamesPlayedOnDate, Path.Combine(path, $"{date.Day}-{date.Month}-{date.Year}.json"));
             }
             
         }
@@ -594,22 +598,27 @@ namespace GU_Exchange.Helpers
             }
         }
 
-        private static void SerializeDictionaryToFile(Dictionary<int, (int, int)> dict, string filePath)
+        private static void SerializeDictionaryToFile(int gamesTotal, Dictionary<int, (int, int)> dict, string filePath)
         {
-            JObject jsonObject = new JObject();
+            JObject jsonParent = new();
+            JObject jsonData = new();
+            jsonParent["games-played"] = gamesTotal;
             foreach (KeyValuePair<int, (int, int)> kvp in dict)
             {
                 JArray innerArray = new JArray { kvp.Value.Item1, kvp.Value.Item2 };
-                jsonObject[kvp.Key.ToString()] = innerArray;
+                jsonData[kvp.Key.ToString()] = innerArray;
             }
-            File.WriteAllText(filePath, jsonObject.ToString());
+            jsonParent["data"] = jsonData;
+            File.WriteAllText(filePath, jsonParent.ToString());
         }
 
-        private static Dictionary<int, (int, int)> DeserializeDictionaryFromFile(string filePath)
+        private static (int gamesTotal, Dictionary<int, (int, int)> data) DeserializeDictionaryFromFile(string filePath)
         {
-            var jsonObject = JObject.Parse(File.ReadAllText(filePath));
-            var dict = new Dictionary<int, (int, int)>();
-            foreach (var kvp in jsonObject)
+            JObject jsonParent = JObject.Parse(File.ReadAllText(filePath));
+            JObject jsonData = (JObject)jsonParent["data"]!;
+            int gamesTotal = (int)jsonParent["games-played"]!;
+            Dictionary<int, (int, int)> dict = new();
+            foreach (var kvp in jsonData)
             {
                 int key = int.Parse(kvp.Key);
                 JArray? values = kvp.Value as JArray;
@@ -619,22 +628,17 @@ namespace GU_Exchange.Helpers
                 int item2 = values[1].ToObject<int>();
                 dict[key] = (item1, item2);
             }
-            return dict;
+            return (gamesTotal, dict);
         }
 
         public static double GetPlayRate(int proto)
         {
-            int gamesTotal = 0;
-            int gamesPlayed = 0;
+            int decksPlayed = 0;
             lock (s_cardPlayData)
             {
-                foreach((int, int) playData in s_cardPlayData.Values)
-                {
-                    gamesTotal += playData.Item1 + playData.Item2;
-                }
-                gamesPlayed = s_cardPlayData.TryGetValue(proto, out (int, int) value) ? value.Item1 + value.Item2 : 0;
+                decksPlayed = s_cardPlayData.TryGetValue(proto, out (int, int) value) ? value.Item1 + value.Item2 : 0;
             }
-            return (double)gamesPlayed / gamesTotal;
+            return (double)decksPlayed / (s_gamesAnalysed * 2);
         }
 
         public static double? GetWinRate(int proto)

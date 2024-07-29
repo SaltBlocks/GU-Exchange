@@ -628,6 +628,18 @@ namespace GU_Exchange
         }
 
         #endregion
+
+        private async void btnChart_Click(object sender, RoutedEventArgs e)
+        {
+            string? currency_name = (string?)this.cbToken.SelectedItem;
+            if (currency_name == null)
+                return;
+            Token currency = (await Wallet.FetchTokens())[currency_name];
+            PriceChartControl _sellControl = new PriceChartControl(CardID, (string)this.cbQuality.SelectedItem, 7, currency);
+            _sellControl.Margin = new Thickness(0, 0, 0, 0);
+            Grid.SetColumnSpan(_sellControl, 2);
+            controlGrid.Children.Add(_sellControl);
+        }
     }
 
     /// <summary>

@@ -4,6 +4,7 @@ using Serilog;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -61,6 +62,7 @@ namespace GU_Exchange.Helpers
         public string TokenAddress;
         public string TokenID;
         public decimal PriceBase;
+        public DateTime? TimeStamp;
         public Dictionary<string, decimal> FeeList;
         #endregion
 
@@ -100,6 +102,7 @@ namespace GU_Exchange.Helpers
             string? tokenAddress = (string?)json_order.SelectToken("sell.data.token_address");
             string? tokenID = (string?)json_order.SelectToken("sell.data.token_id");
             string? quantity = (string?)json_order.SelectToken("buy.data.quantity");
+            TimeStamp = (DateTime?)json_order.SelectToken("updated_timestamp");
             uint? decimals = (uint?)json_order.SelectToken("buy.data.decimals");
             JToken? fees = json_order["fees"];
 
@@ -110,7 +113,7 @@ namespace GU_Exchange.Helpers
             {
                 throw new NullReferenceException("JSON object does not contain valid order.");
             }
-
+            //TimeStamp = DateTime.ParseExact(timeStampStr, "yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal);
             // Calculate the fee amount on the order.
             FeeList = new Dictionary<string, decimal>();
             decimal multDecimals = Pow(new decimal(10), (uint)decimals);
