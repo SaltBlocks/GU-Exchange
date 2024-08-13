@@ -635,7 +635,7 @@ namespace GU_Exchange
             if (currency_name == null)
                 return;
             Token currency = (await Wallet.FetchTokens())[currency_name];
-            PriceChartControl _sellControl = new PriceChartControl(CardID, (string)this.cbQuality.SelectedItem, 7, currency);
+            PriceChartControl _sellControl = new PriceChartControl(CardID, (string)this.cbQuality.SelectedItem, 30, currency);
             _sellControl.Margin = new Thickness(0, 0, 0, 0);
             Grid.SetColumnSpan(_sellControl, 2);
             controlGrid.Children.Add(_sellControl);

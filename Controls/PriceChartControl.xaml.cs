@@ -8,6 +8,9 @@ using System.Windows.Controls;
 using System.Collections.Generic;
 using System.Windows;
 using System.Windows.Markup;
+using System.Drawing.Printing;
+using System.Windows.Shapes;
+using System.Windows.Media;
 
 namespace GU_Exchange.Controls
 {
@@ -97,6 +100,33 @@ namespace GU_Exchange.Controls
 
         private async Task DrawChart()
         {
+            double canvasWidth = canvasChart.ActualWidth;
+            double canvasHeight = canvasChart.ActualHeight - 1;
+            double candleWidth = canvasWidth / _days * 0.8;
+            
+            // Render base
+            Rectangle rectBase = new Rectangle
+            {
+                Width = canvasWidth,
+                Height = canvasHeight,
+                Fill = Brushes.White,
+            };
+            Canvas.SetLeft(rectBase, 0);
+            Canvas.SetBottom(rectBase, 0);
+            canvasChart.Children.Add(rectBase);
+
+            // Render outline
+            Rectangle rectOutline = new Rectangle
+            {
+                Width = canvasWidth,
+                Height = canvasHeight,
+                Stroke = Brushes.Black,
+                StrokeThickness = 1
+            };
+            Canvas.SetLeft(rectOutline, 0);
+            Canvas.SetBottom(rectOutline, 0);
+            canvasChart.Children.Add(rectOutline);
+
             if (_orders.Count == 0)
                 return;
             decimal minPrice = decimal.MaxValue;
@@ -108,6 +138,47 @@ namespace GU_Exchange.Controls
             {
                 if (order.PriceTotal() < minPrice) minPrice = order.PriceTotal();
                 if (order.PriceTotal() > maxPrice) maxPrice = order.PriceTotal();
+            }
+            decimal maxGraph = maxPrice * new decimal(1.1);
+
+            //decimal priceRange = maxPrice - minPrice;
+            //TimeSpan timeRange = maxTime - minTime;
+
+            for (int i = 0; i < _days; i++)
+            {
+                string date = DateTime.UtcNow.AddDays(-i).ToString("yyyy-MM-dd");
+                Console.WriteLine(date);
+                decimal minDayPrice = decimal.MaxValue;
+                decimal maxDayPrice = decimal.MinValue;
+                decimal openPrice = decimal.MinValue;
+                decimal closePrice = decimal.MinValue;
+
+                foreach (Order order in _orders)
+                {
+                    if (order.TimeStamp!.Value.ToString("yyyy-MM-dd") == date)
+                    {
+                        if (order.PriceTotal() < minDayPrice) minDayPrice = order.PriceTotal();
+                        if (order.PriceTotal() > maxDayPrice) maxDayPrice = order.PriceTotal();
+                        if (openPrice == decimal.MinValue) openPrice = order.PriceTotal();
+                        closePrice = order.PriceTotal();
+                    }
+                }
+                if (minDayPrice == decimal.MaxValue)
+                    continue;
+                Console.WriteLine($"Price range on {DateTime.UtcNow.AddDays(-i).ToString("yyyy-MM-dd")} was: {minDayPrice} - {maxDayPrice} {_token.Name}");
+                Rectangle rect = new Rectangle
+                {
+                    Width = candleWidth,
+                    Height = (double)(Math.Abs(closePrice - openPrice) / (maxGraph)) * canvasHeight,
+                    Fill = openPrice > closePrice ? Brushes.Green : Brushes.Red,
+                    Stroke = Brushes.Black,
+                    StrokeThickness = 1
+                };
+                double xPos = ((double)i / _days) * canvasWidth;
+                double yPos = (double)((Math.Min(closePrice, openPrice)) / (maxGraph)) * canvasHeight;
+                Canvas.SetLeft(rect, xPos);
+                Canvas.SetBottom(rect, yPos);
+                canvasChart.Children.Add(rect);
             }
             Console.WriteLine($"Price range between {minTime.ToLocalTime().ToString("yyyy-MM-dd")} and {maxTime.ToLocalTime().ToString("yyyy-MM-dd")} was: {minPrice} - {maxPrice} {_token.Name}");
         }
