@@ -5,7 +5,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:GU_Exchange.Controls"
              mc:Ignorable="d" 
-             d:DesignHeight="450" d:DesignWidth="600" Background="#7FE4E4E4" MinWidth="580" MinHeight="330" MouseDown="UserControl_MouseDown" SizeChanged="UserControl_SizeChanged">
+             d:DesignHeight="450" d:DesignWidth="600" Background="#7FE4E4E4" MinWidth="580" MinHeight="330" MouseDown="UserControl_MouseDown" SizeChanged="UserControl_SizeChanged" Loaded="setup">
     <Grid x:Name="controlGrid" Background="#FFE4E4E4">
         <Border BorderBrush="Black" BorderThickness="1"/>
         <Canvas x:Name="canvasChart" Height="250" Width="600" VerticalAlignment="Top"/>

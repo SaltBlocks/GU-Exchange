@@ -33,13 +33,12 @@ namespace GU_Exchange.Controls
             _days = days;
             _token = token;
             _orders = new();
-            _ = setup();
         }
 
-        private async Task setup()
+        private async void setup(object sender, RoutedEventArgs e)
         {
+            DrawChart();
             await FetchOrders();
-            await DrawChart();
         }
 
             private async Task FetchOrders()
@@ -92,18 +91,20 @@ namespace GU_Exchange.Controls
                         {
                         }
                     }
+                    DrawChart();
                 }
                 urlOrderBook = baseUrlOrderBook + $"&cursor={cursor}";
             }
             Console.WriteLine(_orders.Count);
         }
 
-        private async Task DrawChart()
+        private void DrawChart()
         {
+            canvasChart.Children.Clear();
             double canvasWidth = canvasChart.ActualWidth;
             double canvasHeight = canvasChart.ActualHeight - 1;
-            double candleWidth = canvasWidth / _days * 0.8;
-            
+            if (canvasWidth == 0)
+                return;
             // Render base
             Rectangle rectBase = new Rectangle
             {
@@ -114,7 +115,6 @@ namespace GU_Exchange.Controls
             Canvas.SetLeft(rectBase, 0);
             Canvas.SetBottom(rectBase, 0);
             canvasChart.Children.Add(rectBase);
-
             // Render outline
             Rectangle rectOutline = new Rectangle
             {
@@ -126,61 +126,114 @@ namespace GU_Exchange.Controls
             Canvas.SetLeft(rectOutline, 0);
             Canvas.SetBottom(rectOutline, 0);
             canvasChart.Children.Add(rectOutline);
-
+            // Render Y-axis
+            Line yAxis = new Line
+            {
+                X1 = 55,
+                Y1 = 10,
+                X2 = 55,
+                Y2 = canvasHeight - 40,
+                Stroke = Brushes.Black,
+                StrokeThickness = 1
+            };
+            canvasChart.Children.Add(yAxis);
+            // Render X-axis
+            Line xAxis = new Line
+            {
+                X1 = 55,
+                Y1 = canvasHeight - 40,
+                X2 = canvasWidth - 10,
+                Y2 = canvasHeight - 40,
+                Stroke = Brushes.Black,
+                StrokeThickness = 1
+            };
+            canvasChart.Children.Add(xAxis);
             if (_orders.Count == 0)
                 return;
-            decimal minPrice = decimal.MaxValue;
             decimal maxPrice = decimal.MinValue;
-            DateTime minTime = _orders[_orders.Count - 1].TimeStamp!.Value;
-            DateTime maxTime = _orders[0].TimeStamp!.Value;
 
             foreach (Order order in _orders)
             {
-                if (order.PriceTotal() < minPrice) minPrice = order.PriceTotal();
                 if (order.PriceTotal() > maxPrice) maxPrice = order.PriceTotal();
             }
             decimal maxGraph = maxPrice * new decimal(1.1);
 
-            //decimal priceRange = maxPrice - minPrice;
-            //TimeSpan timeRange = maxTime - minTime;
+            // Draw price labels
+            for (int i = 0; i <= 5; i++)
+            {
+                TextBlock priceLabel = new TextBlock
+                {
+                    Text = (maxGraph * i / 5).ToString("0.000000").Substring(0, 8),
+                    Foreground = Brushes.Black,
+                    Margin = new Thickness(0, 0, 0, -10)
+                };
+                Canvas.SetLeft(priceLabel, 5);
+                Canvas.SetTop(priceLabel, 10 - 5);
+                Canvas.SetTop(priceLabel, canvasHeight - (canvasHeight - 53) * i / 5 - 50);
+                canvasChart.Children.Add(priceLabel);
+            }
 
+            // Draw date labels
             for (int i = 0; i < _days; i++)
             {
-                string date = DateTime.UtcNow.AddDays(-i).ToString("yyyy-MM-dd");
-                Console.WriteLine(date);
-                decimal minDayPrice = decimal.MaxValue;
-                decimal maxDayPrice = decimal.MinValue;
-                decimal openPrice = decimal.MinValue;
-                decimal closePrice = decimal.MinValue;
-
-                foreach (Order order in _orders)
+                double xPosDate = ((double)(_days - i - 1) / (_days + 1)) * (canvasWidth - 40) + 25;
+                TextBlock dateLabel = new TextBlock
                 {
-                    if (order.TimeStamp!.Value.ToString("yyyy-MM-dd") == date)
-                    {
-                        if (order.PriceTotal() < minDayPrice) minDayPrice = order.PriceTotal();
-                        if (order.PriceTotal() > maxDayPrice) maxDayPrice = order.PriceTotal();
-                        if (openPrice == decimal.MinValue) openPrice = order.PriceTotal();
-                        closePrice = order.PriceTotal();
-                    }
-                }
-                if (minDayPrice == decimal.MaxValue)
-                    continue;
-                Console.WriteLine($"Price range on {DateTime.UtcNow.AddDays(-i).ToString("yyyy-MM-dd")} was: {minDayPrice} - {maxDayPrice} {_token.Name}");
-                Rectangle rect = new Rectangle
-                {
-                    Width = candleWidth,
-                    Height = (double)(Math.Abs(closePrice - openPrice) / (maxGraph)) * canvasHeight,
-                    Fill = openPrice > closePrice ? Brushes.Green : Brushes.Red,
-                    Stroke = Brushes.Black,
-                    StrokeThickness = 1
+                    Text = DateTime.UtcNow.AddDays(-i).ToString("MMM-dd"),
+                    Foreground = Brushes.Black,
+                    RenderTransform = new RotateTransform(-45),
                 };
-                double xPos = ((double)i / _days) * canvasWidth;
-                double yPos = (double)((Math.Min(closePrice, openPrice)) / (maxGraph)) * canvasHeight;
-                Canvas.SetLeft(rect, xPos);
-                Canvas.SetBottom(rect, yPos);
-                canvasChart.Children.Add(rect);
+                Canvas.SetLeft(dateLabel, xPosDate);
+                Canvas.SetBottom(dateLabel, -5);
+                canvasChart.Children.Add(dateLabel);
             }
-            Console.WriteLine($"Price range between {minTime.ToLocalTime().ToString("yyyy-MM-dd")} and {maxTime.ToLocalTime().ToString("yyyy-MM-dd")} was: {minPrice} - {maxPrice} {_token.Name}");
+
+            // Draw sales
+            DateTime startTime = DateTime.UtcNow.AddDays(-_days);
+            DateTime startDay = new DateTime(startTime.Year, startTime.Month, startTime.Day);
+            DateTime endDay = startDay.AddDays(_days + 1);
+
+            double? xPosPrev = null;
+            double? yPosPrev = null;
+            double circleSize = 8;
+            foreach (Order order in _orders)
+            {
+                if (order.TimeStamp == null)
+                    continue;
+                double priceFraction = ((double)(order.PriceTotal() / maxGraph));
+                DateTime timeStamp = order.TimeStamp.Value;
+                double timeFraction = (timeStamp - startDay).TotalSeconds / (endDay - startDay).TotalSeconds;
+
+                double xPos = timeFraction * (canvasWidth - 65) + 55;
+                double yPos = priceFraction * (canvasHeight - 50) + 40;
+
+                Ellipse circle = new Ellipse
+                {
+                    Width = circleSize,
+                    Height = circleSize,
+                    Fill = Brushes.Blue
+                };
+
+                Canvas.SetLeft(circle, xPos - circleSize / 2);
+                Canvas.SetBottom(circle, yPos - circleSize / 2 + 1);
+                canvasChart.Children.Add(circle);
+
+                if (xPosPrev != null && yPosPrev != null)
+                {
+                    Line line = new Line
+                    {
+                        X1 = xPosPrev.Value,
+                        Y1 = canvasHeight - yPosPrev.Value,
+                        X2 = xPos,
+                        Y2 = canvasHeight - yPos,
+                        Stroke = Brushes.Blue,
+                        StrokeThickness = 2
+                    };
+                    canvasChart.Children.Add(line);
+                }
+                xPosPrev = xPos;
+                yPosPrev = yPos;
+            }
         }
 
         private void UserControl_MouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
