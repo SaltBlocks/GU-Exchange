@@ -117,6 +117,7 @@ namespace GU_Exchange.Controls
                     success.Visibility = Visibility.Collapsed;
                     error.Visibility = Visibility.Collapsed;
                     break;
+
             }
         }
 

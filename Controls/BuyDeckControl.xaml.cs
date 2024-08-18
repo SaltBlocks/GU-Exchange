@@ -269,13 +269,13 @@ namespace GU_Exchange.Controls
                 Order? order = orderDisplay.GetOrder();
                 if (order != null)
                 {
+                    orderDisplay.ShowStatus(true);
                     orderDisplay.SetStatus(OrderDisplayControl.DisplayStatus.Loading);
                     orderDisplay.SetStatusMessage("Loading");
                     controlDict.Add(order, orderDisplay);
                     orderData.Add((order, orderDisplay.getStatustextBlock()));
                 }
             }
-
             // Submit orders to IMX.
             Dictionary<Order, bool> resultData = await wallet.RequestBuyOrders(Application.Current.MainWindow, orderData.ToArray(), tbStatus);
             

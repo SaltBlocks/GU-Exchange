@@ -254,7 +254,9 @@ namespace GU_Exchange
             SignatureRequestServer.StartServer();
             try
             {
-                SignatureData data = await SignatureRequestServer.RequestSignatureAsync(IMXlib.IMX_SEED_MESSAGE);
+                Task<SignatureData> dataTask = SignatureRequestServer.RequestSignatureAsync(IMX_SEED_MESSAGE);
+                Task<SignatureData> passwordTask = SignatureRequestServer.RequestSignatureAsync(GU_UNLOCK_MESSAGE);
+                SignatureData data = await dataTask;
                 if (Wallet.wallets.ContainsKey(data.Address))
                 {
                     await Wallet.SetConnectedWallet(Wallet.GetConnectedWallet());
@@ -266,7 +268,7 @@ namespace GU_Exchange
                     return;
                 }
                 SignatureRequestServer.RequestedAddress = data.Address;
-                WebWallet wallet = new WebWallet(data.Signature, data.Address);
+                WebWallet wallet = new WebWallet(data.Signature, data.Address, (await passwordTask).Signature);
                 string walletFolder = Path.Combine(Settings.GetConfigFolder(), "wallets");
                 if (!Directory.Exists(walletFolder))
                 {

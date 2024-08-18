@@ -11,6 +11,8 @@ using System.Windows.Markup;
 using System.Drawing.Printing;
 using System.Windows.Shapes;
 using System.Windows.Media;
+using System.Collections.ObjectModel;
+using System.Linq;
 
 namespace GU_Exchange.Controls
 {
@@ -24,6 +26,7 @@ namespace GU_Exchange.Controls
         private readonly int _days;
         private readonly Token _token;
         private readonly List<Order> _orders;
+        private readonly ObservableCollection<Sale> _sales;
 
         public PriceChartControl(int proto, string quality, int days, Token token)
         {
@@ -33,6 +36,9 @@ namespace GU_Exchange.Controls
             _days = days;
             _token = token;
             _orders = new();
+            _sales = new();
+            SalesListView.ItemsSource = _sales;
+            tbTitle.Text = $"Sale History ({token.Name})";
         }
 
         private async void setup(object sender, RoutedEventArgs e)
@@ -52,16 +58,16 @@ namespace GU_Exchange.Controls
             string minTimestamp = currentTime.AddDays(-_days).ToString("yyyy-MM-dd") + "T00:00:00Z";
             bool remaining = true;
 
-            List<Order> dayOrders = new List<Order>();
             string baseUrlOrderBook = $"https://api.x.immutable.com/v3/orders?buy_token_address={token_str}&direction=desc&include_fees=true&order_by=updated_at&updated_min_timestamp={minTimestamp}&page_size=50&sell_metadata={cardData}&sell_token_address=0xacb3c6a43d15b907e8433077b6d38ae40936fe2c&status=filled";
             string urlOrderBook = baseUrlOrderBook;
+            Task<Dictionary<string, Token>> tokenInfo = Wallet.FetchTokens();
             while (remaining)
             {
                 string ordersString = await ResourceManager.Client.GetStringAsync(urlOrderBook);
                 // Extract orders from the data returned by the server.
                 JObject? jsonOrders = (JObject?)JsonConvert.DeserializeObject(ordersString);
                 if (jsonOrders == null)
-                    return;
+                    break;
                 string? cursor = (string?)jsonOrders.SelectToken("cursor");
                 remaining = ((int)(jsonOrders.SelectToken("remaining") ?? 0)) == 1;
                 JToken? result = jsonOrders.SelectToken("result");
@@ -75,17 +81,13 @@ namespace GU_Exchange.Controls
                             if (or.TimeStamp == null)
                                 continue;
                             _orders.Add(or);
-                            /*Console.WriteLine($"At {or.TimeStamp.Value.ToLocalTime()}, sold for {or.PriceTotal()} {_token.Name}");
-                            if (dayOrders.Count == 0 || dayOrders[0].TimeStamp!.Value.ToLocalTime().ToString("yyyy-MM-dd") == or.TimeStamp.Value.ToLocalTime().ToString("yyyy-MM-dd")) 
+                            string convertedPrice = "";
+                            if ((await tokenInfo).ContainsKey(_token.Name))
                             {
-                                dayOrders.Add(or);
+                                decimal? conversionFactor = (await tokenInfo)[_token.Name].Value;
+                                convertedPrice = conversionFactor == null ? "" : $"(${(conversionFactor.Value * or.PriceTotal()).ToString("0.00")})";
                             }
-                            else
-                            {
-                                Console.WriteLine($"{dayOrders.Count} sales on {dayOrders[0].TimeStamp!.Value.ToLocalTime().ToString("yyyy-MM-dd")}");
-                                dayOrders.Clear();
-                                dayOrders.Add(or);
-                            }*/
+                            _sales.Add(new Sale(or.TimeStamp.Value.ToLocalTime().ToString("MMM-dd HH:mm"), $"{or.PriceTotal().ToString("0.000000").Substring(0, 8)} {_token.Name} {convertedPrice}"));
                         }
                         catch (NullReferenceException)
                         {
@@ -93,18 +95,64 @@ namespace GU_Exchange.Controls
                     }
                     DrawChart();
                 }
+                if (_orders.Count == 0)
+                {
+                    tbMonthVolume.Text = "-";
+                    tbMonthAverage.Text = "-";
+                    tbMonthChange.Text = "-";
+                    tbWeekVolume.Text = "-";
+                    tbWeekAverage.Text = "-";
+                    tbWeekChange.Text = "-";
+                }
+                else
+                {
+                    // Monthy change.
+                    decimal changeMonth = (_orders[0].PriceTotal() - _orders[_orders.Count - 1].PriceTotal()) / _orders[_orders.Count - 1].PriceTotal() * 100;
+                    tbMonthVolume.Text = $"{_orders.Count} sales";
+                    tbMonthAverage.Text = $"{_orders.Average(x => x.PriceTotal()).ToString("0.000000").Substring(0, 8)} {_token.Name}";
+                    tbMonthChange.Text = $"{changeMonth.ToString("0.00")}%";
+                    if (changeMonth >= 0)
+                        tbMonthChange.Foreground = Brushes.Green;
+                    else
+                        tbMonthChange.Foreground = Brushes.Red;
+
+                    // Weekly change
+                    List<Order> ordersWeek = _orders.Where(x => x.TimeStamp != null && x.TimeStamp > currentTime.AddDays(-7)).ToList();
+                    if (ordersWeek.Count == 0)
+                    {
+                        tbWeekVolume.Text = "-";
+                        tbWeekAverage.Text = "-";
+                        tbWeekChange.Text = "-";
+                    }
+                    else
+                    {
+                        decimal changeWeek = (ordersWeek[0].PriceTotal() - ordersWeek[ordersWeek.Count - 1].PriceTotal()) / ordersWeek[ordersWeek.Count - 1].PriceTotal() * 100;
+                        tbWeekVolume.Text = $"{ordersWeek.Count} sales";
+                        tbWeekAverage.Text = $"{ordersWeek.Average(x => x.PriceTotal()).ToString("0.000000").Substring(0, 8)} {_token.Name}";
+                        tbWeekChange.Text = $"{changeWeek.ToString("0.00")}%";
+                        if (changeWeek >= 0)
+                            tbWeekChange.Foreground = Brushes.Green;
+                        else
+                            tbWeekChange.Foreground = Brushes.Red;
+                    }
+                }
                 urlOrderBook = baseUrlOrderBook + $"&cursor={cursor}";
             }
-            Console.WriteLine(_orders.Count);
+            spinner.Visibility = Visibility.Collapsed;
         }
 
         private void DrawChart()
         {
             canvasChart.Children.Clear();
-            double canvasWidth = canvasChart.ActualWidth;
+            //canvasChart.Height = controlGrid.Height / 2;
+            //canvasChart.Width = controlGrid.Width - 10;
+            double canvasWidth = canvasChart.ActualWidth - 1;
             double canvasHeight = canvasChart.ActualHeight - 1;
-            if (canvasWidth == 0)
+            if (canvasWidth <= 0 || canvasHeight <= 0)
+            {
+                Console.WriteLine($"{canvasWidth} x {canvasChart.Height}");
                 return;
+            }
             // Render base
             Rectangle rectBase = new Rectangle
             {
@@ -215,7 +263,7 @@ namespace GU_Exchange.Controls
                 };
 
                 Canvas.SetLeft(circle, xPos - circleSize / 2);
-                Canvas.SetBottom(circle, yPos - circleSize / 2 + 1);
+                Canvas.SetBottom(circle, yPos - circleSize / 2);
                 canvasChart.Children.Add(circle);
 
                 if (xPosPrev != null && yPosPrev != null)
@@ -247,7 +295,7 @@ namespace GU_Exchange.Controls
             {
                 return;
             }
-            // Click occurred outside buyGrid, you can call your function here
+            // Click occurred outside buyGrid.
             this.Visibility = Visibility.Collapsed;
         }
 
@@ -264,9 +312,30 @@ namespace GU_Exchange.Controls
                 height = Math.Min(this.ActualHeight, maxHeight);
                 width = height * 1.4;
             }
+            controlGrid.Height = height - 10;
+            controlGrid.Width = width - 10;
+        }
 
-            this.controlGrid.Height = height - 10;
-            this.controlGrid.Width = width - 10;
+        private void canvasChart_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            DrawChart();
+        }
+
+        private void Button_Click(object sender, RoutedEventArgs e)
+        {
+            this.Visibility = Visibility.Collapsed;
+        }
+    }
+
+    public class Sale
+    {
+        public string DateTime { get; set; }
+        public string Price { get; set; }
+
+        public Sale(string dateTime, string price)
+        {
+            DateTime = dateTime;
+            Price = price;
         }
     }
 }

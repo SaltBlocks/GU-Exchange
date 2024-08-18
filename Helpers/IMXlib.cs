@@ -8,6 +8,7 @@ namespace GU_Exchange.Helpers
         #region Constants.
         public const string IMX_SEED_MESSAGE = "Only sign this request if you’ve initiated an action with Immutable X.";
         public const string IMX_LINK_MESSAGE = "Only sign this key linking request from Immutable X";
+        public const string GU_UNLOCK_MESSAGE = "Only sign this message to unlock your wallet in GU Exchange.";
         #endregion
 
         #region Structs.

@@ -3,11 +3,81 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:fa="http://schemas.fontawesome.io/icons/"
              xmlns:local="clr-namespace:GU_Exchange.Controls"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="600" Background="#7FE4E4E4" MinWidth="580" MinHeight="330" MouseDown="UserControl_MouseDown" SizeChanged="UserControl_SizeChanged" Loaded="setup">
     <Grid x:Name="controlGrid" Background="#FFE4E4E4">
-        <Border BorderBrush="Black" BorderThickness="1"/>
-        <Canvas x:Name="canvasChart" Height="250" Width="600" VerticalAlignment="Top"/>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="1*" MaxHeight="40"/>
+            <RowDefinition Height="1*"/>
+            <RowDefinition Height="1*"/>
+        </Grid.RowDefinitions>
+        <Border BorderBrush="Black" Grid.RowSpan="3" BorderThickness="1"/>
+        <Viewbox Grid.Row="0" Margin="5,5,5,5">
+            <TextBlock x:Name="tbTitle" Text="Sale History" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
+        </Viewbox>
+        <Canvas x:Name="canvasChart" Height="Auto" Width="Auto" Grid.Row="1" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" SizeChanged="canvasChart_SizeChanged"/>
+        <fa:ImageAwesome x:Name="spinner" Grid.Row="1" Icon="CircleOutlineNotch" Spin="True" SpinDuration="4" Width="50" Height="50" Visibility="Visible" />
+        <Grid x:Name="infoGrid" Grid.Row="2" Margin="1,1,1,1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="260"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            <Viewbox Margin="5,5,5,5" Grid.Row="0" MaxHeight="20">
+                <TextBlock Text="7-day volume" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
+            </Viewbox>
+            <Viewbox Margin="5,5,5,5" Grid.Row="0" Grid.Column="1" MaxHeight="20">
+                <TextBlock x:Name="tbWeekVolume" Text="-" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
+            </Viewbox>
+            <Viewbox Margin="5,5,5,5" Grid.Row="1" MaxHeight="20">
+                <TextBlock Text="7-day average" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
+            </Viewbox>
+            <Viewbox Margin="5,5,5,5" Grid.Row="1" Grid.Column="1" MaxHeight="20">
+                <TextBlock x:Name="tbWeekAverage" Text="-" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
+            </Viewbox>
+            <Viewbox Margin="5,5,5,5" Grid.Row="2" MaxHeight="20">
+                <TextBlock Text="7-day change" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
+            </Viewbox>
+            <Viewbox Margin="5,5,5,5" Grid.Row="2" Grid.Column="1" MaxHeight="20">
+                <TextBlock x:Name="tbWeekChange" Text="-" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
+            </Viewbox>
+            <Viewbox Margin="5,5,5,5" Grid.Row="0" Grid.Column="2" MaxHeight="20">
+                <TextBlock Text="30-day volume" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
+            </Viewbox>
+            <Viewbox Margin="5,5,5,5" Grid.Row="0" Grid.Column="3" MaxHeight="20">
+                <TextBlock x:Name="tbMonthVolume" Text="-" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
+            </Viewbox>
+            <Viewbox Margin="5,5,5,5" Grid.Row="1" Grid.Column="2" MaxHeight="20">
+                <TextBlock Text="30-day average" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
+            </Viewbox>
+            <Viewbox Margin="5,5,5,5" Grid.Row="1" Grid.Column="3" MaxHeight="20">
+                <TextBlock x:Name="tbMonthAverage" Text="-" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
+            </Viewbox>
+            <Viewbox Margin="5,5,5,5" Grid.Row="2" Grid.Column="2" MaxHeight="20">
+                <TextBlock Text="30-day change" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
+            </Viewbox>
+            <Viewbox Margin="5,5,5,5" Grid.Row="2" Grid.Column="3" MaxHeight="20">
+                <TextBlock x:Name="tbMonthChange" Text="-" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
+            </Viewbox>
+            <ListView Name="SalesListView" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Grid.Column="4" Grid.RowSpan="4" Background="#FFE4E4E4">
+                <ListView.View>
+                    <GridView>
+                        <GridViewColumn Header="Date" DisplayMemberBinding="{Binding DateTime}" Width="95"/>
+                        <GridViewColumn Header="Price" DisplayMemberBinding="{Binding Price}" Width="135"/>
+                    </GridView>
+                </ListView.View>
+            </ListView>
+            <Button Grid.Column="1" MaxWidth="100" MaxHeight="25" Grid.Row="3" Grid.ColumnSpan="2" Content="Close" Click="Button_Click"/>
+        </Grid>
     </Grid>
 </UserControl>

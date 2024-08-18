@@ -1592,6 +1592,7 @@ namespace GU_Exchange.Helpers
         /// <exception cref="NullReferenceException"></exception>
         public override async Task<bool> RequestLinkAsync(Window parent)
         {
+            // Ask the user if they want to connect their wallet to IMX.
             MessageWindow window = new MessageWindow("Before your wallet can be used to trade on IMX, it must be linked to the platform.\nWould you like to link it now?", "Link wallet", MessageType.CONFIRM);
             window.Owner = parent;
             window.ShowDialog();
@@ -1599,15 +1600,29 @@ namespace GU_Exchange.Helpers
             {
                 return false;
             }
+
+            // Request the signature from the user that is used to unlock the wallet in GU Exchange.
+            Task<bool> taskUnlock = Task.Run(async () =>
+            {
+                if (!IsLocked())
+                    return true;
+                SignatureData data = await SignatureRequestServer.RequestSignatureAsync(GU_UNLOCK_MESSAGE);
+                return await UnlockWallet(data.Signature);
+            });
+
+            // Request the signature needed to register the wallet on IMX.
             Task<SignatureData> fetchSignature = SignatureRequestServer.RequestSignatureAsync(IMX_LINK_MESSAGE);
-            UseWebWalletWindow useWalletWindow = new(fetchSignature);
+            UseWebWalletWindow useWalletWindow = new(new List<Task>() { taskUnlock, fetchSignature });
             useWalletWindow.Owner = parent;
             useWalletWindow.ShowDialog();
+            
             try
             {
+                if (!await taskUnlock) // Wait for wallet unlock.
+                    return false;
+
+                // Wait for the users signature and try to register the wallet on IMX.
                 SignatureData linkSignature = await fetchSignature;
-                if (IsLocked())
-                    await UnlockWallet();
                 Task<bool> linkWallet = Task.Run(async () =>
                 {
                     await ResourceManager.RateLimiter.ReserveRequests(1);
@@ -1639,10 +1654,15 @@ namespace GU_Exchange.Helpers
         /// <returns></returns>
         public override async Task<bool> RequestBuyOrder(Window parent, Order order, TextBlock tbStatus)
         {
-            // Unlock wallet (using default password).
-            tbStatus.Text = "Waiting for wallet...";
-            if (IsLocked())
-                await UnlockWallet();
+            // Request the signature from the user that is used to unlock the wallet in GU Exchange.
+            CancellationTokenSource masterCancelSource = new();
+            Task<bool> taskUnlock = Task.Run(async () =>
+            {
+                if (!IsLocked())
+                    return true;
+                SignatureData data = await SignatureRequestServer.RequestSignatureAsync(GU_UNLOCK_MESSAGE, masterCancelSource.Token);
+                return await UnlockWallet(data.Signature);
+            });
 
             // Fetch data for signature request.
             tbStatus.Text = "Requesting order to purchase...";
@@ -1666,6 +1686,7 @@ namespace GU_Exchange.Helpers
             if (signableRequest == null)
             {
                 tbStatus.Text = "An unknown error occurred";
+                masterCancelSource.Cancel();
                 return false;
             }
             JObject? jsonBuyRequest = (JObject?)JsonConvert.DeserializeObject(signableRequest);
@@ -1673,6 +1694,7 @@ namespace GU_Exchange.Helpers
             string? signableMessage = (string?)jsonBuyRequest?.SelectToken("signable_message");
             if (nonce == null || signableMessage == null)
             {
+                masterCancelSource.Cancel();
                 string? message = (string?)jsonBuyRequest?.SelectToken("message");
                 if (message == null)
                 {
@@ -1686,12 +1708,17 @@ namespace GU_Exchange.Helpers
             // Request the users signature.
             tbStatus.Text = "Waiting for user signature...";
             Task<SignatureData> fetchSignature = SignatureRequestServer.RequestSignatureAsync(signableMessage);
-            UseWebWalletWindow useWalletWindow = new(fetchSignature);
+            UseWebWalletWindow useWalletWindow = new(new List<Task>() { taskUnlock, fetchSignature });
             useWalletWindow.Owner = parent;
             useWalletWindow.ShowDialog();
             SignatureData buySignature;
             try
             {
+                if (!await taskUnlock)
+                {
+                    tbStatus.Text = "Failed to unlock wallet";
+                    return false;
+                }
                 buySignature = await fetchSignature;
             }
             catch (OperationCanceledException)
@@ -1751,14 +1778,15 @@ namespace GU_Exchange.Helpers
         /// <returns></returns>
         public override async Task<Dictionary<Order, bool>> RequestBuyOrders(Window parent, (Order order, TextBlock? tbStatusListing)[] orders, TextBlock tbStatus)
         {
-            // Unlock user wallet.
-            foreach ((Order order, TextBlock? tbStatusListing) order in orders)
+            // Request the signature from the user that is used to unlock the wallet in GU Exchange.
+            CancellationTokenSource masterCancelSource = new();
+            Task<bool> taskUnlock = Task.Run(async () =>
             {
-                if (order.tbStatusListing != null) order.tbStatusListing.Text = "Waiting for wallet...";
-            }
-            tbStatus.Text = "Waiting for wallet...";
-            if (IsLocked())
-                await UnlockWallet();
+                if (!IsLocked())
+                    return true;
+                SignatureData data = await SignatureRequestServer.RequestSignatureAsync(GU_UNLOCK_MESSAGE, masterCancelSource.Token);
+                return await UnlockWallet(data.Signature);
+            });
 
             // Fetch data for signature requests.
             tbStatus.Text = "Fetching orders...";
@@ -1769,7 +1797,7 @@ namespace GU_Exchange.Helpers
                 {
                     try
                     {
-                        await ResourceManager.RateLimiter.ReserveRequests(1);
+                        await ResourceManager.RateLimiter.ReserveRequests(1, masterCancelSource.Token);
                     }
                     catch (OperationCanceledException)
                     {
@@ -1834,7 +1862,7 @@ namespace GU_Exchange.Helpers
                 }
 
                 // Request signature.
-                Task<SignatureData> buySignature = SignatureRequestServer.RequestSignatureAsync(signableMessage);
+                Task<SignatureData> buySignature = SignatureRequestServer.RequestSignatureAsync(signableMessage, masterCancelSource.Token);
                 if (prepareTask.tbStatusListing != null) prepareTask.tbStatusListing.Text = "Awaiting signature...";
 
                 // Submit listing to IMX.
@@ -1843,6 +1871,8 @@ namespace GU_Exchange.Helpers
                     SignatureData signature;
                     try
                     {
+                        if (!await taskUnlock)
+                            return false;
                         signature = await buySignature;
                     }
                     catch (OperationCanceledException)
@@ -1859,7 +1889,7 @@ namespace GU_Exchange.Helpers
                         });
                     try
                     {
-                        await ResourceManager.RateLimiter.ReserveRequests(1);
+                        await ResourceManager.RateLimiter.ReserveRequests(1, masterCancelSource.Token);
                     }
                     catch (OperationCanceledException)
                     {
@@ -1918,7 +1948,9 @@ namespace GU_Exchange.Helpers
             // Show signature request window.
             if (sigTasks.Count != 0) // Skip if there are no orders.
             {
-                UseWebWalletWindow useWalletWindow = new(sigTasks);
+                List<Task> tasks = new List<Task>() { taskUnlock };
+                sigTasks.ForEach(x => tasks.Add(x));
+                UseWebWalletWindow useWalletWindow = new(tasks);
                 useWalletWindow.Owner = parent;
                 useWalletWindow.ShowDialog();
                 await Task.WhenAll(buyTasks.Select(x => x.buyTask));
@@ -1953,14 +1985,20 @@ namespace GU_Exchange.Helpers
         public override async Task<Dictionary<NFT, bool>> RequestCreateOrders(Window parent, (NFT card, string tokenID, double price, TextBlock? tbStatusListing)[] listings, TextBlock tbStatus)
         {
             CancellationTokenSource masterCancelSource = new();
-            // Unlock wallet (using default password).
+            // Set status text.
             foreach ((NFT card, string tokenID, double price, TextBlock? tbStatusListing) listing in listings)
             {
                 if (listing.tbStatusListing != null) listing.tbStatusListing.Text = "Waiting for wallet...";
             }
-            tbStatus.Text = "Waiting for wallet...";
-            if (IsLocked())
-                await UnlockWallet();
+
+            // Request the signature from the user that is used to unlock the wallet in GU Exchange.
+            Task<bool> taskUnlock = Task.Run(async () =>
+            {
+                if (!IsLocked())
+                    return true;
+                SignatureData data = await SignatureRequestServer.RequestSignatureAsync(IMXlib.GU_UNLOCK_MESSAGE, masterCancelSource.Token);
+                return await UnlockWallet(data.Signature);
+            });
 
             // Fetch data for signature requests.
             tbStatus.Text = "Preparing orders to create...";
@@ -1993,6 +2031,7 @@ namespace GU_Exchange.Helpers
             UseWebWalletWindow useWalletWindow = new();
             useWalletWindow.Owner = parent;
             useWalletWindow.Show();
+            useWalletWindow.AddTask(taskUnlock);
 
             List<Task<string?>> trackPreparations = new(prepareTasks.Select(x => x.Item1));
             int totalTasks = prepareTasks.Count();
@@ -2040,6 +2079,8 @@ namespace GU_Exchange.Helpers
                 // Submit listing to IMX.
                 Task<bool> createListing = Task.Run(async () =>
                 {
+                    // First, wait for the wallet to unlock before continuing.
+                    await taskUnlock;
                     SignatureData signature;
                     try
                     {
@@ -2161,9 +2202,16 @@ namespace GU_Exchange.Helpers
             {
                 if (order.tbStatusCancellation != null) order.tbStatusCancellation.Text = "Waiting for wallet...";
             }
-            tbStatus.Text = "Waiting for wallet...";
-            if (IsLocked())
-                await UnlockWallet();
+
+            // Request the password from the user using the web wallet, this can be signed later.
+            Task<bool> taskUnlock = Task.Run(async () =>
+            {
+                if (!IsLocked())
+                    return true;
+                SignatureData data = await SignatureRequestServer.RequestSignatureAsync(IMXlib.GU_UNLOCK_MESSAGE, masterCancelSource.Token);
+                return await UnlockWallet(data.Signature);
+            });
+                
 
             // Fetch data for signature requests.
             tbStatus.Text = "Preparing orders to cancel...";
@@ -2197,6 +2245,7 @@ namespace GU_Exchange.Helpers
             UseWebWalletWindow useWalletWindow = new();
             useWalletWindow.Owner = parent;
             useWalletWindow.Show();
+            useWalletWindow.AddTask(taskUnlock);
 
             List<Task<string?>> trackPreparations = new(prepareTasks.Select(x => x.Item1));
             int totalTasks = prepareTasks.Count();
@@ -2223,6 +2272,8 @@ namespace GU_Exchange.Helpers
                 // Submit cancellation to IMX.
                 Task<bool> cancelListing = Task.Run(async () =>
                 {
+                    // First, wait for the wallet to unlock before continuing.
+                    await taskUnlock;
                     SignatureData signature;
                     try
                     {
@@ -2346,10 +2397,15 @@ namespace GU_Exchange.Helpers
                 return false;
             }
 
-            // Unlock user wallet.
-            tbStatus.Text = "Waiting for wallet...";
-            if (IsLocked())
-                await UnlockWallet();
+            // Request the signature from the user that is used to unlock the wallet in GU Exchange.
+            CancellationTokenSource masterCancelSource = new();
+            Task<bool> taskUnlock = Task.Run(async () =>
+            {
+                if (!IsLocked())
+                    return true;
+                SignatureData data = await SignatureRequestServer.RequestSignatureAsync(GU_UNLOCK_MESSAGE, masterCancelSource.Token);
+                return await UnlockWallet(data.Signature);
+            });
 
             // Prompt IMXlib to request the transfer.
             tbStatus.Text = $"Preparing to transfer card{(cards.Count() > 1 ? "s" : "")}...";
@@ -2395,12 +2451,17 @@ namespace GU_Exchange.Helpers
             // Request the users signature.
             tbStatus.Text = "Waiting for user signature...";
             Task<SignatureData> fetchSignature = SignatureRequestServer.RequestSignatureAsync(signableMessage);
-            UseWebWalletWindow useWalletWindow = new(fetchSignature);
+            UseWebWalletWindow useWalletWindow = new(new List<Task>() { taskUnlock, fetchSignature });
             useWalletWindow.Owner = parent;
             useWalletWindow.ShowDialog();
             SignatureData transferSignature;
             try
             {
+                if (!await taskUnlock)
+                {
+                    tbStatus.Text = "Wallet unlock failed";
+                    return false;
+                }
                 transferSignature = await fetchSignature;
             }
             catch (OperationCanceledException)
@@ -2467,10 +2528,15 @@ namespace GU_Exchange.Helpers
                 return false;
             }
 
-            // Unlock user wallet.
-            tbStatus.Text = "Waiting for wallet...";
-            if (IsLocked())
-                await UnlockWallet();
+            // Request the signature from the user that is used to unlock the wallet in GU Exchange.
+            CancellationTokenSource masterCancelSource = new();
+            Task<bool> taskUnlock = Task.Run(async () =>
+            {
+                if (!IsLocked())
+                    return true;
+                SignatureData data = await SignatureRequestServer.RequestSignatureAsync(GU_UNLOCK_MESSAGE, masterCancelSource.Token);
+                return await UnlockWallet(data.Signature);
+            });
 
             // Prompt IMXlib to request the transfer.
             tbStatus.Text = $"Preparing the transfer...";
@@ -2478,7 +2544,7 @@ namespace GU_Exchange.Helpers
             // Create a task so this can run asynchronously.
             Task<string?> requestTransferCurrency = Task.Run(async () =>
             {
-                await ResourceManager.RateLimiter.ReserveRequests(1);
+                await ResourceManager.RateLimiter.ReserveRequests(1, masterCancelSource.Token);
                 int bufferSize = 1024;
                 IntPtr resultBuffer = Marshal.AllocHGlobal(bufferSize);
                 string? result = IntPtrToUtf8String(imx_request_transfer_token(currency.Address, amount, receiverAddress, Address, resultBuffer, bufferSize));
@@ -2496,6 +2562,7 @@ namespace GU_Exchange.Helpers
             if (signableRequest == null)
             {
                 tbStatus.Text = "An unknown error occurred";
+                masterCancelSource.Cancel();
                 return false;
             }
             JObject? jsonBuyRequest = (JObject?)JsonConvert.DeserializeObject(signableRequest);
@@ -2507,21 +2574,28 @@ namespace GU_Exchange.Helpers
                 if (message == null)
                 {
                     tbStatus.Text = "An unknown error occurred";
+                    masterCancelSource.Cancel();
                     return false;
                 }
                 tbStatus.Text = message;
+                masterCancelSource.Cancel();
                 return false;
             }
 
             // Request the users signature.
             tbStatus.Text = "Waiting for user signature...";
-            Task<SignatureData> fetchSignature = SignatureRequestServer.RequestSignatureAsync(signableMessage);
-            UseWebWalletWindow useWalletWindow = new(fetchSignature);
+            Task<SignatureData> fetchSignature = SignatureRequestServer.RequestSignatureAsync(signableMessage, masterCancelSource.Token);
+            UseWebWalletWindow useWalletWindow = new(new List<Task>() { taskUnlock, fetchSignature });
             useWalletWindow.Owner = parent;
             useWalletWindow.ShowDialog();
             SignatureData transferSignature;
             try
             {
+                if (!await taskUnlock)
+                {
+                    tbStatus.Text = "Wallet unlock failed";
+                    return false;
+                }
                 transferSignature = await fetchSignature;
             }
             catch (OperationCanceledException)
