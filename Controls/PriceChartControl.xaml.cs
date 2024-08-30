@@ -13,6 +13,7 @@ using System.Windows.Shapes;
 using System.Windows.Media;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading;
 
 namespace GU_Exchange.Controls
 {
@@ -27,6 +28,7 @@ namespace GU_Exchange.Controls
         private readonly Token _token;
         private readonly List<Order> _orders;
         private readonly ObservableCollection<Sale> _sales;
+        private readonly CancellationTokenSource _masterCTS;
 
         public PriceChartControl(int proto, string quality, int days, Token token)
         {
@@ -37,6 +39,7 @@ namespace GU_Exchange.Controls
             _token = token;
             _orders = new();
             _sales = new();
+            _masterCTS = new();
             SalesListView.ItemsSource = _sales;
             tbTitle.Text = $"Sale History ({token.Name})";
         }
@@ -63,7 +66,14 @@ namespace GU_Exchange.Controls
             Task<Dictionary<string, Token>> tokenInfo = Wallet.FetchTokens();
             while (remaining)
             {
-                string ordersString = await ResourceManager.Client.GetStringAsync(urlOrderBook);
+                string ordersString;
+                try
+                {
+                    ordersString = await ResourceManager.Client.GetStringAsync(urlOrderBook, _masterCTS.Token);
+                } catch (OperationCanceledException)
+                {
+                    break;
+                }
                 // Extract orders from the data returned by the server.
                 JObject? jsonOrders = (JObject?)JsonConvert.DeserializeObject(ordersString);
                 if (jsonOrders == null)
@@ -138,6 +148,7 @@ namespace GU_Exchange.Controls
                 }
                 urlOrderBook = baseUrlOrderBook + $"&cursor={cursor}";
             }
+            Console.WriteLine("Done");
             spinner.Visibility = Visibility.Collapsed;
         }
 
@@ -296,6 +307,7 @@ namespace GU_Exchange.Controls
                 return;
             }
             // Click occurred outside buyGrid.
+            _masterCTS.Cancel();
             this.Visibility = Visibility.Collapsed;
         }
 
@@ -323,6 +335,7 @@ namespace GU_Exchange.Controls
 
         private void Button_Click(object sender, RoutedEventArgs e)
         {
+            _masterCTS.Cancel();
             this.Visibility = Visibility.Collapsed;
         }
     }
