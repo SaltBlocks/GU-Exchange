@@ -36,6 +36,10 @@ namespace GU_Exchange.Helpers
         [DllImport("IMXlib.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern IntPtr eth_get_address(string eth_priv_str, [Out] IntPtr result_buffer, int buffer_size);
         #endregion
+        #region Sign message.
+        [DllImport("IMXlib.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr eth_sign_message(string message, string eth_priv_str, [Out] IntPtr result_buffer, int buffer_size);
+        #endregion
         #region Fetch token information.
         [DllImport("IMXlib.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern double imx_get_token_trade_fee(string token_address_str, string token_id_str);

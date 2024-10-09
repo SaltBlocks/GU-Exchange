@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Net.NetworkInformation;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -779,5 +780,48 @@ namespace GU_Exchange
         }
 
         #endregion
+
+        private void MenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                Wallet? wlt = Wallet.GetConnectedWallet();
+                if (wlt == null)
+                    return;
+                Console.WriteLine(wlt.IsLocked());
+                if (wlt.IsLocked())
+                {
+                    if (wlt is WebWallet)
+                    {
+                        // Request the signature from the user that is used to unlock the wallet in GU Exchange.
+                        CancellationTokenSource masterCancelSource = new();
+                        Task<bool> taskUnlock = Task.Run(async () =>
+                        {
+                            if (!wlt.IsLocked())
+                                return true;
+                            SignatureData data = await SignatureRequestServer.RequestSignatureAsync(IMXlib.GU_UNLOCK_MESSAGE, masterCancelSource.Token);
+                            return await wlt.UnlockWallet(data.Signature);
+                        });
+                        UseWebWalletWindow useWalletWindow = new(taskUnlock);
+                        useWalletWindow.Owner = this;
+                        useWalletWindow.ShowDialog();
+                    }
+                    else
+                    {
+                        UnlockWalletWindow unlockWindow = new UnlockWalletWindow(wlt, false);
+                        unlockWindow.Owner = this;
+                        unlockWindow.ShowDialog();
+                        if (unlockWindow.Result == UnlockWalletWindow.UnlockResult.Cancel)
+                        {
+                            return;
+                        }
+                    }
+                }
+                Console.WriteLine(wlt.DeriveWallet(0).GetPrivateKey());
+            } catch (Exception ex)
+            {
+                Console.WriteLine($"{ex.Message}: {ex.StackTrace}");
+            }
+        }
     }
 }

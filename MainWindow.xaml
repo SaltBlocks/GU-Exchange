@@ -43,6 +43,7 @@
                 <MenuItem x:Name="miCpyAddress" Header="Copy Address (0x...)" Click="MiCpyAddress_Click" />
                 <MenuItem x:Name="miRefresh" Header="Refresh inventory" Click="RefreshInventory_Click" />
                 <Separator />
+                <MenuItem Header="Test" Click="MenuItem_Click" />
                 <MenuItem Header="Exit" Click="miExit_Click" />
             </MenuItem>
             <MenuItem Header="Buy">

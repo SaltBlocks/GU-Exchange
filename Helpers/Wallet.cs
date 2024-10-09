@@ -4,17 +4,19 @@ using Serilog;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Net.NetworkInformation;
 using System.Runtime.InteropServices;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Soap;
 using System.Security.Cryptography;
+using System.Security.Cryptography.Xml;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Transactions;
 using System.Windows;
 using System.Windows.Controls;
 using static GU_Exchange.Helpers.IMXlib;
@@ -654,7 +656,7 @@ namespace GU_Exchange.Helpers
 
         #region Class Parameters.
         public string Address { get; protected set; }
-        protected byte[] _salt;
+        protected byte[]? _salt;
         protected string _lockedKey;
         [NonSerialized()] private bool? _isLinked;
         [NonSerialized()] protected byte[]? _key;
@@ -668,17 +670,25 @@ namespace GU_Exchange.Helpers
         /// </summary>
         /// <param name="privKey">The wallets private key</param>
         /// <param name="password">The password that will be used to encrypt the key.</param>
-        public Wallet(string privateKey, string password = "password")
+        public Wallet(string privateKey, string password = "")
         {
-            // Create a 32 byte random salt to protect against password cracking using pre-generated tables.
-            using (RandomNumberGenerator rng = RandomNumberGenerator.Create())
+            if (password.Length > 0)
             {
-                _salt = new byte[32];
-                rng.GetBytes(_salt);
+                // Create a 32 byte random salt to protect against password cracking using pre-generated tables.
+                using (RandomNumberGenerator rng = RandomNumberGenerator.Create())
+                {
+                    _salt = new byte[32];
+                    rng.GetBytes(_salt);
+                }
+                // Derive the encryption key using Pbkdf2 to render brute force password cracking attempts ineffective.
+                _key = Rfc2898DeriveBytes.Pbkdf2(password, _salt, 210000, HashAlgorithmName.SHA512, 32);
+                _lockedKey = EncryptStringAES256(privateKey, _key);
+                
             }
-            // Derive the encryption key using Pbkdf2 to render brute force password cracking attempts ineffective.
-            _key = Rfc2898DeriveBytes.Pbkdf2(password, _salt, 210000, HashAlgorithmName.SHA512, 32);
-            _lockedKey = EncryptStringAES256(privateKey, _key);
+            else
+            {
+                _lockedKey = privateKey;
+            }
             // Get and store the public eth address associated with the provided private key.
             Address = CalculateAddress();
             _tokenAmountOwned = new Dictionary<string, decimal>();
@@ -704,7 +714,7 @@ namespace GU_Exchange.Helpers
         /// <returns></returns>
         public bool IsLocked()
         {
-            return _key == null;
+            return _key == null && _salt != null;
         }
 
         /// <summary>
@@ -743,8 +753,10 @@ namespace GU_Exchange.Helpers
         /// </summary>
         /// <param name="password"></param>
         /// <returns></returns>
-        public async Task<bool> UnlockWallet(string password = "password")
+        virtual public async Task<bool> UnlockWallet(string password = "password")
         {
+            if (_salt == null)
+                return true;
             Task<byte[]> getKey = Task.Run(() =>
             {
                 return Rfc2898DeriveBytes.Pbkdf2(password, _salt, 210000, HashAlgorithmName.SHA512, 32);
@@ -768,7 +780,15 @@ namespace GU_Exchange.Helpers
         /// <returns>The private key</returns>
         public string GetPrivateKey()
         {
+            if (_salt == null)
+                return _lockedKey;
             return DecryptStringAES256(_lockedKey, _key);
+        }
+
+        public Wallet DeriveWallet(ulong index)
+        {
+            Console.WriteLine(CalculateHDSeed());
+            return new Wallet(BIP32Modified.DeriveHardenedKey(CalculateHDSeed(), index));
         }
         #endregion
 
@@ -1561,6 +1581,16 @@ namespace GU_Exchange.Helpers
                 throw new NullReferenceException("IMXLib returned a null reference while generating an address.");
             return address;
         }
+
+        virtual protected string CalculateHDSeed()
+        {
+            IntPtr signatureBuffer = Marshal.AllocHGlobal(133);
+            string? signature = IntPtrToString(eth_sign_message(GU_UNLOCK_MESSAGE, GetPrivateKey(), signatureBuffer, 133));
+            Marshal.FreeHGlobal(signatureBuffer);
+            if (signature == null)
+                throw new NullReferenceException("IMXLib returned a null reference while calculating a signature.");
+            return signature;
+        }
         #endregion
     }
 
@@ -1570,6 +1600,8 @@ namespace GU_Exchange.Helpers
     [Serializable()]
     internal class WebWallet : Wallet
     {
+        private string seed;
+
         #region Default Constructor.
         /// <summary>
         /// Generate a new webwallet, instead of a private key, the signature to the IMX seed message is provided.
@@ -1577,9 +1609,22 @@ namespace GU_Exchange.Helpers
         /// <param name="privateKey"></param>
         /// <param name="address"></param>
         /// <param name="password"></param>
-        public WebWallet(string imxSeedSignature, string address, string password = "password") : base(imxSeedSignature, password)
+        public WebWallet(string imxSeedSignature, string address, string password = "") : base(imxSeedSignature, password)
         {
             Address = address;
+            seed = password;
+        }
+        #endregion
+
+        #region Key access and handling.
+        public override async Task<bool> UnlockWallet(string password = "")
+        {
+            bool result = await base.UnlockWallet(password);
+            if (result)
+            {
+                seed = password;
+            }
+            return result;
         }
         #endregion
 
@@ -2649,6 +2694,11 @@ namespace GU_Exchange.Helpers
         {
             // Do nothing, we can't calculate the address for this wallet.
             return "";
+        }
+
+        protected override string CalculateHDSeed()
+        {
+            return seed;
         }
         #endregion
     }
