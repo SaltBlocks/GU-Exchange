@@ -18,7 +18,7 @@
         <Button x:Name="mainButton" Grid.Column="0"
         HorizontalAlignment="Stretch"
         VerticalAlignment="Stretch"
-        Margin="0"/>
+        Margin="0" Click="MainButton_Click" Content="{Binding MainContent, RelativeSource={RelativeSource AncestorType=UserControl}}" />
         <!-- No margin -->
         <!-- Dropdown Button -->
         <Button Grid.Column="1"

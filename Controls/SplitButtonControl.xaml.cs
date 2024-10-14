@@ -20,11 +20,23 @@ namespace GU_Exchange.Controls
     /// </summary>
     public partial class SplitButtonControl : UserControl
     {
-        public SplitButtonControl(string mainText)
+        // Define a DependencyProperty for 'Title'
+        public static readonly DependencyProperty MainContentProperty =
+            DependencyProperty.Register("MainContent", typeof(string), typeof(SplitButtonControl), new PropertyMetadata(string.Empty));
+
+        // Define an event for 'ButtonClick'
+        public event RoutedEventHandler? MainButtonClick;
+
+        // Define the CLR property wrapper for 'Title'
+        public string MainContent
+        {
+            get { return (string)GetValue(MainContentProperty); }
+            set { SetValue(MainContentProperty, value); }
+        }
+
+        public SplitButtonControl()
         {
             InitializeComponent();
-            mainButton.Content = mainText;
-            //AddContextItem("CLICK ME!", MenuItem_Click);
         }
 
         public void AddContextItem(string itemName, RoutedEventHandler handler)
@@ -42,6 +54,13 @@ namespace GU_Exchange.Controls
             menu.Items.Add(newMenuItem);
         }
 
+        // Internal Button click event handler that raises the external ButtonClick event
+        private void MainButton_Click(object sender, RoutedEventArgs e)
+        {
+            // Raise the custom ButtonClick event (if subscribed)
+            MainButtonClick?.Invoke(this, e);
+        }
+
         private void Button_Click(object sender, RoutedEventArgs e)
         {
             Button? button = sender as Button;
@@ -51,11 +70,6 @@ namespace GU_Exchange.Controls
                 button.ContextMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
                 button.ContextMenu.IsOpen = true;
             }
-        }
-
-        private void MenuItem_Click(object sender, RoutedEventArgs e)
-        {
-            mainButton.Content = "CLICKED";
         }
     }
 }

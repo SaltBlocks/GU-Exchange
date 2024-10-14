@@ -48,6 +48,7 @@ namespace GU_Exchange
         public CardControl(int CardID)
         {
             InitializeComponent();
+            btnBuy.AddContextItem("Create offer", OfferButton_Click);
             this.CardID = CardID;
             s_imgTokenSource.Cancel();
             s_imgTokenSource = new();
@@ -515,7 +516,7 @@ namespace GU_Exchange
         /// <param name="e"></param>
         private void BtnBuy_Click(object sender, RoutedEventArgs e)
         {
-            Order? cheapestOrder = GetCheapestOrder();
+            Order? cheapestOrder = GetCheapestBuyableOrder();
             if (cheapestOrder == null)
                 return;
             OpenOrder(cheapestOrder);
@@ -550,16 +551,28 @@ namespace GU_Exchange
 
         #region Supporting methods
         /// <summary>
-        /// Return the cheapest <see cref="Order"/> currencly being displayed or null in case no orders are available.
+        /// Return the cheapest <see cref="Order"/> that is not listed by the currencly being displayed or null in case no orders are available.
         /// </summary>
         /// <returns></returns>
-        public Order? GetCheapestOrder()
+        public Order? GetCheapestBuyableOrder()
         {
             if (orderPanel.Children.Count == 0)
             {
                 return null;
             }
-            return ((OrderBarControl)orderPanel.Children[0]).Order;
+            Wallet? wlt = Wallet.GetConnectedWallet();
+            if (wlt == null)
+                return((OrderBarControl)orderPanel.Children[0]).Order;
+            Order? cheapestBuyable = null;
+            foreach (OrderBarControl orderControl in orderPanel.Children)
+            {
+                if (!orderControl.Order.Seller.Equals(wlt.Address))
+                {
+                    cheapestBuyable = orderControl.Order;
+                    break;
+                }
+            }
+            return cheapestBuyable;
         }
 
         /// <summary>
@@ -639,6 +652,17 @@ namespace GU_Exchange
             _sellControl.Margin = new Thickness(0, 0, 0, 0);
             Grid.SetColumnSpan(_sellControl, 2);
             controlGrid.Children.Add(_sellControl);
+        }
+
+        private void OfferButton_Click(object sender, RoutedEventArgs e)
+        {
+            Order? cheapestOrder = GetCheapestBuyableOrder();
+            if (cheapestOrder == null)
+                return;
+            OfferControl _offerControl = new OfferControl(this, cheapestOrder, imgCard.Source);
+            _offerControl.Margin = new Thickness(0, 0, 0, 0);
+            Grid.SetColumnSpan(_offerControl, 2);
+            controlGrid.Children.Add(_offerControl);
         }
     }
 

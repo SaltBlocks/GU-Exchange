@@ -64,6 +64,12 @@ namespace GU_Exchange.Helpers
         [DllImport("IMXlib.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern IntPtr imx_request_sell_nft(string nft_address_str, string nft_id_str, string token_id_str, double price, Fee[] fees, int fee_count, string seller_address_str, IntPtr result_buffer, int buffer_size);
         #endregion
+        #region Create buy offer on the IMX orderbook.
+        [DllImport("IMXlib.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr imx_offer_nft(string nft_address_str, string nft_id_str, string token_id_str, double price, Fee[] fees, int fee_count, string eth_priv_str, IntPtr result_buffer, int buffer_size);
+        [DllImport("IMXlib.dll", CallingConvention = CallingConvention.Cdecl)]
+        public static extern IntPtr imx_request_offer_nft(string nft_address_str, string nft_id_str, string token_id_str, double price, Fee[] fees, int fee_count, string buyer_address_str, IntPtr result_buffer, int buffer_size);
+        #endregion
         #region Finish sale or offer creation.
         [DllImport("IMXlib.dll", CallingConvention = CallingConvention.Cdecl)]
         public static extern IntPtr imx_finish_sell_or_offer_nft(string nonce_str, string imx_seed_sig_str, string imx_transaction_sig_str, IntPtr result_buffer, int buffer_size);
@@ -93,7 +99,7 @@ namespace GU_Exchange.Helpers
         public static extern IntPtr imx_finish_transfer(string nonce_str, string imx_seed_sig_str, string imx_transaction_sig_str, IntPtr result_buffer, int buffer_size);
         #endregion
 
-        #region Pointer convertion.
+        #region Pointer conversion.
         public static string? IntPtrToString(IntPtr ptr)
         {
             return Marshal.PtrToStringAnsi(ptr);

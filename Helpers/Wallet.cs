@@ -1261,6 +1261,146 @@ namespace GU_Exchange.Helpers
         }
 
         /// <summary>
+        /// Request the user to create buy offers for one or multiple cards.
+        /// This will submit the offers immediately if the private key for the <see cref="Wallet"/> is unlocked and available.
+        /// </summary>
+        /// <param name="parent"></param>
+        /// <param name="order"></param>
+        /// <param name="tbStatus"></param>
+        /// <returns></returns>
+        virtual public async Task<Dictionary<NFT, bool>> RequestCreateOffers(Window parent, (NFT card, string tokenID, double price, TextBlock? tbStatusOffer)[] offers, TextBlock tbStatus)
+        {
+            // Unlock user wallet.
+            foreach ((NFT card, string tokenID, double price, TextBlock? tbStatusOffer) offer in offers)
+            {
+                if (offer.tbStatusOffer != null) offer.tbStatusOffer.Text = "Waiting for wallet...";
+            }
+            tbStatus.Text = "Waiting for wallet to be unlocked...";
+            bool reLock = false;
+            if (IsLocked())
+            {
+                UnlockWalletWindow unlockWindow = new UnlockWalletWindow(this);
+                unlockWindow.Owner = parent;
+                unlockWindow.ShowDialog();
+                if (unlockWindow.Result == UnlockWalletWindow.UnlockResult.Cancel)
+                {
+                    foreach ((NFT card, string tokenID, double price, TextBlock? tbStatusOffer) cardOffer in offers)
+                    {
+                        if (cardOffer.tbStatusOffer != null)
+                        {
+                            cardOffer.tbStatusOffer.Text = "Offer cancelled";
+                        }
+                        tbStatus.Text = $"Offer{(offers.Length > 1 ? "s" : "")} cancelled.";
+                    }
+                    return offers.ToDictionary(x => x.card, x => false); ;
+                }
+                reLock = unlockWindow.Result == UnlockWalletWindow.UnlockResult.Relock;
+            }
+
+            // Prompt IMXlib to submit the offers.
+            tbStatus.Text = $"Submitting offer{(offers.Length > 1 ? "s" : "")}...";
+            List<Task<(NFT card, bool result)>> listTasks = new();
+            foreach ((NFT card, string tokenID, double price, TextBlock? tbStatusOffer) offer in offers)
+            {
+                // Create a task for each offer so they can run asynchronously.
+                Task<(NFT card, bool result)> createOffer = Task.Run(async () =>
+                {
+                    // Submit the offer.
+                    if (offer.tbStatusOffer != null) offer.tbStatusOffer.Dispatcher.Invoke(() =>
+                    {
+                        offer.tbStatusOffer.Text = "Submitting offer...";
+                    });
+                    try
+                    {
+                        await ResourceManager.RateLimiter.ReserveRequests(2);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        if (offer.tbStatusOffer != null) offer.tbStatusOffer.Dispatcher.Invoke(() =>
+                        {
+                            offer.tbStatusOffer.Text = "Unknown error";
+                        });
+                        return (offer.card, false);
+                    }
+                    int bufferSize = 1024;
+                    IntPtr resultBuffer = Marshal.AllocHGlobal(bufferSize);
+                    string? result = IntPtrToString(imx_offer_nft(offer.card.token_address, offer.card.token_id.ToString(), offer.tokenID, offer.price, new Fee[0], 0, GetPrivateKey(), resultBuffer, bufferSize));
+                    Marshal.FreeHGlobal(resultBuffer);
+
+                    // Handle the server response
+                    Log.Information($"Offer creation finished with result: {result ?? "None"}");
+                    if (result == null)
+                    {
+                        if (offer.tbStatusOffer != null) offer.tbStatusOffer.Dispatcher.Invoke(() =>
+                        {
+                            offer.tbStatusOffer.Text = "Unknown error";
+                        });
+                        return (offer.card, false);
+                    }
+                    if (!result.Contains("order_id"))
+                    {
+                        JObject? jsonResult = (JObject?)JsonConvert.DeserializeObject(result);
+                        string? message = (string?)jsonResult?.SelectToken("message");
+                        string? code = (string?)jsonResult?.SelectToken("code");
+                        if (message == null || code == null)
+                        {
+                            if (offer.tbStatusOffer != null) offer.tbStatusOffer.Dispatcher.Invoke(() =>
+                            {
+                                offer.tbStatusOffer.Text = "Unknown error";
+                            });
+                            return (offer.card, false);
+                        }
+                        if (offer.tbStatusOffer != null) offer.tbStatusOffer.Dispatcher.Invoke(() =>
+                        {
+                            offer.tbStatusOffer.Text = code;
+                        });
+                        Log.Warning($"Offer failed: {message}");
+                        return (offer.card, false);
+                    }
+                    if (offer.tbStatusOffer != null) offer.tbStatusOffer.Dispatcher.Invoke(() =>
+                    {
+                        offer.tbStatusOffer.Text = "Offer created";
+                    });
+                    return (offer.card, true);
+                });
+                // Add the task to a list of tasks so we can track when they finish.
+                listTasks.Add(createOffer);
+            }
+
+            List<Task<(NFT card, bool result)>> trackOffers = new(listTasks);
+            int totalTasks = listTasks.Count();
+            while (trackOffers.Count() > 0)
+            {
+                Task<(NFT card, bool result)> data = await Task.WhenAny(trackOffers);
+                trackOffers.Remove(data);
+                tbStatus.Text = $"Submitted {totalTasks - trackOffers.Count()} / {totalTasks} offers...";
+            }
+
+            // Wait for list tasks to finish.
+            (NFT card, bool res)[] results = await Task.WhenAll(listTasks);
+
+            // Relock the wallet if requested by the user.
+            if (reLock)
+                LockWallet();
+
+            // Inform the user about the combined result of all offers.
+            if (results.All(x => x.res))
+            {
+                tbStatus.Text = $"Offer{(offers.Count() > 1 ? "s" : "")} submitted to IMX";
+            }
+            else if (results.All(x => !x.res))
+            {
+                tbStatus.Text = $"Offer{(offers.Count() > 1 ? "s" : "")} submission failed";
+            }
+            else
+            {
+                tbStatus.Text = "Not all offers were submitted.";
+            }
+
+            return results.ToDictionary(x => x.card, x => x.res);
+        }
+
+        /// <summary>
         /// Request the user to cancel one or multiple active orders.
         /// This will cancel the orders immediately if the private key for the <see cref="Wallet"/> is unlocked and available.
         /// </summary>
@@ -2228,6 +2368,219 @@ namespace GU_Exchange.Helpers
             else
             {
                 tbStatus.Text = "Not all listings were submitted.";
+            }
+            return results;
+        }
+
+        /// <summary>
+        /// Request the user to List one or multiple.
+        /// This will submit the listings immediately if the private key for the <see cref="Wallet"/> is unlocked and available.
+        /// </summary>
+        /// <param name="parent"></param>
+        /// <param name="order"></param>
+        /// <param name="tbStatus"></param>
+        /// <returns></returns>
+        public override async Task<Dictionary<NFT, bool>> RequestCreateOffers(Window parent, (NFT card, string tokenID, double price, TextBlock? tbStatusOffer)[] offers, TextBlock tbStatus)
+        {
+            CancellationTokenSource masterCancelSource = new();
+            // Set status text.
+            foreach ((NFT card, string tokenID, double price, TextBlock? tbStatusOffer) offer in offers)
+            {
+                if (offer.tbStatusOffer != null) offer.tbStatusOffer.Text = "Waiting for wallet...";
+            }
+
+            // Request the signature from the user that is used to unlock the wallet in GU Exchange.
+            Task<bool> taskUnlock = Task.Run(async () =>
+            {
+                if (!IsLocked())
+                    return true;
+                SignatureData data = await SignatureRequestServer.RequestSignatureAsync(IMXlib.GU_UNLOCK_MESSAGE, masterCancelSource.Token);
+                return await UnlockWallet(data.Signature);
+            });
+
+            // Fetch data for signature requests.
+            tbStatus.Text = "Preparing offers to create...";
+            List<(Task<string?>, NFT card, TextBlock?)> prepareTasks = new();
+            foreach ((NFT card, string tokenID, double price, TextBlock? tbStatusOffer) offer in offers)
+            {
+                Task<string?> createOffer = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await ResourceManager.RateLimiter.ReserveRequests(1, masterCancelSource.Token);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        return null;
+                    }
+                    int bufferSize = 1024;
+                    IntPtr resultBuffer = Marshal.AllocHGlobal(bufferSize);
+                    string? result = IntPtrToUtf8String(imx_request_offer_nft(offer.card.token_address, offer.card.token_id.ToString(), offer.tokenID, offer.price, new Fee[0], 0, Address, resultBuffer, bufferSize));
+                    Marshal.FreeHGlobal(resultBuffer);
+                    return result;
+                });
+                prepareTasks.Add((createOffer, offer.card, offer.tbStatusOffer));
+            }
+
+            List<Task<SignatureData>> sigTasks = new();
+            List<(Task<bool>, NFT card, TextBlock? tbStatusOffer)> offerTasks = new();
+
+            // Show signature request window.
+            UseWebWalletWindow useWalletWindow = new();
+            useWalletWindow.Owner = parent;
+            useWalletWindow.Show();
+            useWalletWindow.AddTask(taskUnlock);
+
+            List<Task<string?>> trackPreparations = new(prepareTasks.Select(x => x.Item1));
+            int totalTasks = prepareTasks.Count();
+            while (trackPreparations.Count() > 0)
+            {
+                Task<string?> dataTask = await Task.WhenAny(trackPreparations);
+                trackPreparations.Remove(dataTask);
+                TextBlock? tbStatusListing = prepareTasks.Where(x => x.Item1 == dataTask).First().Item3;
+                if (tbStatusListing != null) tbStatusListing.Text = "Awaiting signature...";
+                tbStatus.Text = $"Prepared {totalTasks - trackPreparations.Count()} / {totalTasks} offers to sign...";
+                (Task<string?> prep, NFT card, TextBlock? tbStatusOffer) prepareTask = prepareTasks.Find(x => x.Item1 == dataTask);
+                // Check if the data is valid.
+                string? data = await dataTask;
+                if (data == null)
+                {
+                    if (prepareTask.tbStatusOffer != null) prepareTask.tbStatusOffer.Text = "Offer failed";
+                    continue;
+                }
+                JObject? jsonData = (JObject?)JsonConvert.DeserializeObject(data);
+                if (jsonData == null)
+                {
+                    if (prepareTask.tbStatusOffer != null) prepareTask.tbStatusOffer.Text = "Offer failed";
+                    continue;
+                }
+
+                string? nonce = (string?)jsonData?.SelectToken("nonce");
+                string? signableMessage = (string?)jsonData?.SelectToken("signable_message");
+                if (nonce == null || signableMessage == null)
+                {
+                    string? message = (string?)jsonData?.SelectToken("message");
+                    string? code = (string?)jsonData?.SelectToken("code");
+                    if (message == null || code == null)
+                    {
+                        if (prepareTask.tbStatusOffer != null) prepareTask.tbStatusOffer.Text = "Offer failed";
+                        continue;
+                    }
+                    Log.Warning($"Offer failed: {message}");
+                    if (prepareTask.tbStatusOffer != null) prepareTask.tbStatusOffer.Text = message;
+                    continue;
+                }
+
+                // Request signature.
+                Task<SignatureData> getSignature = SignatureRequestServer.RequestSignatureAsync(signableMessage, masterCancelSource.Token);
+
+                // Submit listing to IMX.
+                Task<bool> createOffer = Task.Run(async () =>
+                {
+                    // First, wait for the wallet to unlock before continuing.
+                    await taskUnlock;
+                    SignatureData signature;
+                    try
+                    {
+                        signature = await getSignature;
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        if (prepareTask.tbStatusOffer != null) prepareTask.tbStatusOffer.Dispatcher.Invoke(() =>
+                        {
+                            prepareTask.tbStatusOffer.Text = "Offer failed";
+                        });
+                        useWalletWindow.AutoClose = true;
+                        masterCancelSource.Cancel();
+                        return false;
+                    }
+                    if (prepareTask.tbStatusOffer != null) prepareTask.tbStatusOffer.Dispatcher.Invoke(() =>
+                    {
+                        prepareTask.tbStatusOffer.Text = "Creating offer...";
+                    });
+                    try
+                    {
+                        await ResourceManager.RateLimiter.ReserveRequests(1, masterCancelSource.Token);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        if (prepareTask.tbStatusOffer != null) prepareTask.tbStatusOffer.Dispatcher.Invoke(() =>
+                        {
+                            prepareTask.tbStatusOffer.Text = "Unknown error";
+                        });
+                        return false;
+                    }
+                    int bufferSize = 1024;
+                    IntPtr resultBuffer = Marshal.AllocHGlobal(bufferSize);
+                    string? result = IntPtrToUtf8String(imx_finish_sell_or_offer_nft(nonce, GetPrivateKey(), signature.Signature, resultBuffer, bufferSize));
+                    Marshal.FreeHGlobal(resultBuffer);
+                    Log.Information($"Offer creation finished with result: {result ?? "None"}");
+                    if (result == null)
+                    {
+                        if (prepareTask.tbStatusOffer != null) prepareTask.tbStatusOffer.Dispatcher.Invoke(() =>
+                        {
+                            prepareTask.tbStatusOffer.Text = "Unknown error";
+                        });
+                        return false;
+                    }
+                    if (!result.Contains("order_id"))
+                    {
+                        JObject? jsonResult = (JObject?)JsonConvert.DeserializeObject(result);
+                        string? message = (string?)jsonResult?.SelectToken("message");
+                        string? code = (string?)jsonResult?.SelectToken("code");
+                        if (message == null || code == null)
+                        {
+                            if (prepareTask.tbStatusOffer != null) prepareTask.tbStatusOffer.Dispatcher.Invoke(() =>
+                            {
+                                prepareTask.tbStatusOffer.Text = "Unknown error";
+                            });
+                            return false;
+                        }
+                        if (prepareTask.tbStatusOffer != null) prepareTask.tbStatusOffer.Dispatcher.Invoke(() =>
+                        {
+                            prepareTask.tbStatusOffer.Text = code;
+                        });
+                        Log.Warning($"Listing failed: {message}");
+                        return false;
+                    }
+                    if (prepareTask.tbStatusOffer != null) prepareTask.tbStatusOffer.Dispatcher.Invoke(() =>
+                    {
+                        prepareTask.tbStatusOffer.Text = "Listing created";
+                    });
+                    return true;
+                });
+
+                sigTasks.Add(getSignature);
+                useWalletWindow.AddTask(getSignature);
+                offerTasks.Add((createOffer, prepareTask.card, prepareTask.tbStatusOffer));
+            }
+            useWalletWindow.AutoClose = true;
+            // Wait for offers to finish.
+            Dictionary<NFT, bool> results = (await Task.WhenAll(offerTasks.Select(async x =>
+            {
+                try
+                {
+                    return (x.card, await x.Item1);
+                }
+                catch (Exception)
+                {
+                    return (x.card, false);
+                }
+            }))).ToDictionary(x => x.card, x => x.Item2);
+            results = results.Concat(offers.Where(x => !results.ContainsKey(x.card)).ToDictionary(x => x.card, x => false)).ToDictionary(x => x.Key, x => x.Value);
+
+            // Inform the user of the offer result.
+            if (results.All(x => x.Value))
+            {
+                tbStatus.Text = $"Offer{(offers.Count() > 1 ? "s" : "")} submitted to IMX";
+            }
+            else if (results.All(x => !x.Value))
+            {
+                tbStatus.Text = $"Offer submission{(offers.Count() > 1 ? "s" : "")} failed";
+            }
+            else
+            {
+                tbStatus.Text = "Not all offers were submitted.";
             }
             return results;
         }

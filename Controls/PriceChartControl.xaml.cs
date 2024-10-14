@@ -50,7 +50,7 @@ namespace GU_Exchange.Controls
             await FetchOrders();
         }
 
-            private async Task FetchOrders()
+        private async Task FetchOrders()
         {
             // Fetch orders in the IMX global orderbook for the specified card of the specified quality listed in the selected token.
             string cardData = HttpUtility.UrlEncode("{\"proto\":[\"" + _proto + "\"],\"quality\":[\"" + _quality + "\"]}");
@@ -148,7 +148,6 @@ namespace GU_Exchange.Controls
                 }
                 urlOrderBook = baseUrlOrderBook + $"&cursor={cursor}";
             }
-            Console.WriteLine("Done");
             spinner.Visibility = Visibility.Collapsed;
         }
 
@@ -161,7 +160,6 @@ namespace GU_Exchange.Controls
             double canvasHeight = canvasChart.ActualHeight - 1;
             if (canvasWidth <= 0 || canvasHeight <= 0)
             {
-                Console.WriteLine($"{canvasWidth} x {canvasChart.Height}");
                 return;
             }
             // Render base
@@ -233,28 +231,32 @@ namespace GU_Exchange.Controls
             }
 
             // Draw date labels
-            for (int i = 0; i < _days; i++)
-            {
-                double xPosDate = ((double)(_days - i - 1) / (_days + 1)) * (canvasWidth - 40) + 25;
-                TextBlock dateLabel = new TextBlock
-                {
-                    Text = DateTime.UtcNow.AddDays(-i).ToString("MMM-dd"),
-                    Foreground = Brushes.Black,
-                    RenderTransform = new RotateTransform(-45),
-                };
-                Canvas.SetLeft(dateLabel, xPosDate);
-                Canvas.SetBottom(dateLabel, -5);
-                canvasChart.Children.Add(dateLabel);
-            }
-
-            // Draw sales
             DateTime startTime = DateTime.UtcNow.AddDays(-_days);
             DateTime startDay = new DateTime(startTime.Year, startTime.Month, startTime.Day);
             DateTime endDay = startDay.AddDays(_days + 1);
 
+            // Draw sales
             double? xPosPrev = null;
             double? yPosPrev = null;
             double circleSize = 8;
+            
+            for (int i = 0; i <= _days; i++)
+            {
+                DateTime labelDate = startDay.AddDays(i);
+                double timeFraction = (labelDate - startDay).TotalSeconds / (endDay - startDay).TotalSeconds;
+
+                double xPos = timeFraction * (canvasWidth - 65) + 55;
+                TextBlock dateLabel = new TextBlock
+                {
+                    Text = labelDate.ToString("MMM-dd"),
+                    Foreground = Brushes.Black,
+                    RenderTransform = new RotateTransform(-45),
+                };
+                Canvas.SetLeft(dateLabel, xPos - 30);
+                Canvas.SetBottom(dateLabel, -5);
+                canvasChart.Children.Add(dateLabel);
+            }
+
             foreach (Order order in _orders)
             {
                 if (order.TimeStamp == null)
