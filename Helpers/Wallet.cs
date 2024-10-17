@@ -56,6 +56,7 @@ namespace GU_Exchange.Helpers
     public class Order
     {
         #region Class Properties.
+        public bool IsOffer;
         public string Name;
         public string Quality;
         public string Currency;
@@ -79,8 +80,14 @@ namespace GU_Exchange.Helpers
         public Order(JToken json_order, string currency)
         {
             // Collect data pertaining to the order from the json object.
-            string? name = (string?)json_order.SelectToken("sell.data.properties.name");
-            string? image_url = (string?)json_order.SelectToken("sell.data.properties.image_url");
+            string? order_type = (string?)json_order.SelectToken("buy.type");
+            if (order_type == null)
+                throw new NullReferenceException("JSON object does not contain valid order.");
+            IsOffer = order_type == "ERC721";
+            string nft_owner_str = IsOffer ? "buy" : "sell";
+            string nft_buyer_str = IsOffer ? "sell" : "buy";
+            string? name = (string?)json_order.SelectToken($"{nft_owner_str}.data.properties.name");
+            string? image_url = (string?)json_order.SelectToken($"{nft_owner_str}.data.properties.image_url");
             switch (image_url?.Substring(image_url.Length - 1))
             {
                 case "4":
@@ -101,17 +108,17 @@ namespace GU_Exchange.Helpers
             }
             string? seller = (string?)json_order["user"];
             ulong? orderID = (ulong?)json_order.SelectToken("order_id");
-            string? tokenAddress = (string?)json_order.SelectToken("sell.data.token_address");
-            string? tokenID = (string?)json_order.SelectToken("sell.data.token_id");
-            string? quantity = (string?)json_order.SelectToken("buy.data.quantity");
+            string? tokenAddress = (string?)json_order.SelectToken($"{nft_owner_str}.data.token_address");
+            string? tokenID = (string?)json_order.SelectToken($"{nft_owner_str}.data.token_id");
+            string? quantity = (string?)json_order.SelectToken($"{nft_buyer_str}.data.quantity");
             TimeStamp = (DateTime?)json_order.SelectToken("updated_timestamp");
-            uint? decimals = (uint?)json_order.SelectToken("buy.data.decimals");
+            uint? decimals = (uint?)json_order.SelectToken($"{nft_buyer_str}.data.decimals");
             JToken? fees = json_order["fees"];
 
             // Ensure that the order is valid.
             if (name == null || seller == null || orderID == null ||
                 tokenAddress == null || tokenID == null ||
-                quantity == null || fees == null || decimals == null)
+                quantity == null || decimals == null)
             {
                 throw new NullReferenceException("JSON object does not contain valid order.");
             }
@@ -120,19 +127,22 @@ namespace GU_Exchange.Helpers
             FeeList = new Dictionary<string, decimal>();
             decimal multDecimals = Pow(new decimal(10), (uint)decimals);
             decimal quantity_base = decimal.Parse(quantity);
-            foreach (JToken fee in fees)
+            if (fees != null)
             {
-                string? address = (string?)fee["address"];
-                string? fee_amount = (string?)fee["amount"];
-                if (fee_amount == null || address == null)
-                    throw new NullReferenceException("Not Implemented");
-                if (FeeList.ContainsKey(address))
+                foreach (JToken fee in fees)
                 {
-                    FeeList[address] = FeeList[address] + decimal.Parse(fee_amount) / multDecimals;
-                }
-                else
-                {
-                    FeeList.Add(address, decimal.Parse(fee_amount) / multDecimals);
+                    string? address = (string?)fee["address"];
+                    string? fee_amount = (string?)fee["amount"];
+                    if (fee_amount == null || address == null)
+                        throw new NullReferenceException("Not Implemented");
+                    if (FeeList.ContainsKey(address))
+                    {
+                        FeeList[address] = FeeList[address] + decimal.Parse(fee_amount) / multDecimals;
+                    }
+                    else
+                    {
+                        FeeList.Add(address, decimal.Parse(fee_amount) / multDecimals);
+                    }
                 }
             }
 

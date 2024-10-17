@@ -1,5 +1,8 @@
 ﻿using GU_Exchange.Helpers;
+using System;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -15,6 +18,7 @@ namespace GU_Exchange
         #region Class Properties
         private readonly CardControl _parent;
         private readonly Order _order;
+        private readonly List<Order> _offers;
         #endregion
 
         #region Default Constructor
@@ -23,11 +27,14 @@ namespace GU_Exchange
         /// </summary>
         /// <param name="order">The order that should be purchased.</param>
         /// <param name="image">An image to display to the user.</param>
-        public BuyControl(CardControl parent, Order order, ImageSource image)
+        public BuyControl(CardControl parent, Order order, ImageSource image, List<Order> offers)
         {
             InitializeComponent();
             _parent = parent;
             _order = order;
+            _offers = offers;
+            if (Wallet.GetConnectedWallet() != null && _offers.Where(x => x.Seller.Equals(Wallet.GetConnectedWallet()!.Address)).Count() != 0)
+                btnOffer.Content = "Cancel Offer";
             DataContext = new PurchaseConfirmationViewModel(order, image);
         }
         #endregion
@@ -142,6 +149,51 @@ namespace GU_Exchange
             this.Visibility = Visibility.Collapsed;
         }
         #endregion
+
+        private async void btnOffer_Click(object sender, RoutedEventArgs e)
+        {
+            userChoicePanel.Visibility = Visibility.Collapsed;
+            loadingPanel.Visibility = Visibility.Visible;
+
+            // Get the connected wallet.
+            Wallet? wallet = Wallet.GetConnectedWallet();
+            if (wallet == null)
+            {
+                // No wallet connected, cannot continue.
+                spinner.Visibility = Visibility.Collapsed;
+                error.Visibility = Visibility.Visible;
+                btnClose.Visibility = Visibility.Visible;
+                tbStatus.Text = "No wallet connected";
+                return;
+            }
+
+            
+            Order? userOffer = _offers.Where(x => x.Seller.Equals(wallet.Address)).FirstOrDefault();
+            if (userOffer == null)
+            {
+                this.Visibility = Visibility.Collapsed;
+                _parent.OpenOffer(_order);
+                return;
+            }
+
+            (string, TextBlock?)[] orders = { (userOffer.OrderID.ToString(), null) };
+            bool result = (await wallet.RequestCancelOrders(Application.Current.MainWindow, orders, tbStatus)).All(x => x.Value);
+            spinner.Visibility = Visibility.Collapsed;
+            if (!result)
+            {
+                // Purchase failed.
+                error.Visibility = Visibility.Visible;
+                btnClose.Visibility = Visibility.Visible;
+                return;
+            }
+
+            // Buying the order succeeded, now update the inventory and local wallet to reflect the successfull purchase.
+            success.Visibility = Visibility.Visible;
+
+            // Refresh the wallet in the parent CardControl.
+            _ = _parent.SetupInventoryAsync();
+            btnClose.Visibility = Visibility.Visible;
+        }
     }
 
     /// <summary>

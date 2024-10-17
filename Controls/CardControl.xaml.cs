@@ -36,6 +36,7 @@ namespace GU_Exchange
         private readonly Task<BitmapSource?> _imgShadow;
         private readonly Task<BitmapSource?> _imgGold;
         private readonly Task<BitmapSource?> _imgDiamond;
+        private readonly List<Order> _offersList;
         public bool CanClose;
         #endregion
 
@@ -58,6 +59,7 @@ namespace GU_Exchange
             _imgShadow = ResourceManager.GetCardImageAsync(CardID, 3, false, s_imgTokenSource.Token);
             _imgGold = ResourceManager.GetCardImageAsync(CardID, 2, false, s_imgTokenSource.Token);
             _imgDiamond = ResourceManager.GetCardImageAsync(CardID, 1, false, s_imgTokenSource.Token);
+            _offersList = new List<Order>();
             CanClose = true;
             cbToken.Items.Add("ETH");
             cbToken.Items.Add("GODS");
@@ -207,6 +209,7 @@ namespace GU_Exchange
             if (quality == null)
                 return;
             this.orderPanel.Children.Clear(); // Remove the existing orders from the list of orders.
+            _offersList.Clear(); // Remove existing offers from the list.
             this.spinner.Visibility = Visibility.Visible; // Show the loading spinner.
 
             // Fetch orders in the IMX global orderbook for the specified card of the specified quality listed in the selected token.
@@ -228,7 +231,6 @@ namespace GU_Exchange
                 Task<string> taskGetOrders = ResourceManager.Client.GetStringAsync(urlOrderBook, token);
                 if (wallet != null)
                 {
-                    //TODO setup fetching of cards in users wallet.
                     string urlInventory = $"https://api.x.immutable.com/v3/orders?buy_token_address={token_str}&direction=asc&include_fees=true&order_by=buy_quantity&page_size=50&sell_metadata={cardData}&sell_token_address=0xacb3c6a43d15b907e8433077b6d38ae40936fe2c&status=active&user={wallet.Address}";
                     strInventory = await ResourceManager.Client.GetStringAsync(urlInventory);
                 }
@@ -241,71 +243,64 @@ namespace GU_Exchange
                 return;
             }
 
-            List<Order> orders = new();
-
             // Extract orders from the data returned by the server.
-            JObject? jsonOrders = (JObject?)JsonConvert.DeserializeObject(strOrderBook);
-            if (jsonOrders == null)
-                return;
-            JToken? result = jsonOrders["result"];
-            if (result != null)
-            {
-                foreach (JToken order in result)
-                {
-                    try
-                    {
-                        Order or = new Order(order, currency.Name);
-                        orders.Add(or);
-                    }
-                    catch (NullReferenceException)
-                    {
-                    }
-                }
-            }
+            JObject? jsonOrders = JsonConvert.DeserializeObject<JObject?>(strOrderBook);
+            JToken? result = jsonOrders?["result"];
 
-            // Extract orders from the users inventory.
-            jsonOrders = (JObject?)JsonConvert.DeserializeObject(strInventory);
-            if (jsonOrders == null)
-                return;
-            result = jsonOrders["result"];
             if (result == null)
                 return;
 
-            foreach (JToken order in result)
-            {
-                try
-                {
-                    Order or = new Order(order, currency.Name);
-                    bool exists = false;
-                    foreach (Order listOrder in orders)
-                    {
-                        if (listOrder.OrderID.Equals(or.OrderID))
-                        {
-                            exists = true;
-                            break;
-                        }
-                    }
-                    if (!exists)
-                        orders.Add(or);
-                }
-                catch (NullReferenceException)
-                {
-                }
-            }
+            List<Order> orders = result
+                .Select(order => new Order(order, currency.Name))
+                .ToList();
+
+            // Extract orders from the users inventory.
+            jsonOrders = JsonConvert.DeserializeObject<JObject?>(strInventory);
+            result = jsonOrders?["result"];
+            if (result == null)
+                return;
+
+            orders.AddRange(result
+                .Select(order => new Order(order, currency.Name))
+                .Where(x => !orders.Select(y => y.OrderID).Contains(x.OrderID))
+                .ToList());
 
             // Sort the orders by cost from lowest to highest before displaying them in the window.
             foreach (Order order in orders.OrderBy(x => x.PriceTotal()))
             {
                 OrderBarControl bar = new OrderBarControl(order);
-                // TODO once user wallets are implemented, change the color of orders posted by the user to make them easy to identify.
                 if (wallet != null && order.Seller.Equals(wallet.Address))
-                {
                     bar.SetBackgroundColor("#3F00FF00");
-                }
-                this.orderPanel.Children.Add(bar);
+                orderPanel.Children.Add(bar);
                 bar.Width = 450f / 800f * this.controlGrid.ActualWidth;
             }
-            this.spinner.Visibility = Visibility.Collapsed; // Hide the loading spinner.
+
+            // Fetch offers that have been made for the displayed card.
+            string urlOffers = $"https://api.x.immutable.com/v3/orders?status=active&buy_metadata={cardData}&order_by=sell_quantity&direction=desc&page_size=200";
+            string? cursor = null;
+            do
+            {
+                string url = cursor != null ? $"{urlOffers}&cursor={cursor}" : urlOffers;
+                jsonOrders = JsonConvert.DeserializeObject<JObject>(await ResourceManager.Client.GetStringAsync(url));
+                result = jsonOrders?["result"];
+                if (result == null)
+                    break;
+                _offersList.AddRange(result.Select(order => new Order(order, currency.Name)));
+
+                cursor = jsonOrders?["cursor"]?.ToString();
+            } while (jsonOrders?["remaining"]?.ToString() == "1");
+
+            // Color orders that are posted by the user of have offers from the user.
+            if (wallet != null)
+            {
+                foreach (OrderBarControl orderBar in orderPanel.Children)
+                {
+                    if (_offersList.Where(x => x.Seller.Equals(wallet.Address)).Select(x => x.TokenID).Contains(orderBar.Order.TokenID))
+                        orderBar.SetBackgroundColor("#7FAA1EAF");
+                }
+            }
+
+            spinner.Visibility = Visibility.Collapsed; // Hide the loading spinner.
         }
 
         /// <summary>
@@ -582,6 +577,8 @@ namespace GU_Exchange
         /// <param name="order"></param>
         public void OpenOrder(Order order)
         {
+            if (spinner.Visibility == Visibility.Visible)
+                return;
             Wallet? wlt = Wallet.GetConnectedWallet();
             if (wlt == null)
                 return;
@@ -594,11 +591,19 @@ namespace GU_Exchange
             }
             else
             {
-                BuyControl _buyControl = new BuyControl(this, order, imgCard.Source);
+                BuyControl _buyControl = new BuyControl(this, order, imgCard.Source, _offersList.Where(x => x.TokenID.Equals(order.TokenID)).ToList());
                 _buyControl.Margin = new Thickness(0, 0, 0, 0);
                 Grid.SetColumnSpan(_buyControl, 2);
                 controlGrid.Children.Add(_buyControl);
             }
+        }
+
+        public void OpenOffer(Order order)
+        {
+            OfferControl _offerControl = new OfferControl(this, order, imgCard.Source);
+            _offerControl.Margin = new Thickness(0, 0, 0, 0);
+            Grid.SetColumnSpan(_offerControl, 2);
+            controlGrid.Children.Add(_offerControl);
         }
 
         /// <summary>
@@ -659,10 +664,7 @@ namespace GU_Exchange
             Order? cheapestOrder = GetCheapestBuyableOrder();
             if (cheapestOrder == null)
                 return;
-            OfferControl _offerControl = new OfferControl(this, cheapestOrder, imgCard.Source);
-            _offerControl.Margin = new Thickness(0, 0, 0, 0);
-            Grid.SetColumnSpan(_offerControl, 2);
-            controlGrid.Children.Add(_offerControl);
+            OpenOffer(cheapestOrder);
         }
     }
 
