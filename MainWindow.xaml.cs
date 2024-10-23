@@ -114,6 +114,7 @@ namespace GU_Exchange
                 .MinimumLevel.Debug()
                 .CreateLogger();
             loadTime.Stop();
+            SetAlertCounter(3);
             Log.Information($"{loadTime.ElapsedMilliseconds}ms to load main window.");
         }
         #endregion
@@ -749,6 +750,15 @@ namespace GU_Exchange
 
         #region Interact with trading overlay.
 
+        public void OpenOverlay(UserControl overlay)
+        {
+            CloseOverlay();
+            _overlayControl = overlay;
+            Grid.SetRow(_overlayControl, 2);
+            Grid.SetRowSpan(_overlayControl, 4);
+            this.MainGrid.Children.Add(_overlayControl);
+        }
+
         /// <summary>
         /// Open the trading overlay for the card with the provided CardID.
         /// </summary>
@@ -821,6 +831,40 @@ namespace GU_Exchange
             } catch (Exception ex)
             {
                 Console.WriteLine($"{ex.Message}: {ex.StackTrace}");
+            }
+        }
+
+        private void BellGrid_MouseEnter(object sender, MouseEventArgs e)
+        {
+            bell.Foreground = new SolidColorBrush(Colors.Gray);
+        }
+
+        private void BellGrid_MouseLeave(object sender, MouseEventArgs e)
+        {
+            bell.Foreground = new SolidColorBrush(Colors.Black);
+        }
+
+        private void BellGrid_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            CloseOverlay();
+            OpenOverlay(new NotificationScreenControl());
+        }
+
+        private void SetAlertCounter(int num)
+        {
+            if (num <= 0)
+            {
+                tbAlert.Visibility = Visibility.Collapsed;
+                elAlert.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                tbAlert.Visibility = Visibility.Visible;
+                elAlert.Visibility = Visibility.Visible;
+                if (num < 9)
+                    tbAlert.Text = num.ToString();
+                else
+                    tbAlert.Text = "9";
             }
         }
     }

@@ -1,5 +1,6 @@
 ﻿using GU_Exchange.Controls;
 using GU_Exchange.Helpers;
+using ImageProcessor.Processors;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Serilog;
@@ -8,6 +9,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Net.Http;
+using System.Net.NetworkInformation;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
@@ -50,6 +52,7 @@ namespace GU_Exchange
         {
             InitializeComponent();
             btnBuy.AddContextItem("Create offer", OfferButton_Click);
+            btnBuy.AddContextItem("Cancel offers", CancelOfferButton_Click);
             this.CardID = CardID;
             s_imgTokenSource.Cancel();
             s_imgTokenSource = new();
@@ -665,6 +668,37 @@ namespace GU_Exchange
             if (cheapestOrder == null)
                 return;
             OpenOffer(cheapestOrder);
+        }
+
+        private void CancelOfferButton_Click(object sender, RoutedEventArgs e)
+        {
+            if (!CanClose)
+                return;
+            if (spinner.Visibility == Visibility.Visible)
+                return;
+            Wallet? wlt = Wallet.GetConnectedWallet();
+            if (wlt == null)
+                return;
+            List<Order> orders = _offersList.Where(x => x.Seller.Equals(wlt.Address)).ToList();
+            int quality = 4;
+            switch (cbQuality.Text)
+            {
+                case "Meteorite":
+                    quality = 4;
+                    break;
+                case "Shadow":
+                    quality = 3;
+                    break;
+                case "Gold":
+                    quality = 2;
+                    break;
+                case "Diamond":
+                    quality = 1;
+                    break;
+            }
+            CancelOrdersControl overlay = new CancelOrdersControl(CardID, quality, orders);
+            ((MainWindow)Application.Current.MainWindow).CloseOverlay();
+            ((MainWindow)Application.Current.MainWindow).OpenOverlay(overlay);
         }
     }
 

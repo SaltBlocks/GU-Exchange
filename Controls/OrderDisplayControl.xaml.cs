@@ -80,7 +80,10 @@ namespace GU_Exchange.Controls
         public void SetOrder(Order order)
         {
             _order = order;
-            tbSubText.Text = $"{Math.Round(order.PriceTotal(), 10)} {order.Currency}";
+            if (_order.IsOffer)
+                tbSubText.Text = $"Offered {Math.Round(order.PriceBase, 10)} {order.Currency}";
+            else
+                tbSubText.Text = $"{Math.Round(order.PriceTotal(), 10)} {order.Currency}";
             ShowStatus(false);
         }
 

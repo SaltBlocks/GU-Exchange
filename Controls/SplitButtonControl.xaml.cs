@@ -54,6 +54,14 @@ namespace GU_Exchange.Controls
             menu.Items.Add(newMenuItem);
         }
 
+        public void SetContextItemEnabled(string itemName, bool enabled)
+        {
+            foreach (MenuItem item in menu.Items.OfType<MenuItem>().Where(x => x.Header.Equals(itemName)))
+            {
+                item.IsEnabled = enabled;
+            }
+        }
+
         // Internal Button click event handler that raises the external ButtonClick event
         private void MainButton_Click(object sender, RoutedEventArgs e)
         {

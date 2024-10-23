@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:fa="http://schemas.fontawesome.io/icons/"
         xmlns:local="clr-namespace:GU_Exchange"
         mc:Ignorable="d"
         Title="GU Exchange" Height="600" Width="950" Background="#FFE4E4E4">
@@ -67,6 +68,7 @@
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="*"/>
                 <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="40"/>
             </Grid.ColumnDefinitions>
             <Grid Grid.Column="0">
                 <Grid.ColumnDefinitions>
@@ -98,11 +100,20 @@
                     <TextBlock x:Name="txtImx" HorizontalAlignment="Left" TextWrapping="Wrap" Text="0000.00 IMX"/>
                 </Viewbox>
             </Grid>
+            <Grid Grid.Column="3" HorizontalAlignment="Right">
+                <Grid Name="BellGrid" Margin="0,0,-10,0" MouseEnter="BellGrid_MouseEnter" MouseLeave="BellGrid_MouseLeave" MouseLeftButtonDown="BellGrid_MouseLeftButtonDown">
+                    <fa:ImageAwesome x:Name="bell" Icon="Bell" Height="25" Width="25" HorizontalAlignment="Center" Margin="0,3,2,0" />
+                    <Ellipse x:Name="elAlert" Stroke="Black" Fill="Red" Width="15" Height="15" Margin="12,-10,0,0" Visibility="Collapsed"/>
+                    <Viewbox Width="20" Height="20" Margin="5,5,5,5">
+                        <TextBlock x:Name="tbAlert" Text="9" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="White" Margin="12,-10,0,0" Visibility="Collapsed" />
+                    </Viewbox>
+                </Grid>
+            </Grid>
         </Grid>
         <!-- #endregion-->
 
         <!-- #region No wallet banner. -->
-        <Rectangle x:Name="rectNoWallet" Margin="10,0,10,0" Stroke="Black" Fill="#FF8AB3F7" RadiusX="10" RadiusY="10" Visibility="Visible" Grid.Row="1" MouseEnter="rectNoWallet_MouseEnter" MouseLeave="rectNoWallet_MouseLeave" MouseLeftButtonDown="noWallet_MouseLeftButtonDown"/>
+        <Rectangle x:Name="rectNoWallet" Margin="10,0,10,0" Stroke="Black" Fill="#FF8AB3F7" RadiusX="10" RadiusY="10" Grid.Row="1" MouseEnter="rectNoWallet_MouseEnter" MouseLeave="rectNoWallet_MouseLeave" MouseLeftButtonDown="noWallet_MouseLeftButtonDown"/>
         <Viewbox Grid.Row="1">
             <TextBlock x:Name="tbNoWallet" Text="No wallet connected" Foreground="White" Grid.Row="1" MouseEnter="rectNoWallet_MouseEnter" MouseLeave="rectNoWallet_MouseLeave" MouseLeftButtonDown="noWallet_MouseLeftButtonDown"/>
         </Viewbox>
