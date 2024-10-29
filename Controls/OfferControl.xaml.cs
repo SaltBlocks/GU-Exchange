@@ -132,7 +132,7 @@ namespace GU_Exchange.Controls
                 };
                 Dictionary<string, Token> tokens = await Wallet.FetchTokens();
                 Token token = tokens[_order.Currency];
-                listings.Add((card, token.Address, double.Parse(tbOfferAmount.Text), null));
+                listings.Add((card, token.Address, decimal.ToDouble((decimal.Parse(tbOfferAmount.Text) / getFeeMultiplier())), null));
             }
             catch (FormatException)
             {
@@ -166,6 +166,23 @@ namespace GU_Exchange.Controls
             btnClose.Visibility = Visibility.Visible;
             ((MainWindow)Application.Current.MainWindow).menuBar.IsEnabled = true;
             _parent.CanClose = true;
+        }
+
+        private decimal getFeeMultiplier()
+        {
+            switch ((string)_order.Quality)
+            {
+                case "Meteorite":
+                    return 1.08M;
+                case "Shadow":
+                    return 1.07M;
+                case "Gold":
+                    return 1.06M;
+                case "Diamond":
+                    return 1.035M;
+                default:
+                    return 1.08M;
+            }
         }
     }
 }

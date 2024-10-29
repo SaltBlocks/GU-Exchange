@@ -103,7 +103,7 @@ namespace GU_Exchange.Controls
                         if (cardName == null || img_url == null)
                             continue;
                         string[] card_data = img_url.Split("id=")[1].Split("&q=");
-                        Order or = new Order(order, await getOrderCurrencyName(order));
+                        Order or = new Order(order, await Order.getOrderCurrencyName(order));
                         _orders.Add((cardName, card_data, or));
                         if (_orderIndex < 50)
                         {
@@ -295,27 +295,6 @@ namespace GU_Exchange.Controls
             ((MainWindow)Application.Current.MainWindow).menuBar.IsEnabled = true;
             scrollBar.IsEnabled = true;
             btnClose.IsEnabled = true;
-        }
-        #endregion
-        #region Supporting methods
-        /// <summary>
-        /// Get the token symbol associated with a provided order in json format.
-        /// </summary>
-        /// <param name="order"></param>
-        /// <returns></returns>
-        private async Task<string> getOrderCurrencyName(JToken order)
-        {
-            string? token_address = (string?)order.SelectToken("buy.data.token_address");
-            if (token_address == null)
-                return "???";
-            if (token_address == "")
-            {
-                string? token_type = (string?)order.SelectToken("buy.type");
-                if (token_type == null)
-                    return "???";
-                return token_type;
-            }
-            return await Wallet.FetchTokenSymbol(token_address);
         }
         #endregion
     }

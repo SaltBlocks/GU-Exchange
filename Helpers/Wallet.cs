@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using Microsoft.VisualBasic;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Serilog;
 using System;
@@ -184,7 +185,10 @@ namespace GU_Exchange.Helpers
         /// <returns>The total order price.</returns>
         public decimal PriceTotal()
         {
-            return PriceBase + PriceFees();
+            if (!IsOffer)
+                return PriceBase + PriceFees();
+            else
+                return PriceBase - PriceFees();
         }
 
         #endregion
@@ -211,6 +215,26 @@ namespace GU_Exchange.Helpers
                 }
             }
             return A;
+        }
+
+        /// <summary>
+        /// Get the token symbol associated with a provided order in json format.
+        /// </summary>
+        /// <param name="order"></param>
+        /// <returns></returns>
+        public static async Task<string> getOrderCurrencyName(JToken order)
+        {
+            string? token_address = (string?)order.SelectToken("buy.data.token_address");
+            if (token_address == null)
+                return "???";
+            if (token_address == "")
+            {
+                string? token_type = (string?)order.SelectToken("buy.type");
+                if (token_type == null)
+                    return "???";
+                return token_type;
+            }
+            return await Wallet.FetchTokenSymbol(token_address);
         }
         #endregion
     }
@@ -1000,6 +1024,7 @@ namespace GU_Exchange.Helpers
 
             if (!result.Contains("trade_id"))
             {
+                Log.Information(result);
                 JObject? jsonResult = (JObject?)JsonConvert.DeserializeObject(result);
                 string? message = (string?)jsonResult?.SelectToken("message");
                 if (message == null)
@@ -1889,6 +1914,7 @@ namespace GU_Exchange.Helpers
             string? signableMessage = (string?)jsonBuyRequest?.SelectToken("signable_message");
             if (nonce == null || signableMessage == null)
             {
+                
                 masterCancelSource.Cancel();
                 string? message = (string?)jsonBuyRequest?.SelectToken("message");
                 if (message == null)
@@ -1896,6 +1922,7 @@ namespace GU_Exchange.Helpers
                     tbStatus.Text = "An unknown error occurred";
                     return false;
                 }
+                Log.Information(message);
                 tbStatus.Text = message;
                 return false;
             }
@@ -1956,6 +1983,7 @@ namespace GU_Exchange.Helpers
                     tbStatus.Text = "An unknown error occurred";
                     return false;
                 }
+                Log.Information(jsonResult.ToString());
                 tbStatus.Text = message;
                 return false;
             }

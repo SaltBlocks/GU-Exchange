@@ -18,7 +18,7 @@
         <!--#endregion-->
         <!-- #region Title. -->
         <Viewbox Grid.Row="0" Margin="10,10,10,10">
-            <TextBlock Text="Notifications" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
+            <TextBlock x:Name="tbTitle" Text="Notifications" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="Black"/>
         </Viewbox>
         <!-- #region Close button. -->
         <Button x:Name="btnClose" Content="X" HorizontalAlignment="Right" Height="20" Grid.Row="0" Margin="0,0,0,0" VerticalAlignment="Top" Width="20" Click="BtnClose_Click"/>
